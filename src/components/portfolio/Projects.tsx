@@ -136,49 +136,114 @@ const Projects = () => {
                   </CardContent>
                 </Card>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl">{project.title}</DialogTitle>
-                </DialogHeader>
-                <Tabs defaultValue="what" className="w-full">
-                  <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="what">What</TabsTrigger>
-                    <TabsTrigger value="problem">Problem</TabsTrigger>
-                    <TabsTrigger value="process">Process</TabsTrigger>
-                    <TabsTrigger value="solution">Solution</TabsTrigger>
-                    <TabsTrigger value="outcome">Outcome</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="what" className="mt-6">
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">What is this project?</h3>
-                      <p className="text-muted-foreground leading-relaxed">{project.details.what}</p>
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+                <div className="grid grid-cols-4 h-[80vh]">
+                  {/* Sidebar Navigation */}
+                  <div className="col-span-1 border-r bg-muted/30 p-6 overflow-y-auto">
+                    <div className="mb-8">
+                      <h2 className="text-lg font-semibold mb-2">{project.title}</h2>
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        <div><strong>Role:</strong> Product Developer</div>
+                        <div><strong>Timeline:</strong> {project.status.split(' • ')[1] || '2024'}</div>
+                        <div><strong>Team:</strong> {project.company}</div>
+                        <div><strong>Skills:</strong> AI/ML, Product Strategy, Full-Stack Development</div>
+                      </div>
                     </div>
-                  </TabsContent>
-                  <TabsContent value="problem" className="mt-6">
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Problem Statement</h3>
-                      <p className="text-muted-foreground leading-relaxed">{project.details.problem}</p>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="process" className="mt-6">
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Development Process</h3>
-                      <p className="text-muted-foreground leading-relaxed">{project.details.process}</p>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="solution" className="mt-6">
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Solution</h3>
-                      <p className="text-muted-foreground leading-relaxed">{project.details.solution}</p>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="outcome" className="mt-6">
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Results & Impact</h3>
-                      <p className="text-muted-foreground leading-relaxed">{project.details.outcome}</p>
-                    </div>
-                  </TabsContent>
-                </Tabs>
+                    <Tabs defaultValue="overview" orientation="vertical" className="w-full">
+                      <TabsList className="flex flex-col h-auto w-full bg-transparent p-0 space-y-1">
+                        <TabsTrigger value="overview" className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                          Overview
+                        </TabsTrigger>
+                        <TabsTrigger value="problem" className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                          Into the Problem Space
+                        </TabsTrigger>
+                        <TabsTrigger value="research" className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                          Research & Analysis
+                        </TabsTrigger>
+                        <TabsTrigger value="solution" className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                          Solution
+                        </TabsTrigger>
+                        <TabsTrigger value="outcome" className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                          Impact & Reflection
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                  
+                  {/* Main Content Area */}
+                  <div className="col-span-3 p-8 overflow-y-auto">
+                    <Tabs defaultValue="overview" orientation="vertical">
+                      <TabsContent value="overview" className="mt-0">
+                        <div className="space-y-6">
+                          <h3 className="text-2xl font-bold mb-4">Overview</h3>
+                          <div 
+                            className="h-48 rounded-lg flex items-center justify-center text-white font-light text-xl mb-6"
+                            style={{ background: project.gradient }}
+                          >
+                            {project.subtitle}
+                          </div>
+                          <p className="text-lg leading-relaxed">{project.details.what}</p>
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="problem" className="mt-0">
+                        <div className="space-y-6">
+                          <h3 className="text-2xl font-bold">The Problem</h3>
+                          <p className="text-lg leading-relaxed">{project.details.problem}</p>
+                          <div className="bg-muted p-6 rounded-lg">
+                            <h4 className="font-semibold mb-2">Challenge Statement</h4>
+                            <p className="text-muted-foreground">How might we address the core issues identified in this space while creating meaningful value for users?</p>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="research" className="mt-0">
+                        <div className="space-y-6">
+                          <h3 className="text-2xl font-bold">Research & Development Process</h3>
+                          <p className="text-lg leading-relaxed">{project.details.process}</p>
+                          <div className="grid gap-4">
+                            <div className="bg-muted p-4 rounded-lg">
+                              <h4 className="font-semibold mb-2">Key Technologies</h4>
+                              <p className="text-sm text-muted-foreground">AI/ML algorithms, data processing pipelines, user interface design</p>
+                            </div>
+                            <div className="bg-muted p-4 rounded-lg">
+                              <h4 className="font-semibold mb-2">Development Approach</h4>
+                              <p className="text-sm text-muted-foreground">Iterative development with continuous user feedback and testing</p>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="solution" className="mt-0">
+                        <div className="space-y-6">
+                          <h3 className="text-2xl font-bold">Solution</h3>
+                          <p className="text-lg leading-relaxed">{project.details.solution}</p>
+                          <div className="bg-primary/10 p-6 rounded-lg border-l-4 border-primary">
+                            <h4 className="font-semibold mb-2">Core Innovation</h4>
+                            <p>This solution leverages cutting-edge technology to create a seamless user experience while addressing the fundamental challenges in the problem space.</p>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="outcome" className="mt-0">
+                        <div className="space-y-6">
+                          <h3 className="text-2xl font-bold">Impact & Results</h3>
+                          <p className="text-lg leading-relaxed">{project.details.outcome}</p>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                              <h4 className="font-semibold text-green-800 mb-2">Key Metrics</h4>
+                              <p className="text-sm text-green-700">Significant improvements in efficiency and user satisfaction</p>
+                            </div>
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                              <h4 className="font-semibold text-blue-800 mb-2">Lessons Learned</h4>
+                              <p className="text-sm text-blue-700">Valuable insights gained from user feedback and iterative development</p>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </div>
               </DialogContent>
             </Dialog>
           ))}
