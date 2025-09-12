@@ -32,18 +32,25 @@ const Experience = () => {
 
   const experiences = [
     {
-      role: "Job Title",
-      company: "Company Name",
-      period: "Start Date - End Date",
-      location: "Location",
-      description: "Brief description of your role and key achievements"
+      role: "Product Management Intern",
+      company: "NimbleRx",
+      period: "Summer 2025",
+      location: "San Francisco, CA",
+      description: "Led product initiatives for AI-powered healthcare solutions including Mira AI digital patient twin"
     },
     {
-      role: "Job Title",
-      company: "Company Name", 
-      period: "Start Date - End Date",
-      location: "Location",
-      description: "Brief description of your role and key achievements"
+      role: "Consulting Intern",
+      company: "KPMG", 
+      period: "Summer 2024",
+      location: "New York, NY",
+      description: "Developed automated compliance solutions and consulted on regulatory technology implementations"
+    },
+    {
+      role: "ESG Analyst Intern",
+      company: "Vitalis",
+      period: "2024",
+      location: "Remote",
+      description: "Analyzed environmental, social, and governance factors for sustainable investment decisions"
     }
   ];
 

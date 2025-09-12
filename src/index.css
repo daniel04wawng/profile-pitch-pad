@@ -42,6 +42,9 @@ All colors MUST be HSL.
     --gradient-orange-purple: linear-gradient(135deg, #ff9a56 0%, #ff6b9d 50%, #c96dd8 100%);
     --gradient-blue-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --gradient-pink-orange: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --gradient-blue-green: linear-gradient(135deg, #0ea5e9 0%, #10b981 100%);
+    --gradient-purple-pink: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    --gradient-green-blue: linear-gradient(135deg, #22c55e 0%, #3b82f6 100%);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
