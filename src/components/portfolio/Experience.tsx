@@ -98,7 +98,6 @@ const Experience = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="font-medium mb-2">{achievement.project}</p>
                     <p className="text-muted-foreground text-sm">{achievement.description}</p>
                   </CardContent>
                 </Card>
