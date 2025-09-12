@@ -10,20 +10,28 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 220 14% 28%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
+    --secondary: 220 9% 46%;
     --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
+    --muted: 220 9% 46%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
+    --accent: 220 9% 46%;
     --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 220 14% 28%;
     --radius: 0.5rem;
+    
+    /* Muted gradient variables */
+    --gradient-orange-purple: linear-gradient(135deg, #e2e8f0, #cbd5e1, #94a3b8, #64748b);
+    --gradient-blue-purple: linear-gradient(135deg, #f1f5f9, #e2e8f0, #cbd5e1, #94a3b8);
+    --gradient-pink-orange: linear-gradient(135deg, #fef2f2, #fce7f3, #f3e8ff, #e0e7ff);
+    --gradient-blue-green: linear-gradient(135deg, #f0f9ff, #e0f2fe, #ccfbf1, #d1fae5);
+    --gradient-purple-pink: linear-gradient(135deg, #faf5ff, #f3e8ff, #fce7f3, #fef2f2);
+    --gradient-green-blue: linear-gradient(135deg, #f0fdf4, #dcfce7, #d1fae5, #ccfbf1);
   }
 
   .dark {
