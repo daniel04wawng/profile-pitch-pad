@@ -1,118 +1,125 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Calendar, MapPin } from "lucide-react";
+import { Calendar, MapPin, Building2 } from "lucide-react";
 
 const Experience = () => {
-  const hackathons = [
+  const experiences = [
     {
-      title: "Hackathon Name 1",
-      award: "1st Place",
-      date: "2024",
-      location: "Location",
-      project: "Project Name",
-      description: "Brief description of what you built and achieved"
+      title: "Full-Stack Developer",
+      company: "Tech Innovation Lab",
+      location: "San Francisco, CA",
+      period: "2023 - Present",
+      description: "Leading development of scalable web applications and mentoring junior developers. Implemented microservices architecture that improved system performance by 40%.",
+      technologies: ["React", "Node.js", "AWS", "Docker", "PostgreSQL"],
+      type: "Full-time"
     },
     {
-      title: "Hackathon Name 2", 
-      award: "Best Design",
-      date: "2024",
-      location: "Location",
-      project: "Project Name",
-      description: "Brief description of what you built and achieved"
+      title: "Frontend Developer Intern",
+      company: "StartupXYZ",
+      location: "Remote",
+      period: "2022 - 2023",
+      description: "Developed responsive user interfaces and collaborated with design team to create intuitive user experiences. Contributed to a 50% increase in user engagement.",
+      technologies: ["Vue.js", "TypeScript", "Tailwind CSS", "Figma"],
+      type: "Internship"
     },
     {
-      title: "Hackathon Name 3",
-      award: "People's Choice",
-      date: "2023", 
-      location: "Location",
-      project: "Project Name",
-      description: "Brief description of what you built and achieved"
+      title: "Freelance Web Developer",
+      company: "Various Clients",
+      location: "Remote",
+      period: "2021 - 2022",
+      description: "Built custom websites and web applications for small businesses. Specialized in e-commerce solutions and content management systems.",
+      technologies: ["WordPress", "PHP", "JavaScript", "MySQL"],
+      type: "Freelance"
     }
   ];
 
-  const experiences = [
+  const education = [
     {
-      role: "Product Management Intern",
-      company: "NimbleRx",
-      period: "Summer 2025",
-      location: "San Francisco, CA",
-      description: "Led product initiatives for AI-powered healthcare solutions including Mira AI digital patient twin"
-    },
-    {
-      role: "Consulting Intern",
-      company: "KPMG", 
-      period: "Summer 2024",
-      location: "New York, NY",
-      description: "Developed automated compliance solutions and consulted on regulatory technology implementations"
-    },
-    {
-      role: "ESG Analyst Intern",
-      company: "Vitalis",
-      period: "2024",
-      location: "Remote",
-      description: "Analyzed environmental, social, and governance factors for sustainable investment decisions"
+      degree: "Bachelor of Science in Computer Science",
+      school: "University of California, Berkeley",
+      year: "2020 - 2024",
+      description: "Focused on software engineering, algorithms, and data structures. Graduated Magna Cum Laude."
     }
   ];
 
   return (
-    <section className="py-24 px-6 md:px-12 lg:px-24 bg-secondary/30">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-light mb-16">Experience & Achievements</h2>
-        
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Hackathons & Wins */}
+    <section className="py-24 px-6 md:px-12 lg:px-24">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-light mb-6">Experience & Education</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            My journey in technology has been driven by curiosity and a desire to 
+            solve complex problems through innovative solutions.
+          </p>
+        </div>
+
+        <div className="space-y-12">
+          {/* Experience */}
           <div>
-            <h3 className="text-2xl font-medium mb-8 flex items-center gap-2">
-              <Trophy className="w-6 h-6" />
-              Hackathon Wins
-            </h3>
+            <h3 className="text-2xl font-medium mb-8 text-center">Professional Experience</h3>
             <div className="space-y-6">
-              {hackathons.map((hackathon, index) => (
-                <Card key={index} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{hackathon.title}</CardTitle>
-                      <Badge variant="secondary">{hackathon.award}</Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {hackathon.date}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {hackathon.location}
-                      </span>
+              {experiences.map((exp, index) => (
+                <Card key={index} className="group hover:shadow-lg transition-all duration-300">
+                  <CardHeader>
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
+                      <div>
+                        <CardTitle className="text-xl mb-2">{exp.title}</CardTitle>
+                        <div className="flex items-center text-muted-foreground mb-2">
+                          <Building2 className="w-4 h-4 mr-2" />
+                          <span className="font-medium">{exp.company}</span>
+                        </div>
+                        <div className="flex items-center text-muted-foreground mb-2">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          <span>{exp.location}</span>
+                        </div>
+                        <div className="flex items-center text-muted-foreground">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          <span>{exp.period}</span>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="mt-2 md:mt-0">
+                        {exp.type}
+                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="font-medium mb-2">{hackathon.project}</p>
-                    <p className="text-muted-foreground text-sm">{hackathon.description}</p>
+                    <p className="text-muted-foreground mb-4 leading-relaxed">
+                      {exp.description}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {exp.technologies.map((tech, techIndex) => (
+                        <Badge key={techIndex} variant="outline" className="text-xs">
+                          {tech}
+                        </Badge>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </div>
 
-          {/* Work Experience */}
+          {/* Education */}
           <div>
-            <h3 className="text-2xl font-medium mb-8">Work Experience</h3>
+            <h3 className="text-2xl font-medium mb-8 text-center">Education</h3>
             <div className="space-y-6">
-              {experiences.map((exp, index) => (
-                <Card key={index} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">{exp.role}</CardTitle>
-                    <div className="flex justify-between items-center text-sm text-muted-foreground">
-                      <span className="font-medium">{exp.company}</span>
-                      <span>{exp.period}</span>
+              {education.map((edu, index) => (
+                <Card key={index} className="group hover:shadow-lg transition-all duration-300">
+                  <CardHeader>
+                    <CardTitle className="text-xl mb-2">{edu.degree}</CardTitle>
+                    <div className="flex items-center text-muted-foreground mb-2">
+                      <Building2 className="w-4 h-4 mr-2" />
+                      <span className="font-medium">{edu.school}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      {exp.location}
+                    <div className="flex items-center text-muted-foreground">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      <span>{edu.year}</span>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground text-sm">{exp.description}</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {edu.description}
+                    </p>
                   </CardContent>
                 </Card>
               ))}

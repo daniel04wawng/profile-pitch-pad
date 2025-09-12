@@ -6,31 +6,25 @@ const Links = () => {
   const links = [
     {
       name: "Devpost",
-      url: "https://devpost.com/your-username",
+      url: "https://devpost.com/daniel04wang",
       icon: <ExternalLink className="w-5 h-5" />,
       description: "Check out my hackathon projects"
     },
     {
       name: "GitHub", 
-      url: "https://github.com/your-username",
+      url: "https://github.com/daniel04wawng",
       icon: <Github className="w-5 h-5" />,
       description: "View my code repositories"
     },
     {
       name: "LinkedIn",
-      url: "https://linkedin.com/in/your-username", 
+      url: "https://www.linkedin.com/in/daniel04wang/", 
       icon: <Linkedin className="w-5 h-5" />,
       description: "Connect with me professionally"
     },
     {
-      name: "Resume",
-      url: "/path-to-your-resume.pdf",
-      icon: <FileText className="w-5 h-5" />,
-      description: "Download my resume"
-    },
-    {
       name: "Email",
-      url: "mailto:your.email@example.com",
+      url: "mailto:daniel04wang@gmail.com",
       icon: <Mail className="w-5 h-5" />,
       description: "Get in touch directly"
     }
@@ -75,7 +69,7 @@ const Links = () => {
             Want to work together on something cool?
           </p>
           <Button size="lg" asChild>
-            <a href="mailto:your.email@example.com">
+            <a href="mailto:daniel04wang@gmail.com">
               <Mail className="w-5 h-5 mr-2" />
               Let's Talk
             </a>
