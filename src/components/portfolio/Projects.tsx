@@ -117,10 +117,10 @@ const Projects = () => {
               <DialogTrigger asChild>
                 <Card className="group cursor-pointer hover:shadow-lg transition-all duration-300 border-0 overflow-hidden">
                   <div 
-                    className="h-48 flex items-center justify-center text-white font-light text-2xl"
+                    className="h-48 flex items-center justify-center text-white font-light text-xl"
                     style={{ background: project.gradient }}
                   >
-                    {project.title}
+                    {project.subtitle}
                   </div>
                   <CardContent className="p-6">
                     <div className="mb-4">
