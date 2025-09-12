@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+move import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,11 +7,6 @@ import { motion, useScroll, useTransform, useInView } from "framer-motion";
 
 const Projects = () => {
   const [selectedProject, setSelectedProject] = useState(null);
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: false, amount: 0.2 });
-  const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 1000], [0, -100]);
-  const opacity = useTransform(scrollY, [0, 1000], [1, 0.8]);
 
   const projects = [
     {
@@ -139,14 +134,7 @@ const Projects = () => {
   return (
     <section className="py-24 px-6 md:px-12 lg:px-24">
       <div className="max-w-6xl mx-auto">
-        <motion.div
-          ref={ref}
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
         <h2 className="text-3xl md:text-4xl font-light mb-16">Cool Projects I've Built</h2>
-        </motion.div>
         
         <div className="grid md:grid-cols-2 gap-8">
           {projects.map((project, index) => {

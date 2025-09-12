@@ -5,8 +5,6 @@ import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 
 const Experience = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: false, amount: 0.2 });
 
   const achievements = [
     {
@@ -60,14 +58,7 @@ const Experience = () => {
   return (
     <section className="py-24 px-6 md:px-12 lg:px-24">
       <div className="max-w-6xl mx-auto">
-        <motion.div
-          ref={ref}
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
-          <h2 className="text-3xl md:text-4xl font-light mb-16">Experience & Achievements</h2>
-        </motion.div>
+        <h2 className="text-3xl md:text-4xl font-light mb-16">Experience & Achievements</h2>
         
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Achievements & Competitions */}

@@ -5,8 +5,6 @@ import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 
 const Links = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: false, amount: 0.2 });
 
   const links = [
     {
@@ -38,17 +36,10 @@ const Links = () => {
   return (
     <section className="py-24 px-6 md:px-12 lg:px-24">
       <div className="max-w-4xl mx-auto text-center">
-        <motion.div
-          ref={ref}
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
-          <h2 className="text-3xl md:text-4xl font-light mb-6">Let's Connect</h2>
-          <p className="text-muted-foreground text-lg mb-16 max-w-2xl mx-auto">
-            Interested in collaborating or just want to chat? Here's where you can find me online.
-          </p>
-        </motion.div>
+        <h2 className="text-3xl md:text-4xl font-light mb-6">Let's Connect</h2>
+        <p className="text-muted-foreground text-lg mb-16 max-w-2xl mx-auto">
+          Interested in collaborating or just want to chat? Here's where you can find me online.
+        </p>
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
           {links.map((link, index) => {
@@ -89,12 +80,7 @@ const Links = () => {
           })}
         </div>
 
-        <motion.div 
-          className="text-center"
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-          transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-        >
+        <div className="text-center">
           <p className="text-muted-foreground mb-6">
             Want to work together on something cool?
           </p>
@@ -104,7 +90,7 @@ const Links = () => {
               Let's Talk
             </a>
           </Button>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
