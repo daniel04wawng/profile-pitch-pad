@@ -1,73 +1,86 @@
-# Welcome to your Lovable project
+# Daniel Wang - Portfolio
 
-## Project info
+A modern, responsive portfolio website showcasing my projects in AI, product management, and software development.
 
-**URL**: https://lovable.dev/projects/a1a3b742-778b-4211-acde-93e3f1c24609
+## Features
 
-## How can I edit this code?
+- **Responsive Design**: Optimized for all device sizes
+- **Interactive Animations**: Smooth scroll-triggered animations using Framer Motion
+- **Project Showcase**: Detailed project modals with images and comprehensive stories
+- **Experience Timeline**: Professional experience and achievements
+- **Contact Links**: Easy access to social media and professional profiles
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/a1a3b742-778b-4211-acde-93e3f1c24609) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
+## Technologies Used
 
 This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Vite** - Fast build tool and development server
+- **TypeScript** - Type-safe JavaScript
+- **React** - Modern UI library
+- **shadcn-ui** - Beautiful, accessible component library
+- **Tailwind CSS** - Utility-first CSS framework
+- **Framer Motion** - Animation library for smooth interactions
 
-## How can I deploy this project?
+## Getting Started
 
-Simply open [Lovable](https://lovable.dev/projects/a1a3b742-778b-4211-acde-93e3f1c24609) and click on Share -> Publish.
+### Prerequisites
 
-## Can I connect a custom domain to my Lovable project?
+- Node.js (v16 or higher)
+- npm or yarn
 
-Yes, you can!
+### Installation
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```sh
+# Clone the repository
+git clone https://github.com/daniel04wawng/profile-pitch-pad.git
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+# Navigate to the project directory
+cd profile-pitch-pad
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+```
+
+### Building for Production
+
+```sh
+# Build the project
+npm run build
+
+# Preview the production build
+npm run preview
+```
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── portfolio/
+│   │   ├── Hero.tsx          # Landing section with bio
+│   │   ├── Projects.tsx      # Project gallery and modals
+│   │   ├── Experience.tsx    # Work experience and achievements
+│   │   └── Links.tsx         # Social media and contact links
+│   └── ui/                   # Reusable UI components
+├── pages/
+│   └── Index.tsx             # Main page component
+└── lib/
+    └── utils.ts              # Utility functions
+```
+
+## Deployment
+
+This portfolio is deployed on Vercel and automatically updates when changes are pushed to the main branch.
+
+## Contact
+
+- **GitHub**: [@daniel04wawng](https://github.com/daniel04wawng)
+- **LinkedIn**: [Daniel Wang](https://linkedin.com/in/daniel04wang)
+- **Email**: daniel.wang@berkeley.edu
+
+---
+
+Built with ❤️ by Daniel Wang
