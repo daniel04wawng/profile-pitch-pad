@@ -83,4 +83,4 @@ This portfolio is deployed on Vercel and automatically updates when changes are 
 
 ---
 
-Built with ❤️ by Daniel Wang# Force Vercel deployment
+Built by Daniel Wang
