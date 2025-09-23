@@ -32,7 +32,7 @@ const Hero = () => {
               </h1>
               
               <p className="text-lg text-muted-foreground max-w-2xl leading-relaxed">
-                I just finished my third year at Ivey Business School in Canada, and I'm now on leave to solve some of the largest problems in the world. I am passionate about creating unforgettable expereinces through technology + community
+                I just finished my third year at Ivey Business School in Canada, and I'm now on a journey to solve some of the largest problems in the world through product and software. I am passionate about creating unforgettable expereinces through technology + community
               </p>
             </div>
             <div className="mb-8">
