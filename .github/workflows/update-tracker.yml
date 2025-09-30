@@ -1,0 +1,39 @@
+name: Update Productivity Tracker
+
+on:
+  pull_request:
+    types: [review_requested]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tracker repo
+        uses: actions/checkout@v4
+        with:
+          repository: daniel04wawng/abundant-productivity-tracker
+          path: tracker
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd tracker
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Update tracker
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_OWNER: daniel04wawng
+          GH_REPO: profile-pitch-pad
+          MODE: tracker
+          TRACK_BY: requester
+          GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          cd tracker
+          python sync_github_to_sheets.py
