@@ -3,6 +3,7 @@ name: Update Productivity Tracker
 on:
   pull_request:
     types: [review_requested]
+  workflow_dispatch:
 
 jobs:
   update:
