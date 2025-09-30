@@ -32,7 +32,11 @@ jobs:
 
       - name: Update tracker
         env:
+<<<<<<< HEAD
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+=======
           GH_TOKEN: ${{ secrets.GH_PAT }}
+>>>>>>> origin/main
           GH_OWNER: daniel04wawng
           GH_REPO: profile-pitch-pad
           MODE: tracker
@@ -41,4 +45,6 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: |
           cd tracker
+          echo "Testing token access..."
+          curl -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/daniel04wawng/profile-pitch-pad -s | head -n 5
           python sync_github_to_sheets.py
