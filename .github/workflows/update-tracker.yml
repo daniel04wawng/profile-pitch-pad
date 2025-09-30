@@ -32,7 +32,7 @@ jobs:
 
       - name: Update tracker
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
           GH_OWNER: daniel04wawng
           GH_REPO: profile-pitch-pad
           MODE: tracker
