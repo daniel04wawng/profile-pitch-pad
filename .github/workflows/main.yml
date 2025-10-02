@@ -1,0 +1,205 @@
+name: "PR Analytics (Single Repo, Downloadable + Excel)"
+
+on:
+  schedule:
+    - cron: "0 16 * * MON"   # 9:00 AM PDT (Mar–Nov)
+    - cron: "0 17 * * MON"   # 9:00 AM PST (Nov–Mar)
+  workflow_dispatch:
+    inputs:
+      report_date_start:
+        description: "Report date start (d/MM/yyyy), leave empty to auto-use last week"
+        required: false
+      report_date_end:
+        description: "Report date end (d/MM/yyyy), leave empty to auto-use last week"
+        required: false
+
+jobs:
+  build-report:
+    name: "Build PR analytics for this repo"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read     # read PRs / contents in this repo
+    env:
+      TZ_REGION: "America/Los_Angeles"
+      GH_REPO: ${{ github.repository }}        # e.g., my-org/my-repo
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}    # gh CLI uses this automatically
+
+    steps:
+      - id: guard
+        name: "Run only at 9:00 AM Pacific"
+        run: |
+          hr=$(TZ=${TZ_REGION} date +%H)
+          if [ "$hr" = "09" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "It's 09:00 in ${TZ_REGION} — proceeding."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Not 09:00 in ${TZ_REGION} (local hour is $hr) — skipping."
+          fi
+
+      - name: "Set date range (defaults to last week Mon–Sun in Pacific)"
+        if: steps.guard.outputs.run == 'true'
+        id: daterange
+        shell: bash
+        run: |
+          set -euo pipefail
+          IN_START='${{ inputs.report_date_start }}'
+          IN_END='${{ inputs.report_date_end }}'
+
+          if [ -z "$IN_START" ] || [ -z "$IN_END" ]; then
+            last_sun=$(TZ=${TZ_REGION} date -d "last sunday" +%Y-%m-%d)
+            start_iso=$(TZ=${TZ_REGION} date -d "$last_sun -6 days" +%Y-%m-%d) # last Monday
+            end_iso=$last_sun                                                  # last Sunday
+          else
+            parse_to_iso() {
+              d=$(echo "$1" | awk -F'/' '{print $1}')
+              m=$(echo "$1" | awk -F'/' '{print $2}')
+              y=$(echo "$1" | awk -F'/' '{print $3}')
+              printf "%04d-%02d-%02d\n" "$y" "$m" "$d"
+            }
+            start_iso=$(parse_to_iso "$IN_START")
+            end_iso=$(parse_to_iso "$IN_END")
+          fi
+
+          start_label=$(date -d "$start_iso" +%d-%m-%Y)
+          end_label=$(date -d "$end_iso" +%d-%m-%Y)
+
+          echo "start_iso=$start_iso" >> "$GITHUB_OUTPUT"
+          echo "end_iso=$end_iso" >> "$GITHUB_OUTPUT"
+          echo "start_label=$start_label" >> "$GITHUB_OUTPUT"
+          echo "end_label=$end_label" >> "$GITHUB_OUTPUT"
+          echo "Using range: $start_iso .. $end_iso"
+
+      - name: "Prepare workspace"
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          rm -rf out && mkdir -p out/per_repo
+
+      - name: "Collect PRs and build CSV"
+        if: steps.guard.outputs.run == 'true'
+        shell: bash
+        env:
+          START_ISO: ${{ steps.daterange.outputs.start_iso }}
+          END_ISO:   ${{ steps.daterange.outputs.end_iso }}
+        run: |
+          set -euo pipefail
+          command -v jq >/dev/null 2>&1 || { sudo apt-get update -y && sudo apt-get install -y jq; }
+
+          REPO="${GH_REPO}"
+          SAFE_REPO=$(echo "$REPO" | tr '/ ' '__')
+
+          COMBINED="out/pr_analytics_${START_ISO}_to_${END_ISO}.csv"
+          PERREPO="out/per_repo/${SAFE_REPO}_${START_ISO}_to_${END_ISO}.csv"
+
+          echo "repo,number,title,state,author,created_at,merged_at,closed_at" > "$COMBINED"
+          echo "repo,number,title,state,author,created_at,merged_at,closed_at" > "$PERREPO"
+
+          echo "Fetching PRs for $REPO between $START_ISO and $END_ISO ..."
+          mapfile -t pr_numbers < <(
+            gh api --paginate \
+              -X GET "search/issues" \
+              -f q="repo:${REPO} type:pr created:${START_ISO}..${END_ISO}" \
+              -f per_page=100 \
+            | jq -r '.items[].number' | sort -n
+          )
+
+          for num in "${pr_numbers[@]:-}"; do
+            pr_json=$(gh api "repos/${REPO}/pulls/${num}")
+            title=$(echo "$pr_json" | jq -r '.title' | tr '\n' ' ' | sed 's/"/'\''/g')
+            state=$(echo "$pr_json" | jq -r '.state')
+            created_at=$(echo "$pr_json" | jq -r '.created_at')
+            merged_at=$(echo "$pr_json" | jq -r '.merged_at')
+            closed_at=$(echo "$pr_json" | jq -r '.closed_at')
+            author=$(echo "$pr_json" | jq -r '.user.login')
+
+            line="${REPO},${num},\"${title}\",${state},${author},${created_at},${merged_at},${closed_at}"
+            echo "$line" >> "$PERREPO"
+            echo "$line" >> "$COMBINED"
+          done
+
+          echo "Built CSVs: $COMBINED and $PERREPO"
+
+      - name: "Create Markdown summary"
+        if: steps.guard.outputs.run == 'true'
+        shell: bash
+        env:
+          START_LABEL: ${{ steps.daterange.outputs.start_label }}
+          END_LABEL:   ${{ steps.daterange.outputs.end_label }}
+        run: |
+          set -euo pipefail
+          SUMMARY="out/PR_Analytics_${START_LABEL}_to_${END_LABEL}.md"
+          total=$(tail -n +2 out/pr_analytics_*.csv | wc -l | tr -d ' ')
+          merged=$(tail -n +2 out/pr_analytics_*.csv | awk -F',' '$4=="closed" && $7!="null"{c++} END{print c+0}')
+          closed_unmerged=$(tail -n +2 out/pr_analytics_*.csv | awk -F',' '$4=="closed" && $7=="null"{c++} END{print c+0}')
+          opened=$(tail -n +2 out/pr_analytics_*.csv | awk -F',' 'BEGIN{print 0} END{print NR}')
+
+          {
+            echo "### 📊 Pull Request Analytics"
+            echo "**Repo:** ${{ env.GH_REPO }}"
+            echo "**Period:** ${START_LABEL} – ${END_LABEL}"
+            echo ""
+            echo "**Totals:**"
+            echo "- PRs discovered (created in period): ${opened}"
+            echo "- Merged: ${merged}"
+            echo "- Closed (unmerged): ${closed_unmerged}"
+            echo ""
+            echo "_Detailed rows available in CSV and Excel artifacts._"
+          } > "$SUMMARY"
+
+      - name: "Setup Python"
+        if: steps.guard.outputs.run == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: "Generate Excel workbook (XLSX)"
+        if: steps.guard.outputs.run == 'true'
+        shell: bash
+        env:
+          START_LABEL: ${{ steps.daterange.outputs.start_label }}
+          END_LABEL:   ${{ steps.daterange.outputs.end_label }}
+        run: |
+          set -euo pipefail
+          python - << 'PY'
+import glob, os
+import pandas as pd
+
+md_start = os.environ.get("START_LABEL")
+md_end = os.environ.get("END_LABEL")
+
+combined_csv = glob.glob("out/pr_analytics_*_to_*.csv")[0]
+df = pd.read_csv(combined_csv)
+
+opened = len(df)
+merged = (df["state"].eq("closed") & df["merged_at"].notna()).sum()
+closed_unmerged = (df["state"].eq("closed") & df["merged_at"].isna()).sum()
+
+summary = pd.DataFrame({
+    "Metric": ["Period", "PRs discovered (created in period)", "Merged", "Closed (unmerged)"],
+    "Value":  [f"{md_start} – {md_end}", opened, merged, closed_unmerged],
+})
+
+xlsx_name = f"out/PR_Analytics_{md_start}_to_{md_end}.xlsx"
+with pd.ExcelWriter(xlsx_name, engine="xlsxwriter") as writer:
+    summary.to_excel(writer, sheet_name="Summary", index=False)
+    df.to_excel(writer, sheet_name="Combined", index=False)
+    # Single-repo sheet
+    if "repo" in df.columns and not df.empty:
+        repo = df["repo"].iloc[0]
+        sheet = repo.replace("/", "__")[:31]
+        df.to_excel(writer, sheet_name=sheet, index=False)
+
+print("Built Excel:", xlsx_name)
+PY
+
+      - name: "Upload artifacts (CSV + Markdown + XLSX)"
+        if: steps.guard.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-analytics-${{ steps.daterange.outputs.start_iso }}-to-${{ steps.daterange.outputs.end_iso }}
+          path: |
+            out/*.md
+            out/*.csv
+            out/per_repo/*.csv
+            out/*.xlsx
+          if-no-files-found: error
