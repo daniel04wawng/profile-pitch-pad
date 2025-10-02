@@ -1,4 +1,4 @@
-name: "PR Analytics (Single Repo, Downloadable + Excel)"
+name: "PR Analytics (CSV + Excel via Action)"
 
 on:
   schedule:
@@ -15,7 +15,6 @@ on:
 
 jobs:
   build-report:
-    name: "Build PR analytics for this repo"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,13 +30,11 @@ jobs:
           hr=$(TZ=${TZ_REGION} date +%H)
           if [ "$hr" = "09" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "It's 09:00 in ${TZ_REGION} — proceeding."
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "Not 09:00 in ${TZ_REGION} (local hour is $hr) — skipping."
           fi
 
-      - name: "Set date range (defaults to last week Mon–Sun in Pacific)"
+      - name: "Set date range"
         if: steps.guard.outputs.run == 'true'
         id: daterange
         run: |
@@ -46,16 +43,12 @@ jobs:
 
           if [ -z "$IN_START" ] || [ -z "$IN_END" ]; then
             last_sun=$(TZ=${TZ_REGION} date -d "last sunday" +%Y-%m-%d)
-            start_iso=$(TZ=${TZ_REGION} date -d "$last_sun -6 days" +%Y-%m-%d) # last Monday
-            end_iso=$last_sun                                                  # last Sunday
+            start_iso=$(TZ=${TZ_REGION} date -d "$last_sun -6 days" +%Y-%m-%d)
+            end_iso=$last_sun
           else
-            d=$(echo "$IN_START" | cut -d'/' -f1)
-            m=$(echo "$IN_START" | cut -d'/' -f2)
-            y=$(echo "$IN_START" | cut -d'/' -f3)
+            d=$(echo "$IN_START" | cut -d'/' -f1); m=$(echo "$IN_START" | cut -d'/' -f2); y=$(echo "$IN_START" | cut -d'/' -f3)
             start_iso=$(printf "%04d-%02d-%02d\n" "$y" "$m" "$d")
-            d=$(echo "$IN_END" | cut -d'/' -f1)
-            m=$(echo "$IN_END" | cut -d'/' -f2)
-            y=$(echo "$IN_END" | cut -d'/' -f3)
+            d=$(echo "$IN_END" | cut -d'/' -f1); m=$(echo "$IN_END" | cut -d'/' -f2); y=$(echo "$IN_END" | cut -d'/' -f3)
             end_iso=$(printf "%04d-%02d-%02d\n" "$y" "$m" "$d")
           fi
 
@@ -69,45 +62,32 @@ jobs:
 
       - name: "Prepare workspace"
         if: steps.guard.outputs.run == 'true'
-        run: mkdir -p out/per_repo
+        run: mkdir -p out
 
-      - name: "Collect PRs and build CSV"
+      - name: "Collect PRs into CSV"
         if: steps.guard.outputs.run == 'true'
         env:
           START_ISO: ${{ steps.daterange.outputs.start_iso }}
           END_ISO:   ${{ steps.daterange.outputs.end_iso }}
         run: |
           sudo apt-get update -y && sudo apt-get install -y jq
-          REPO="${GH_REPO}"
-          SAFE_REPO=$(echo "$REPO" | tr '/ ' '__')
-
           COMBINED="out/pr_analytics_${START_ISO}_to_${END_ISO}.csv"
-          PERREPO="out/per_repo/${SAFE_REPO}_${START_ISO}_to_${END_ISO}.csv"
-
           echo "repo,number,title,state,author,created_at,merged_at,closed_at" > "$COMBINED"
-          echo "repo,number,title,state,author,created_at,merged_at,closed_at" > "$PERREPO"
-
-          echo "Fetching PRs for $REPO between $START_ISO and $END_ISO ..."
           mapfile -t pr_numbers < <(
-            gh api --paginate \
-              -X GET "search/issues" \
-              -f q="repo:${REPO} type:pr created:${START_ISO}..${END_ISO}" \
-              -f per_page=100 \
-            | jq -r '.items[].number' | sort -n
+            gh api --paginate -X GET "search/issues" \
+              -f q="repo:${GH_REPO} type:pr created:${START_ISO}..${END_ISO}" \
+              -f per_page=100 |
+            jq -r '.items[].number' | sort -n
           )
-
           for num in "${pr_numbers[@]:-}"; do
-            pr_json=$(gh api "repos/${REPO}/pulls/${num}")
+            pr_json=$(gh api "repos/${GH_REPO}/pulls/${num}")
             title=$(echo "$pr_json" | jq -r '.title' | tr '\n' ' ' | sed 's/"/'\''/g')
             state=$(echo "$pr_json" | jq -r '.state')
             created_at=$(echo "$pr_json" | jq -r '.created_at')
             merged_at=$(echo "$pr_json" | jq -r '.merged_at')
             closed_at=$(echo "$pr_json" | jq -r '.closed_at')
             author=$(echo "$pr_json" | jq -r '.user.login')
-
-            line="${REPO},${num},\"${title}\",${state},${author},${created_at},${merged_at},${closed_at}"
-            echo "$line" >> "$PERREPO"
-            echo "$line" >> "$COMBINED"
+            echo "${GH_REPO},${num},\"${title}\",${state},${author},${created_at},${merged_at},${closed_at}" >> "$COMBINED"
           done
 
       - name: "Create Markdown summary"
@@ -127,64 +107,19 @@ jobs:
             echo "**Period:** ${START_LABEL} - ${END_LABEL}"
             echo ""
             echo "**Totals:**"
-            echo "- PRs discovered (created in period): ${opened}"
+            echo "- PRs discovered: ${opened}"
             echo "- Merged: ${merged}"
             echo "- Closed (unmerged): ${closed_unmerged}"
           } > "$SUMMARY"
 
-      - name: "Setup Python"
+      - name: "Convert CSV to Excel"
         if: steps.guard.outputs.run == 'true'
-        uses: actions/setup-python@v5
+        uses: jlumbroso/csv-to-xlsx-action@v1.2
         with:
-          python-version: '3.x'
+          csvFile: out/pr_analytics_${{ steps.daterange.outputs.start_iso }}_to_${{ steps.daterange.outputs.end_iso }}.csv
+          xlsxFile: out/PR_Analytics_${{ steps.daterange.outputs.start_label }}_to_${{ steps.daterange.outputs.end_label }}.xlsx
 
-      - name: "Install Python dependencies"
-        if: steps.guard.outputs.run == 'true'
-        run: |
-          python -m pip install --upgrade pip
-          pip install pandas xlsxwriter
-
-      - name: "Generate Excel workbook (XLSX)"
-        if: steps.guard.outputs.run == 'true'
-        env:
-          START_LABEL: ${{ steps.daterange.outputs.start_label }}
-          END_LABEL:   ${{ steps.daterange.outputs.end_label }}
-        run: |
-          # Write Python script to a file to avoid YAML parsing issues
-          cat << 'PY' > build_xlsx.py
-import glob, os
-import pandas as pd
-
-md_start = os.environ.get("START_LABEL")
-md_end = os.environ.get("END_LABEL")
-
-combined_csv = glob.glob("out/pr_analytics_*_to_*.csv")[0]
-df = pd.read_csv(combined_csv)
-
-opened = len(df)
-merged = (df["state"].eq("closed") & df["merged_at"].notna()).sum()
-closed_unmerged = (df["state"].eq("closed") & df["merged_at"].isna()).sum()
-
-summary = pd.DataFrame({
-    "Metric": ["Period", "PRs discovered (created in period)", "Merged", "Closed (unmerged)"],
-    "Value":  [f"{md_start} - {md_end}", opened, merged, closed_unmerged],
-})
-
-xlsx_name = f"out/PR_Analytics_{md_start}_to_{md_end}.xlsx"
-with pd.ExcelWriter(xlsx_name, engine="xlsxwriter") as writer:
-    summary.to_excel(writer, sheet_name="Summary", index=False)
-    df.to_excel(writer, sheet_name="Combined", index=False)
-    if "repo" in df.columns and not df.empty:
-        repo = df["repo"].iloc[0]
-        sheet = repo.replace("/", "__")[:31]
-        df.to_excel(writer, sheet_name=sheet, index=False)
-
-print("Built Excel:", xlsx_name)
-PY
-
-          python build_xlsx.py
-
-      - name: "Upload artifacts (CSV + Markdown + XLSX)"
+      - name: "Upload artifacts"
         if: steps.guard.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -192,7 +127,4 @@ PY
           path: |
             out/*.md
             out/*.csv
-            out/per_repo/*.csv
             out/*.xlsx
-
-
