@@ -18,7 +18,7 @@ jobs:
     name: "Build PR analytics for this repo"
     runs-on: ubuntu-latest
     permissions:
-      contents: read       # read-only; nothing in the repo will be changed
+      contents: read
     env:
       TZ_REGION: "America/Los_Angeles"
       GH_REPO: ${{ github.repository }}
@@ -31,8 +31,10 @@ jobs:
           hr=$(TZ=${TZ_REGION} date +%H)
           if [ "$hr" = "09" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "It's 09:00 in ${TZ_REGION} — proceeding."
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Not 09:00 in ${TZ_REGION} (local hour is $hr) — skipping."
           fi
 
       - name: "Set date range (defaults to last week Mon–Sun in Pacific)"
@@ -44,8 +46,8 @@ jobs:
 
           if [ -z "$IN_START" ] || [ -z "$IN_END" ]; then
             last_sun=$(TZ=${TZ_REGION} date -d "last sunday" +%Y-%m-%d)
-            start_iso=$(TZ=${TZ_REGION} date -d "$last_sun -6 days" +%Y-%m-%d)
-            end_iso=$last_sun
+            start_iso=$(TZ=${TZ_REGION} date -d "$last_sun -6 days" +%Y-%m-%d) # last Monday
+            end_iso=$last_sun                                                  # last Sunday
           else
             d=$(echo "$IN_START" | cut -d'/' -f1)
             m=$(echo "$IN_START" | cut -d'/' -f2)
@@ -78,10 +80,14 @@ jobs:
           sudo apt-get update -y && sudo apt-get install -y jq
           REPO="${GH_REPO}"
           SAFE_REPO=$(echo "$REPO" | tr '/ ' '__')
+
           COMBINED="out/pr_analytics_${START_ISO}_to_${END_ISO}.csv"
           PERREPO="out/per_repo/${SAFE_REPO}_${START_ISO}_to_${END_ISO}.csv"
+
           echo "repo,number,title,state,author,created_at,merged_at,closed_at" > "$COMBINED"
           echo "repo,number,title,state,author,created_at,merged_at,closed_at" > "$PERREPO"
+
+          echo "Fetching PRs for $REPO between $START_ISO and $END_ISO ..."
           mapfile -t pr_numbers < <(
             gh api --paginate \
               -X GET "search/issues" \
@@ -89,6 +95,7 @@ jobs:
               -f per_page=100 \
             | jq -r '.items[].number' | sort -n
           )
+
           for num in "${pr_numbers[@]:-}"; do
             pr_json=$(gh api "repos/${REPO}/pulls/${num}")
             title=$(echo "$pr_json" | jq -r '.title' | tr '\n' ' ' | sed 's/"/'\''/g')
@@ -97,6 +104,7 @@ jobs:
             merged_at=$(echo "$pr_json" | jq -r '.merged_at')
             closed_at=$(echo "$pr_json" | jq -r '.closed_at')
             author=$(echo "$pr_json" | jq -r '.user.login')
+
             line="${REPO},${num},\"${title}\",${state},${author},${created_at},${merged_at},${closed_at}"
             echo "$line" >> "$PERREPO"
             echo "$line" >> "$COMBINED"
@@ -114,9 +122,9 @@ jobs:
           closed_unmerged=$(tail -n +2 out/pr_analytics_*.csv | awk -F',' '$4=="closed" && $7=="null"{c++} END{print c+0}')
           opened=$(tail -n +2 out/pr_analytics_*.csv | awk -F',' 'BEGIN{print 0} END{print NR}')
           {
-            echo "### 📊 Pull Request Analytics"
+            echo "### PR Analytics"
             echo "**Repo:** ${{ env.GH_REPO }}"
-            echo "**Period:** ${START_LABEL} – ${END_LABEL}"
+            echo "**Period:** ${START_LABEL} - ${END_LABEL}"
             echo ""
             echo "**Totals:**"
             echo "- PRs discovered (created in period): ${opened}"
@@ -133,6 +141,7 @@ jobs:
       - name: "Install Python dependencies"
         if: steps.guard.outputs.run == 'true'
         run: |
+          python -m pip install --upgrade pip
           pip install pandas xlsxwriter
 
       - name: "Generate Excel workbook (XLSX)"
@@ -141,7 +150,8 @@ jobs:
           START_LABEL: ${{ steps.daterange.outputs.start_label }}
           END_LABEL:   ${{ steps.daterange.outputs.end_label }}
         run: |
-          cat > build_xlsx.py << 'PY'
+          # Write Python script to a file to avoid YAML parsing issues
+          cat << 'PY' > build_xlsx.py
 import glob, os
 import pandas as pd
 
@@ -184,4 +194,5 @@ PY
             out/*.csv
             out/per_repo/*.csv
             out/*.xlsx
+
 
