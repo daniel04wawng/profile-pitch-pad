@@ -18,11 +18,11 @@ jobs:
     name: "Build PR analytics for this repo"
     runs-on: ubuntu-latest
     permissions:
-      contents: read     # read PRs / contents in this repo
+      contents: read       # read-only; nothing in the repo will be changed
     env:
       TZ_REGION: "America/Los_Angeles"
       GH_REPO: ${{ github.repository }}        # e.g., my-org/my-repo
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}    # gh CLI uses this automatically
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}    # gh CLI will use this automatically
 
     steps:
       - id: guard
@@ -152,6 +152,12 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: "Install Python dependencies"
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas xlsxwriter
+
       - name: "Generate Excel workbook (XLSX)"
         if: steps.guard.outputs.run == 'true'
         shell: bash
@@ -160,7 +166,7 @@ jobs:
           END_LABEL:   ${{ steps.daterange.outputs.end_label }}
         run: |
           set -euo pipefail
-          python - << 'PY'
+          python <<'PY'
 import glob, os
 import pandas as pd
 
@@ -183,7 +189,7 @@ xlsx_name = f"out/PR_Analytics_{md_start}_to_{md_end}.xlsx"
 with pd.ExcelWriter(xlsx_name, engine="xlsxwriter") as writer:
     summary.to_excel(writer, sheet_name="Summary", index=False)
     df.to_excel(writer, sheet_name="Combined", index=False)
-    # Single-repo sheet
+    # Add a sheet named after this repo (sanitized)
     if "repo" in df.columns and not df.empty:
         repo = df["repo"].iloc[0]
         sheet = repo.replace("/", "__")[:31]
