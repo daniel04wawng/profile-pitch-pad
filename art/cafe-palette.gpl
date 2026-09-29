@@ -1,0 +1,38 @@
+GIMP Palette
+Name: Daniel's cafe
+Columns: 6
+#
+ 59  36  24	wood 1 darkest
+ 92  58  36	wood 2
+122  78  49	wood 3
+156 106  68	wood 4
+185 133  85	wood 5
+212 165 116	wood 6 light
+247 239 225	cream 1
+239 224 196	cream 2
+220 199 161	cream 3
+ 47  74  42	sage 1 dark
+ 74 107  58	sage 2
+111 154  85	sage 3
+155 191 122	sage 4
+200 220 168	sage 5 light
+142  63  44	terracotta 1
+196 106  74	terracotta 2
+231 154 122	terracotta 3
+242 193 176	blush
+138 106  44	brass dark
+201 161  90	brass
+255 217 138	glow
+255 243 207	glow hot
+ 26  29  49	night 1
+ 42  47  82	night 2
+ 69  80 125	night 3
+123 132 196	dusk
+188 211 234	sky day
+ 26  21  18	ink
+ 58  48  42	charcoal
+107  98  90	stone
+163 154 143	pebble
+255 255 255	white
+232 168 196	flower pink
+242 204 107	flower yellow

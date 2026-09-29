@@ -1,0 +1,238 @@
+{
+  "scene": "background.png",
+  "width": 384,
+  "height": 256,
+  "assets": [
+    {
+      "id": "pastry-counter",
+      "file": "sprites/pastry-counter.png",
+      "x": 176,
+      "y": 56,
+      "w": 98,
+      "h": 78,
+      "baseY": 131,
+      "hotspot": "projects",
+      "label": "pastry case: my projects"
+    },
+    {
+      "id": "espresso-bar",
+      "file": "sprites/espresso-bar.png",
+      "x": 184,
+      "y": 36,
+      "w": 43,
+      "h": 35,
+      "baseY": 70,
+      "hotspot": "about",
+      "label": "espresso: about me"
+    },
+    {
+      "id": "menu-board",
+      "file": "sprites/menu-board.png",
+      "x": 238,
+      "y": 32,
+      "w": 17,
+      "h": 28,
+      "baseY": 60,
+      "hotspot": "menu",
+      "label": "menu: the blog"
+    },
+    {
+      "id": "kitchen",
+      "file": "sprites/kitchen.png",
+      "x": 253,
+      "y": 28,
+      "w": 36,
+      "h": 59,
+      "baseY": 86,
+      "hotspot": "now",
+      "label": "the kitchen: in the oven"
+    },
+    {
+      "id": "till",
+      "file": "sprites/till.png",
+      "x": 248,
+      "y": 72,
+      "w": 25,
+      "h": 35,
+      "baseY": 106,
+      "hotspot": "contact",
+      "label": "the till: say hi"
+    },
+    {
+      "id": "piano",
+      "file": "sprites/piano.png",
+      "x": 290,
+      "y": 80,
+      "w": 53,
+      "h": 53,
+      "baseY": 132,
+      "hotspot": "piano",
+      "label": "piano: my music"
+    },
+    {
+      "id": "record-shelf",
+      "file": "sprites/record-shelf.png",
+      "x": 336,
+      "y": 108,
+      "w": 40,
+      "h": 43,
+      "baseY": 150,
+      "hotspot": "books",
+      "label": "shelf: books + records"
+    },
+    {
+      "id": "armchair",
+      "file": "sprites/armchair.png",
+      "x": 283,
+      "y": 140,
+      "w": 36,
+      "h": 33,
+      "baseY": 172,
+      "hotspot": "chill",
+      "label": "sit and listen"
+    },
+    {
+      "id": "sax-poster",
+      "file": "sprites/sax-poster.png",
+      "x": 326,
+      "y": 52,
+      "w": 29,
+      "h": 35,
+      "baseY": 86,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "big-table",
+      "file": "sprites/big-table.png",
+      "x": 156,
+      "y": 114,
+      "w": 90,
+      "h": 71,
+      "baseY": 182,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "booth",
+      "file": "sprites/booth.png",
+      "x": 100,
+      "y": 68,
+      "w": 79,
+      "h": 59,
+      "baseY": 124,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "window-wall",
+      "file": "sprites/window-wall.png",
+      "x": 30,
+      "y": 46,
+      "w": 121,
+      "h": 169,
+      "baseY": 214,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "front-wall-right",
+      "file": "sprites/front-wall-right.png",
+      "x": 262,
+      "y": 139,
+      "w": 122,
+      "h": 65,
+      "baseY": 203,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "planter-center",
+      "file": "sprites/planter-center.png",
+      "x": 146,
+      "y": 160,
+      "w": 32,
+      "h": 57,
+      "baseY": 215,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "planter-left",
+      "file": "sprites/planter-left.png",
+      "x": 112,
+      "y": 184,
+      "w": 28,
+      "h": 33,
+      "baseY": 215,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "flowers-right",
+      "file": "sprites/flowers-right.png",
+      "x": 262,
+      "y": 148,
+      "w": 29,
+      "h": 31,
+      "baseY": 177,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "aframe-sign",
+      "file": "sprites/aframe-sign.png",
+      "x": 82,
+      "y": 170,
+      "w": 29,
+      "h": 42,
+      "baseY": 210,
+      "hotspot": "now",
+      "label": "special of the day"
+    },
+    {
+      "id": "bistro-set",
+      "file": "sprites/bistro-set.png",
+      "x": 42,
+      "y": 146,
+      "w": 53,
+      "h": 46,
+      "baseY": 190,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "lamp-post",
+      "file": "sprites/lamp-post.png",
+      "x": 15,
+      "y": 66,
+      "w": 15,
+      "h": 91,
+      "baseY": 155,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "bike",
+      "file": "sprites/bike.png",
+      "x": 0,
+      "y": 115,
+      "w": 33,
+      "h": 35,
+      "baseY": 148,
+      "hotspot": null,
+      "label": null
+    },
+    {
+      "id": "trees-front",
+      "file": "sprites/trees-front.png",
+      "x": 296,
+      "y": 153,
+      "w": 88,
+      "h": 103,
+      "baseY": 256,
+      "hotspot": null,
+      "label": null
+    }
+  ]
+}
