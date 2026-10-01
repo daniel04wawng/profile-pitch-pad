@@ -1,3 +1,12 @@
+# Daniel's café: art
+
+**Current pipeline (isometric pixel art, drawn in code):**
+- `draw_room.py`: the empty room (floor + two walls) -> `public/cafe/room.png`. Its floor's back corner is the editor's grid origin.
+- `draw_iso.py`: furniture and small objects -> `public/cafe/sprites/iso-*.png`.
+- Place and arrange everything in the editor at `/cafe?edit` (dev server only).
+
+Older material lives in `archive/` (see its README). The notes below are from the original spec.
+
 # Daniel's café: pixel art kit
 
 Everything the café's art needs to follow so any piece, generated or hand-drawn, drops into the site.

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Stage } from "./Stage";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
-import { BASE, HOTSPOTS, type Layout, type SpriteDef } from "./types";
+import { BASE, DEFAULT_GRID, HOTSPOTS, snapIso, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -58,12 +58,15 @@ export function Editor({ initial }: { initial: Layout }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [showBg, setShowBg] = useState(true);
   const [outlines, setOutlines] = useState(true);
-  const [grid, setGrid] = useState(false);
+  const [grid, setGrid] = useState(true);
+  const [snap, setSnap] = useState(true);
+  const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
   const [playing, setPlaying] = useState(false);
   const [status, setStatus] = useState<"saved" | "unsaved" | "saving" | "error">("saved");
   const [painting, setPainting] = useState<string | null>(null);
   const [versions, setVersions] = useState<Record<string, number>>({});
-  const drag = useRef<{ id: string; sx: number; sy: number; x: number; y: number; baseY: number } | null>(null);
+  const drag = useRef<{ id: string; sx: number; sy: number; x: number; y: number; baseY: number; footX: number } | null>(null);
+  const gridOf = (l: Layout) => l.grid ?? DEFAULT_GRID;
 
   // ---------- history ----------
 
@@ -129,8 +132,9 @@ export function Editor({ initial }: { initial: Layout }) {
   // Place an asset with its feet at `at` (scene pixels); defaults to the middle of the scene.
   const place = async (file: string, at?: { x: number; y: number }) => {
     const { w, h } = sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? 0}`));
-    const fx = at ? Math.round(at.x) : Math.round(layout.width / 2);
-    const fy = at ? Math.round(at.y) : Math.round(layout.height / 2 + h / 2);
+    let fx = at ? Math.round(at.x) : Math.round(layout.width / 2);
+    let fy = at ? Math.round(at.y) : Math.round(layout.height / 2 + h / 2);
+    if (snap) ({ x: fx, y: fy } = snapIso(fx, fy, gridOf(layout)));
     const id = uniqueId(nameOf(file));
     edit((l) => ({
       ...l,
@@ -243,12 +247,12 @@ export function Editor({ initial }: { initial: Layout }) {
         setSelected(null);
       } else if (sel && !mod) {
         const step = e.shiftKey ? 8 : 1;
-        const moves: Record<string, [number, number]> = {
-          ArrowLeft: [-step, 0],
-          ArrowRight: [step, 0],
-          ArrowUp: [0, -step],
-          ArrowDown: [0, step],
-        };
+        // With snap on, arrows hop one grid step (half a tile) and stay on the grid.
+        const gx = gridOf(layout).tile / 2;
+        const gy = gridOf(layout).tile / 4;
+        const moves: Record<string, [number, number]> = snap
+          ? { ArrowLeft: [-gx, 0], ArrowRight: [gx, 0], ArrowUp: [0, -gy], ArrowDown: [0, gy] }
+          : { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
         if (moves[e.key]) {
           e.preventDefault();
           const [dx, dy] = moves[e.key];
@@ -301,6 +305,7 @@ export function Editor({ initial }: { initial: Layout }) {
             ["background", showBg, setShowBg],
             ["outlines", outlines, setOutlines],
             ["grid", grid, setGrid],
+            ["snap", snap, setSnap],
           ] as const
         ).map(([name, v, set]) => (
           <label key={name} className="flex items-center gap-1.5 text-[12px]">
@@ -329,6 +334,7 @@ export function Editor({ initial }: { initial: Layout }) {
             showOutlines={outlines}
             showGrid={grid}
             versions={versions}
+            marker={marker}
             handlers={{
               onHover: (s) => !drag.current && setHovered(s?.id ?? null),
               onPointerDown: (s, p, e) => {
@@ -338,13 +344,20 @@ export function Editor({ initial }: { initial: Layout }) {
                 // one undo step per drag
                 past.current.push(layout);
                 future.current = [];
-                drag.current = { id: s.id, sx: p.x, sy: p.y, x: s.x, y: s.y, baseY: s.baseY };
+                drag.current = { id: s.id, sx: p.x, sy: p.y, x: s.x, y: s.y, baseY: s.baseY, footX: s.x + s.w / 2 };
               },
               onPointerMove: (p) => {
                 const d = drag.current;
                 if (!d) return;
-                const dx = Math.round(p.x - d.sx);
-                const dy = Math.round(p.y - d.sy);
+                let dx = Math.round(p.x - d.sx);
+                let dy = Math.round(p.y - d.sy);
+                if (snap) {
+                  // snap the object's base (bottom-center) onto the iso grid
+                  const foot = snapIso(d.footX + dx, d.baseY + dy, gridOf(layout));
+                  dx = Math.round(foot.x - d.footX);
+                  dy = Math.round(foot.y - d.baseY);
+                  setMarker(foot);
+                }
                 editLive((l) => ({
                   ...l,
                   assets: l.assets.map((a) => (a.id === d.id ? { ...a, x: d.x + dx, y: d.y + dy, baseY: d.baseY + dy } : a)),
@@ -353,6 +366,7 @@ export function Editor({ initial }: { initial: Layout }) {
               onPointerUp: () => {
                 const d = drag.current;
                 drag.current = null;
+                setMarker(null);
                 // a click without movement shouldn't leave an empty undo step
                 const s = d && layout.assets.find((a) => a.id === d.id);
                 if (s && s.x === d.x && s.y === d.y) past.current.pop();
@@ -365,7 +379,7 @@ export function Editor({ initial }: { initial: Layout }) {
             }}
           />
           <p className="pointer-events-none absolute bottom-2 left-3 text-[11px] opacity-40">
-            drag to move · arrows nudge (⇧ 8px) · [ ] layer · F flip · H hide · ⌘D duplicate · ⌫ delete · ⌘Z undo · P play
+            drag to move · arrows move{snap ? " 1 grid step" : " 1px (⇧ 8px)"} · [ ] layer · F flip · H hide · ⌘D duplicate · ⌫ delete · ⌘Z undo · P play
           </p>
         </div>
 

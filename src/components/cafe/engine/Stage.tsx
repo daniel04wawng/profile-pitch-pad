@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { BASE, type Layout, type SpriteDef } from "./types";
+import { BASE, DEFAULT_GRID, type Layout, type SpriteDef } from "./types";
 
 // Alpha masks so clicks land on the actual drawn pixels, not the sprite's bounding box.
 function useAlphaMasks(layout: Layout | null, versions: Record<string, number>) {
@@ -48,6 +48,7 @@ export function Stage({
   showOutlines = false,
   showGrid = false,
   versions = {},
+  marker = null,
   handlers,
   children,
 }: {
@@ -61,6 +62,8 @@ export function Stage({
   showGrid?: boolean;
   // Bumped after a pixel edit so the browser reloads that PNG instead of using its cache.
   versions?: Record<string, number>;
+  // Floor tile to highlight (scene point at a tile's center), e.g. where a dragged object will land.
+  marker?: { x: number; y: number } | null;
   handlers: StageHandlers;
   children?: React.ReactNode;
 }) {
@@ -83,6 +86,7 @@ export function Stage({
   const ox = Math.round((box.w - layout.width * scale) / 2);
   const oy = Math.round((box.h - layout.height * scale) / 2);
 
+  const g = layout.grid ?? DEFAULT_GRID;
   const ordered = useMemo(() => [...layout.assets].sort((a, b) => a.baseY - b.baseY), [layout.assets]);
 
   const toScene = (e: { clientX: number; clientY: number }) => {
@@ -167,15 +171,37 @@ export function Stage({
             />
           ),
         )}
-        {showGrid && (
-          <div
-            className="pointer-events-none absolute inset-0 z-[999]"
-            style={{
-              backgroundImage:
-                "linear-gradient(to right, rgba(0,255,255,.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,255,255,.18) 1px, transparent 1px)",
-              backgroundSize: "16px 16px",
-            }}
-          />
+        {(showGrid || marker) && (
+          <svg
+            className="pointer-events-none absolute left-0 top-0 z-[999] overflow-visible"
+            width={layout.width}
+            height={layout.height}
+            shapeRendering="crispEdges"
+          >
+            {showGrid && (
+              <>
+                <defs>
+                  <pattern id="iso-grid" patternUnits="userSpaceOnUse" x={g.ox} y={g.oy} width={g.tile} height={g.tile / 2}>
+                    <path
+                      d={`M0 ${g.tile / 4} L${g.tile / 2} 0 L${g.tile} ${g.tile / 4} L${g.tile / 2} ${g.tile / 2} Z`}
+                      fill="none"
+                      stroke="rgba(120,255,240,0.35)"
+                      strokeWidth={0.5}
+                    />
+                  </pattern>
+                </defs>
+                <rect width={layout.width} height={layout.height} fill="url(#iso-grid)" />
+              </>
+            )}
+            {marker && (
+              <path
+                d={`M${marker.x - g.tile / 2} ${marker.y} L${marker.x} ${marker.y - g.tile / 4} L${marker.x + g.tile / 2} ${marker.y} L${marker.x} ${marker.y + g.tile / 4} Z`}
+                fill="rgba(155,191,122,0.35)"
+                stroke="#9bbf7a"
+                strokeWidth={0.75}
+              />
+            )}
+          </svg>
         )}
         {children}
       </div>
