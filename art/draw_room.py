@@ -22,11 +22,15 @@ from draw_iso import P as BASE_P
 # Colors sampled from the original café: orange-brown planks with dark seams and bright
 # reflections, warm cream walls over dark wood paneling.
 P = {**BASE_P, **{k: tuple(int(v[i : i + 2], 16) for i in (1, 3, 5)) + (255,) for k, v in {
-    "wall0": "#d9b585", "wall1": "#e6c697", "wall2": "#f0d6aa",
-    "glow": "#e0a865", "deep0": "#2e1508", "deep1": "#4a2410",
-    "plank0": "#884517", "plank1": "#9e5a26", "plank2": "#a65927", "plank3": "#b1652b",
-    "seam": "#5a311c", "shine0": "#d0732a", "shine1": "#e78e31",
-    "panel0": "#4f2a16", "panel1": "#6b3d22", "panel2": "#7c4a29", "rail": "#9e5a26",
+    # walls: the original's lamp-lit orange-tan plaster (sampled from the high-res original)
+    "wall0": "#a4693f", "wall1": "#b97644", "wall2": "#c4814d", "wall3": "#d38c54", "wall4": "#e09a5c",
+    "glow": "#eba868", "deep0": "#2e1508", "deep1": "#4a2410",
+    # floor: golden honey planks with bright glossy reflections
+    "plank0": "#934b1c", "plank1": "#ac5f27", "plank2": "#c76b28", "plank3": "#cd7536",
+    "seam": "#6a3415", "shine0": "#e08738", "shine1": "#ffa640",
+    "panel0": "#4f2a16", "panel1": "#6b3d22", "panel2": "#8a5530", "rail": "#b0703a",
+    # navy trim and base, like the original's outer walls
+    "navy0": "#0a192f", "navy1": "#22253e", "navy2": "#363763",
 }.items()}}
 
 ART = os.path.dirname(os.path.abspath(__file__))
@@ -50,26 +54,40 @@ def floor_uv(x, y):
     return (a + b) / 2, (b - a) / 2
 
 
-def wall_color(z, along, lit):
+BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+
+
+def dither(level, x, y, ramp):
+    """Pick from a dark->light ramp at a fractional level, with ordered dithering between steps."""
+    level = max(0.0, min(len(ramp) - 1.0, level))
+    i = int(level)
+    if i < len(ramp) - 1 and (level - i) * 16 > BAYER[y % 4][x % 4]:
+        i += 1
+    return ramp[i]
+
+
+def wall_color(z, along, lit, x, y):
     if z >= WALL:
-        return "seam" if z >= WALL + CAP - 1 else "deep1"  # the cut top of the wall
-    if z >= WALL - 7:  # crown molding
-        return ("panel2" if lit else "panel1") if z in (WALL - 7, WALL - 3) else ("panel1" if lit else "panel0")
+        return "navy0" if z >= WALL + CAP - 1 else "navy1"  # the cut top of the wall
+    if z >= WALL - 6:  # crown molding
+        return "panel2" if z in (WALL - 6, WALL - 2) else ("panel1" if lit else "panel0")
     if z < 4:
         return "deep0"  # baseboard
-    if z < 48:  # dark wood paneling, framed panels every half tile
+    if z < 34:  # low wood wainscot, framed panels every half tile
         k = (along * 2) % 1
-        if k < 0.08 or z in (6, 44):
+        if k < 0.08 or z in (6, 31):
             return "panel0"
         if k < 0.14:
-            return "panel2" if lit else "panel1"  # lit panel edge
+            return "panel2" if lit else "panel1"
         return "panel1" if lit else "panel0"
-    if z < 52:
-        return "rail" if lit else "panel2"  # chair rail
-    # warm cream wall with soft stripes
-    if (along * 2) % 1 < 0.16:
-        return "wall1" if lit else "wall0"
-    return "wall2" if lit else "wall1"
+    if z < 37:
+        return "rail"  # chair rail
+    # warm plaster: brightest at mid-height, falling off toward the ceiling, corner and far ends
+    mid = 1 - abs((z - 80) / 70)
+    ends = 1 - (along / N) ** 2 * 0.6
+    corner = min(1.0, along / 2.5)
+    level = (0.6 + 3.2 * mid * ends * (0.55 + 0.45 * corner)) - (0 if lit else 0.7)
+    return dither(level, x, y, ["wall0", "wall1", "wall2", "wall3", "wall4"])
 
 
 def main():
@@ -83,7 +101,7 @@ def main():
         along = (OX - x) / HW if lit else (x - OX) / HW
         floor_y = round(OY + along * HH)
         for z in range(WALL + CAP):
-            put(x, floor_y - z, wall_color(z, along, lit))
+            put(x, floor_y - z, wall_color(z, along, lit, x, floor_y - z))
 
     # ---- floor: narrow orange-brown planks like the original, dark seams, glossy light streaks
     PLANKS = 5
@@ -104,12 +122,15 @@ def main():
             elif ((u + off) / seg_len) % 1 < 0.025:
                 c = "seam"
             else:
-                # glossy floor: soft bands of reflected light running across the planks
-                g = math.sin(u * 0.55 - v * 0.25) + 0.6 * math.sin(v * 0.9 + u * 0.15)
-                if g > 1.35:
-                    c = "shine1" if (x + y) % 2 == 0 else "shine0"
-                elif g > 1.15 and (x + y) % 2 == 0:
-                    c = "shine0"
+                # glossy floor: long streaks of reflected lamplight along the planks
+                g = math.sin(u * 0.35 - v * 0.9) + 0.5 * math.sin(v * 1.7 + 1.3)
+                lit_plank = plank_tone.setdefault(("lit", p, seg), rng.random())
+                if g > 1.15 and lit_plank < 0.7:
+                    c = "shine1" if g > 1.38 else "shine0"
+            # lamp-lit middle, dimmer toward the walls and the front edges
+            d = ((u - N * 0.5) ** 2 + (v - N * 0.5) ** 2) ** 0.5 / (N * 0.7)
+            if c in ("plank1", "plank2", "plank3") and d > 0.55 and BAYER[y % 4][x % 4] < (d - 0.55) * 40:
+                c = "plank0"
             if u < 0.15 or v < 0.15:
                 c = "deep0"
             elif (u < 0.45 or v < 0.45) and c not in ("seam",):
@@ -120,10 +141,10 @@ def main():
     for x in range(OX - N * HW, OX + N * HW + 1):
         if x <= OX:
             edge = OY + N * HH + (x - (OX - N * HW)) / 2
-            c = "steel1"
+            c = "navy2"
         else:
             edge = OY + 2 * N * HH - (x - OX) / 2
-            c = "steel0"
+            c = "navy1"
         for k in range(1, SLAB + 1):
             put(x, math.floor(edge) + k, c)
 

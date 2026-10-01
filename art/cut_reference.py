@@ -35,14 +35,27 @@ def floor(px):
     return (r > 140) & ((r - b) > 70) & (g > 70) & (g < r) & ((r + g + b) > 300)
 
 
+def rug(px):
+    """The deep red patterned rug under the piano corner."""
+    r, g, b = px[..., 0].astype(int), px[..., 1].astype(int), px[..., 2].astype(int)
+    return (r > 90) & (g < 75) & (b < 75) & ((r - g) > 45)
+
+
+def around_floor_piece(px):
+    return floor(px) | wall(px) | rug(px)
+
+
 # name: (outline in high-res pixels, what to remove inside it)
 PIECES = {
     "chalkboard-menu": ([(956, 120), (1016, 120), (1016, 238), (956, 238)], wall),
     "sax-poster": ([(1302, 214), (1418, 214), (1418, 350), (1302, 350)], wall),
     "record-art": ([(1428, 345), (1490, 345), (1490, 430), (1428, 430)], wall),
     "framed-picture-tall": ([(712, 78), (768, 78), (768, 164), (712, 164)], wall),
-    "kitchen-doorway": ([(1012, 116), (1150, 116), (1150, 340), (1012, 340)], wall),
     "wall-lamp": ([(1166, 250), (1198, 250), (1198, 300), (1166, 300)], wall),
+    "back-bar-shelves": ([(766, 34), (962, 112), (962, 196), (766, 150)], wall),
+    "espresso-station": ([(776, 178), (902, 214), (902, 268), (776, 236)], wall),
+    "piano": ([(1172, 330), (1300, 318), (1336, 372), (1350, 380), (1350, 476), (1172, 476)], around_floor_piece),
+    "record-cabinet": ([(1352, 436), (1490, 436), (1490, 566), (1352, 566)], around_floor_piece),
 }
 
 
