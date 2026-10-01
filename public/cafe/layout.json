@@ -1,25 +1,26 @@
 {
   "scene": "room.png",
-  "width": 480,
-  "height": 368,
+  "width": 672,
+  "height": 536,
   "grid": {
     "tile": 32,
-    "ox": 240,
-    "oy": 120,
-    "cols": 14,
-    "rows": 14
+    "ox": 336,
+    "oy": 198,
+    "cols": 20,
+    "rows": 20
   },
   "assets": [
     {
       "id": "iso-bookshelf",
       "file": "sprites/iso-bookshelf.png",
-      "x": 226,
-      "y": 62,
+      "x": 322,
+      "y": 140,
       "w": 45,
       "h": 75,
-      "baseY": 137,
+      "baseY": 215,
       "hotspot": "books",
       "label": "books I love"
     }
-  ]
+  ],
+  "sceneNight": "room-night.png"
 }

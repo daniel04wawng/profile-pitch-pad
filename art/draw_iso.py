@@ -20,7 +20,7 @@ ART = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(ART), "public", "cafe", "sprites")
 
 PALETTE = {
-    "ink": "#2b1d1a",
+    "ink": "#3d2418",
     "wood0": "#4a2f25", "wood1": "#6b4232", "wood2": "#8f5b3e", "wood3": "#b47a4f", "wood4": "#d29f6b",
     "cream0": "#c9b18a", "cream1": "#e2cfa8", "cream2": "#f3e6c9", "white": "#fdf8ef",
     "sage0": "#3f5a3a", "sage1": "#5f8251", "sage2": "#86a86b", "sage3": "#b5cf8f",
@@ -64,7 +64,7 @@ class Iso:
             self.px(x + dx * k + (1 if dx > 0 else -1), y + k, c)
 
     def vline(self, x, y0, y1, c):
-        for y in range(y0, y1 + 1):
+        for y in range(int(y0), int(y1) + 1):
             self.px(x, y, c)
 
     def corners(self, ox, oy, a, b):
@@ -605,9 +605,194 @@ def hanging_plant():
     return save_set("hanging-plant", s)
 
 
+# ---------------------------------------------------------------- storefront + street (batch 4)
+# Front-wall pieces run along the café's front edges. Drawn facing down-left (front-left
+# edge); flip for the front-right edge. 8 units = one tile along the wall.
+
+NAVY = ("blue0", "steel0")
+
+
+def knee_wall():
+    """Low wall segment, two tiles long: the base of the storefront."""
+    s = Iso(120, 80)
+    X0, Y0 = 50, 30
+    s.block(X0, Y0, 0, 0, 0, 16, 2, 20, "cream1", "blue0", "steel0", edge="cream2")
+    A, B, C, D = s.corners(*s.pt(X0, Y0, 0, 0, 20), 16, 2)
+    Dh = (D[0], D[1] + 20)
+    for p0 in (1, 9):  # recessed panels
+        s.poly([s.on_left_face(Dh, p0, 15), s.on_left_face(Dh, p0 + 6, 15), s.on_left_face(Dh, p0 + 6, 4), s.on_left_face(Dh, p0, 4)], "blue1")
+    s.outline()
+    return s.save("knee-wall")
+
+
+def storefront_glass():
+    """Two tiles of shop window: navy frame, big panes, a knee wall underneath."""
+    s = Iso(120, 140)
+    X0, Y0 = 50, 100
+    s.block(X0, Y0, 0, 0, 0, 16, 2, 20, "cream1", "blue0", "steel0", edge="cream2")
+    # frame + glass above the knee wall
+    s.block(X0, Y0, 0, 0, 20, 16, 1, 62, "blue0", "glass0", "steel0")
+    A, B, C, D = s.corners(*s.pt(X0, Y0, 0, 0, 82), 16, 1)
+    Dh = (D[0], D[1] + 62)
+    for t in range(16):
+        for z in range(62):
+            x, y = s.on_left_face(Dh, t, z)
+            frame = t in (0, 8, 15) or z < 2 or z >= 60
+            if frame:
+                c = "blue0"
+            else:
+                glare = 0 <= (z - 2 * t + 8) % 30 < 3  # diagonal reflections
+                c = "glass1" if glare else ("glass0" if z > 30 else "blue2")
+            s.px(x, y, c); s.px(x + 1, y, c)
+    s.outline()
+    return s.save("storefront-glass")
+
+
+def door():
+    """Café door with a glass upper half; one tile wide."""
+    s = Iso(80, 140)
+    X0, Y0 = 30, 100
+    A, B, C, D = s.block(X0, Y0, 0, 0, 0, 8, 1, 82, "blue0", "wood2", "wood0")
+    Dh = (D[0], D[1] + 82)
+    for t in range(8):
+        for z in range(82):
+            x, y = s.on_left_face(Dh, t, z)
+            if t in (0, 7) or z >= 79 or z < 2:
+                c = "blue0"
+            elif 44 < z < 74 and 1 < t < 6:
+                c = "glass1" if (z - t) % 9 == 0 else "glass0"
+            elif t in (1, 6) or z in (40, 44):
+                c = "wood3"
+            else:
+                c = "wood2"
+            s.px(x, y, c); s.px(x + 1, y, c)
+    hx, hy = s.on_left_face(Dh, 6, 38)
+    s.px(hx, hy, "gold1"); s.px(hx, hy + 1, "gold0")
+    s.outline()
+    return s.save("door")
+
+
+def awning():
+    """Striped awning sloping out and down from the front wall, two tiles wide."""
+    s = Iso(120, 140)
+    x0, y0 = 40, 110
+    top_z = 92
+    for ti in range(0, 33):  # along the wall, half-unit steps
+        t = ti / 2
+        for ki in range(0, 25):  # out from the wall (and down), fine steps so there are no gaps
+            o = ki / 8  # units out from the wall
+            drop = ki * 0.6  # px down as it slopes out
+            x = x0 + 2 * t - 2 * o
+            y = y0 + t - top_z + o + drop
+            stripe = int(t) % 2 == 0
+            c = "cream2" if stripe else "sage1"
+            if ki > 21:
+                c = "cream1" if stripe else "sage0"  # front lip
+            s.px(x, y, c); s.px(x + 1, y, c)
+        # scalloped edge under the lip
+        if ti % 2 == 0:
+            x = x0 + 2 * t - 2 * 3
+            y = y0 + t - top_z + 3 + 24 * 0.6 + 1
+            s.px(x, y, "sage0" if int(t) % 2 else "cream0")
+    s.outline()
+    anchor(s, x0 + 16, y0 + 8)
+    return s.save("awning")
+
+
+def street_lamp():
+    s = Iso(60, 160)
+    cx = 26
+    for y in range(130, 136):  # base
+        for x in range(cx - 4, cx + 5):
+            s.px(x, y, "steel0")
+    s.vline(cx, 30, 132, "steel0"); s.vline(cx + 1, 30, 132, "steel1")
+    for x in range(cx - 3, cx + 5):
+        s.px(x, 100, "steel1")  # little collar
+    # lantern
+    for y in range(14, 30):
+        w = 4 if y < 18 or y > 26 else 5
+        for x in range(cx - w, cx + w + 2):
+            edge = x in (cx - w, cx + w + 1) or y in (14, 29)
+            s.px(x, y, "steel0" if edge else ("gold2" if x < cx + 1 else "gold1"))
+    for x in range(cx - 3, cx + 5):
+        s.px(x, 12, "steel0"); s.px(x, 13, "steel1")
+    s.px(cx, 10, "steel0"); s.px(cx + 1, 10, "steel0")
+    s.outline()
+    return save_set("street-lamp", s, glow=(cx, 22, 110))
+
+
+def sidewalk_tree():
+    s = Iso(110, 160)
+    X0, Y0 = 50, 120
+    s.block(X0, Y0, 0, 0, 0, 6, 6, 2, "steel1", "steel0", "steel0")  # iron grate
+    tx, ty = s.pt(X0, Y0, 3, 3, 2)
+    s.vline(tx, ty - 62, ty, "wood1"); s.vline(tx + 1, ty - 62, ty, "wood0")
+    s.px(tx - 1, ty - 30, "wood1"); s.px(tx - 2, ty - 31, "wood1")
+    rng = random.Random(5)
+    for k in range(26):  # leafy canopy of overlapping clusters, lit from the top-left
+        dx = rng.randint(-22, 22)
+        dy = rng.randint(-34, 6)
+        r = rng.randint(6, 10)
+        c = "sage3" if dx + dy < -22 else ("sage2" if dx + dy < 0 else ("sage1" if dx + dy < 18 else "sage0"))
+        s.d.ellipse([tx + dx - r, ty - 66 + dy * 0.7 - r * 0.8, tx + dx + r, ty - 66 + dy * 0.7 + r * 0.8], fill=P[c])
+    s.outline()
+    return s.save("sidewalk-tree")
+
+
+def bench():
+    s = Iso(90, 70)
+    X0, Y0 = 34, 30
+    for a in (0.5, 11):  # iron legs
+        for b in (0.5, 3.5):
+            x, y = s.pt(X0, Y0, a, b, 0)
+            s.vline(x, y - 9, y, "steel0")
+    s.block(X0, Y0, 0, 0, 9, 12, 4, 2, "wood3", "wood2", "wood1", edge="wood4")  # seat
+    s.block(X0, Y0, 0, 0, 11, 12, 1, 9, "wood3", "wood2", "wood1", edge="wood4")  # backrest
+    s.outline()
+    return s.save("bench")
+
+
+def laptop():
+    s = Iso(40, 40)
+    X0, Y0 = 16, 14
+    s.block(X0, Y0, 0, 0, 0, 6, 4, 1, "steel3", "steel2", "steel1")  # base
+    s.block(X0, Y0, 0, 0, 1, 6, 1, 7, "steel1", "blue2", "steel0")  # screen, lit
+    x, y = s.pt(X0, Y0, 2, 1, 5)
+    s.px(x, y, "white"); s.px(x + 1, y, "glass1")
+    s.outline()
+    return s.save("laptop")
+
+
+def flower_vase():
+    s = Iso(30, 40)
+    cx = 12
+    for y in range(18, 28):
+        for x in range(cx - 2, cx + 3):
+            s.px(x, y, "glass1" if x < cx else "glass0")
+    for (dx, dy, c) in [(-4, 6, "pink1"), (3, 5, "gold1"), (0, 2, "white"), (-2, 9, "terra2"), (4, 10, "pink2"), (1, 7, "sage2"), (-5, 12, "sage1")]:
+        s.d.ellipse([cx + dx - 2, dy + 4, cx + dx + 2, dy + 7], fill=P[c])
+    s.vline(cx, 12, 18, "sage1")
+    s.outline()
+    return s.save("flower-vase")
+
+
+def coffee_cup():
+    s = Iso(20, 20)
+    s.d.ellipse([3, 10, 13, 14], fill=P["cream1"])  # saucer
+    for y in range(5, 11):
+        for x in range(5, 11):
+            s.px(x, y, "white" if x < 9 else "cream2")
+    for x in range(5, 11):
+        s.px(x, 5, "wood1")
+    s.px(11, 7, "white"); s.px(12, 8, "white"); s.px(11, 9, "white")
+    s.outline()
+    return s.save("coffee-cup")
+
+
 ALL = [bookshelf, counter, table_round, chair, pastry_case, espresso_machine, register, menu_board,
        piano, record_player, armchair, stool, plant_pot, floor_lamp, rug,
-       window, wall_sconce, framed_picture, wall_shelf, hanging_plant]
+       window, wall_sconce, framed_picture, wall_shelf, hanging_plant,
+       knee_wall, storefront_glass, door, awning, street_lamp, sidewalk_tree, bench, laptop, flower_vase, coffee_cup]
 
 
 def sheet(images, path, scale=5):
@@ -627,6 +812,7 @@ if __name__ == "__main__":
     imgs = [f() for f in ALL]
     import json
 
+    # glow points for pieces brought over from the original café (not drawn here)
     with open(os.path.join(OUT, "_companions.json"), "w") as f:
         json.dump(COMPANIONS, f, indent=2)
     print(f"{len(imgs)} iso assets -> {OUT}")

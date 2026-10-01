@@ -22,6 +22,8 @@ export type Layout = {
   // Isometric floor grid: 2:1 diamond tiles, `tile` px wide, anchored so (ox, oy) is a tile corner.
   // cols x rows = the room's floor size in tiles; the grid is only drawn (and snapped) there.
   grid?: { tile: number; ox: number; oy: number; cols?: number; rows?: number };
+  // Optional night layer for the base (lit windows in the buildings), shown as it gets dark.
+  sceneNight?: string;
 };
 
 export const DEFAULT_GRID: NonNullable<Layout["grid"]> = { tile: 32, ox: 0, oy: 0 };
@@ -69,4 +71,13 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "iso-armchair": { hotspot: "chill", label: "sit and listen" },
   "iso-tip-jar": { hotspot: "contact", label: "say hi" },
   "iso-register": { hotspot: "contact", label: "say hi" },
+  // pieces from the original café
+  "cafe-pastry-counter": { hotspot: "projects", label: "browse the pastry case" },
+  "cafe-piano": { hotspot: "piano", label: "play the piano" },
+  "cafe-record-shelf": { hotspot: "books", label: "books + records" },
+  "cafe-armchair": { hotspot: "chill", label: "sit and listen" },
+  "cafe-menu-board": { hotspot: "menu", label: "read the menu" },
+  "cafe-aframe-sign": { hotspot: "now", label: "special of the day" },
+  "cafe-till": { hotspot: "contact", label: "say hi" },
+  "cafe-espresso-bar": { hotspot: "about", label: "about me" },
 };

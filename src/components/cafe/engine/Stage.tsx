@@ -281,6 +281,16 @@ export function Stage({
                 ...maskStyle(src(layout.scene)),
               }}
             />
+            {/* the city's windows light up after dark */}
+            {layout.sceneNight && light.lamps > 0.02 && (
+              <img
+                src={src(layout.sceneNight)}
+                alt=""
+                draggable={false}
+                className="pointer-events-none absolute left-0 top-0 max-w-none mix-blend-screen"
+                style={{ zIndex: 940, opacity: light.lamps }}
+              />
+            )}
             {/* lamps glow once it gets dark */}
             {light.lamps > 0.02 &&
               ordered.map((s) => {
