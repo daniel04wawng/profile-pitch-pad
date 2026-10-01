@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Stage } from "./Stage";
+import { Stage, assetName, useCompanions } from "./Stage";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
 import { CafeScreen } from "./Screens";
@@ -59,6 +59,17 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const [cut, setCut] = useState<Layout | null>(null);
   const [assets, setAssets] = useState<string[]>([]);
   const [sizes, setSizes] = useState<Record<string, Size>>({});
+  const companions = useCompanions();
+  // The point of a sprite that stands on the grid: its drawn foot if it has one (scaled to
+  // its current size, mirrored when flipped), otherwise its bottom-centre.
+  const footOf = (s: Pick<SpriteDef, "file" | "w" | "h" | "flipX">) => {
+    const f = companions[assetName(s.file)]?.foot;
+    const nat = sizes[s.file];
+    if (!f) return { x: s.w / 2, y: s.h };
+    const kx = nat ? s.w / nat.w : 1;
+    const ky = nat ? s.h / nat.h : 1;
+    return { x: s.flipX ? s.w - f.x * kx : f.x * kx, y: f.y * ky };
+  };
   const [tab, setTab] = useState<"scene" | "assets" | "screens">("scene");
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -79,7 +90,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   // live preview of the screen being designed, shown over the room while you edit it
   const [designOpen, setDesignOpen] = useState(true);
   const [versions, setVersions] = useState<Record<string, number>>({});
-  const drag = useRef<{ id: string; sx: number; sy: number; x: number; y: number; baseY: number; footX: number } | null>(null);
+  const drag = useRef<{ id: string; sx: number; sy: number; x: number; y: number; baseY: number; footX: number; footY: number } | null>(null);
   const gridOf = (l: Layout) => l.grid ?? DEFAULT_GRID;
 
   // ---------- history ----------
@@ -173,11 +184,12 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     let fy = at ? Math.round(at.y) : Math.round(layout.height / 2 + h / 2);
     if (snap) ({ x: fx, y: fy } = snapIso(fx, fy, gridOf(layout)));
     const id = uniqueId(nameOf(file));
+    const foot = footOf({ file, w, h });
     edit((l) => ({
       ...l,
       assets: [
         ...l.assets,
-        { id, file, x: fx - Math.round(w / 2), y: fy - h, w, h, baseY: FLAT_ASSETS.has(nameOf(file)) ? fy - h : fy, hotspot: ASSET_DEFAULTS[nameOf(file)]?.hotspot ?? null, label: ASSET_DEFAULTS[nameOf(file)]?.label ?? null },
+        { id, file, x: fx - Math.round(foot.x), y: fy - Math.round(foot.y), w, h, baseY: FLAT_ASSETS.has(nameOf(file)) ? fy - Math.round(foot.y) : fy - Math.round(foot.y) + h, hotspot: ASSET_DEFAULTS[nameOf(file)]?.hotspot ?? null, label: ASSET_DEFAULTS[nameOf(file)]?.label ?? null },
       ],
     }));
     setSelected(id);
@@ -447,7 +459,8 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                 // one undo step per drag
                 past.current.push(layout);
                 future.current = [];
-                drag.current = { id: s.id, sx: p.x, sy: p.y, x: s.x, y: s.y, baseY: s.baseY, footX: s.x + s.w / 2 };
+                const foot = footOf(s);
+                drag.current = { id: s.id, sx: p.x, sy: p.y, x: s.x, y: s.y, baseY: s.baseY, footX: s.x + foot.x, footY: s.y + foot.y };
               },
               onPointerMove: (p, e) => {
                 const d = drag.current;
@@ -456,10 +469,10 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                 let dy = Math.round(p.y - d.sy);
                 // hold Shift to place freely (e.g. a cup on top of the counter)
                 if (snap && !e.shiftKey) {
-                  // snap the object's base (bottom-center) onto the iso grid
-                  const foot = snapIso(d.footX + dx, d.baseY + dy, gridOf(layout));
+                  // snap the object's foot (its floor corner, or bottom-centre) onto the iso grid
+                  const foot = snapIso(d.footX + dx, d.footY + dy, gridOf(layout));
                   dx = Math.round(foot.x - d.footX);
-                  dy = Math.round(foot.y - d.baseY);
+                  dy = Math.round(foot.y - d.footY);
                   setMarker(foot);
                 } else setMarker(null);
                 editLive((l) => ({

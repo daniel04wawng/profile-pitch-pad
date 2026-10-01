@@ -3,14 +3,17 @@ import { Fragment } from "react";
 import { BASE, DEFAULT_GRID, type Layout, type SpriteDef } from "./types";
 import type { Light } from "./lighting";
 
-// Extra layers drawn by art/draw_iso.py: window sky masks, sun patches, lamp glow points.
-type Companion = {
+// Extra info drawn alongside some sprites (art/draw_props.py): window sky masks, sun patches,
+// lamp glow points, and `foot`, the point that stands on the floor grid (an iso piece's front
+// corner, a round piece's centre), so the editor can snap it exactly.
+export type Companion = {
+  foot?: { x: number; y: number };
   sky?: string;
   light?: { file: string; dx: number; dy: number; w: number; h: number };
   glow?: { x: number; y: number; r: number };
 };
 let companionsCache: Promise<Record<string, Companion>> | null = null;
-function useCompanions() {
+export function useCompanions() {
   const [c, setC] = useState<Record<string, Companion>>({});
   useEffect(() => {
     companionsCache ??= fetch(`${BASE}sprites/_companions.json`, { cache: "no-store" })
@@ -20,7 +23,7 @@ function useCompanions() {
   }, []);
   return c;
 }
-const assetName = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/, "");
+export const assetName = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/, "");
 const maskStyle = (url: string): React.CSSProperties => ({
   WebkitMaskImage: `url(${url})`,
   maskImage: `url(${url})`,

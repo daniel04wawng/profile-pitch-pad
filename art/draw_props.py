@@ -39,7 +39,7 @@ for i, v in enumerate(WOOD):
 EXTRA = {}  # name -> companion info (sky mask, sun patch) for _companions.json
 
 
-def save(c, name, anchor=None, sky=None, light=None):
+def save(c, name, anchor=None, sky=None, light=None, foot=None):
     """Outline, crop and write a sprite. `anchor` (x, y) is where a wall item meets the floor:
     an almost invisible pixel goes there so the editor sets it on the wall line. `sky` is a
     Canvas masking window glass; `light` a Canvas with the sun patch it throws on the floor."""
@@ -50,6 +50,10 @@ def save(c, name, anchor=None, sky=None, light=None):
     im = c.im.crop(bbox)
     im.save(os.path.join(OUT, f"{name}.png"))
     info = {}
+    if foot is not None:  # the point that stands on the grid, for the editor's snapping
+        info["foot"] = {"x": round(foot[0]) - bbox[0], "y": round(foot[1]) - bbox[1]}
+    elif anchor is not None:
+        info["foot"] = {"x": round(anchor[0]) - bbox[0], "y": round(anchor[1]) - bbox[1]}
     if sky is not None:
         sky.im.crop(bbox).save(os.path.join(OUT, f"{name}.sky.png"))
         info["sky"] = f"sprites/{name}.sky.png"
@@ -57,8 +61,7 @@ def save(c, name, anchor=None, sky=None, light=None):
         lb = light.im.getbbox()
         light.im.crop(lb).save(os.path.join(OUT, f"{name}.light.png"))
         info["light"] = {"file": f"sprites/{name}.light.png", "dx": lb[0] - bbox[0], "dy": lb[1] - bbox[1], "w": lb[2] - lb[0], "h": lb[3] - lb[1]}
-    if info:
-        EXTRA[name] = info
+    EXTRA[name] = info
     return im
 
 
@@ -102,7 +105,7 @@ def cafe_table():
     disc(c, cx, ty, 13, 6.5, lambda dx, dy: "wood5" if (dx + dy < -1.0) else ("wood4" if dx + dy < 0.6 else "wood3"))
     c.px(cx - 6, ty - 2, "gold3")  # a glint of lamplight
     c.px(cx - 5, ty - 2, "gold2")
-    return save(c, "cafe-table")
+    return save(c, "cafe-table", foot=(cx, floor_y))
 
 
 def cafe_chair():
@@ -130,7 +133,7 @@ def cafe_chair():
     # round seat
     disc(c, cx, sy + 1, 7, 3.5, lambda dx, dy: "wood1")
     disc(c, cx, sy, 7, 3.5, lambda dx, dy: "wood4" if dx + dy < -0.3 else "wood3")
-    return save(c, "cafe-chair")
+    return save(c, "cafe-chair", foot=(cx, floor_y))
 
 
 # ---------------------------------------------------------------- the piano corner
@@ -140,10 +143,10 @@ def piano():
     """Upright piano after the original's: near-black mahogany, glossy lamp-lit lid, framed
     panels, gold strip over the keys, turned front legs, brass pedals, a brass desk lamp and
     a black phone on top. Keyboard faces down-left."""
-    c = Canvas(120, 130)
-    X0, Y0 = 20, 60
-    L, D = 16, 5  # length along the keyboard, depth (units: 2px across, 1px down)
-    KB, TOP = 18, 52  # keyboard height and body height (px): tall, like the original
+    c = Canvas(140, 160)
+    X0, Y0 = 24, 76
+    L, D = 20, 4  # length along the keyboard, depth (units: 2px across, 1px down)
+    KB, TOP = 22, 64  # keyboard height and body height (px): tall, like the original
     KD = 4  # how far the keyboard sticks out
     m0, m1, m2, m3, m4, m5 = "mah0", "mah1", "mah2", "mah3", "mah4", "mah5"
 
@@ -228,7 +231,7 @@ def piano():
         c.px(px_ + dx, py_ - 3 + (1 if abs(dx) == 3 else 0), "navy0")  # handset
     c.px(px_ - 1, py_ - 1, "key0")
     c.px(px_, py_ - 1, "navy1")
-    return save(c, "piano")
+    return save(c, "piano", foot=(X0 + 2 * L - 2 * (D + KD), Y0 + L + D + KD))
 
 
 def piano_stool():
@@ -241,7 +244,7 @@ def piano_stool():
             c.px(round(x0 + (x1 - x0) * t), y, col)
     disc(c, cx, sy + 1.5, 6, 3, lambda dx, dy: "wood1")
     disc(c, cx, sy, 6, 3, lambda dx, dy: "mah5" if dx + dy < -0.8 else ("mah4" if dx + dy < 0.4 else "mah3"))  # brown leather top, like the original
-    return save(c, "piano-stool")
+    return save(c, "piano-stool", foot=(cx, floor_y))
 
 
 # ---------------------------------------------------------------- walls and ceiling
@@ -283,7 +286,7 @@ def table_cloth(name, field, alt, trim, hem):
                 return hem
             return alt if (r > 0.55 or (abs(dx) * 0.9 + abs(dy) < 0.5 and r > 0.12)) else field
         disc(c, cx, ty, rx, ry, top_col)
-        return save(c, name)
+        return save(c, name, foot=(cx, floor_y))
     draw.__name__ = name.replace("-", "_")
     return draw
 
@@ -337,7 +340,7 @@ def bookshelf():
     rng = random.Random(7)
     c = Canvas(90, 140)
     X0, Y0 = 20, 90
-    L, D, H = 11, 3, 66
+    L, D, H = 12, 4, 66
     SH = [3, 15, 27, 39, 51, 63]  # shelf boards (z of each board's top)
     spines = ["red1", "red2", "navy1", "navy2", "sage1", "sage0", "key1", "gold1", "choc1", "pink0", "terra1", "mah3"]
     books = {}  # (shelf) -> list of (t0, t1, colour, height, band)
@@ -376,7 +379,7 @@ def bookshelf():
         c.px(px_ + dx, py_, "terra1"); c.px(px_ + dx, py_ - 1, "terra2")
     for (dx, dy, col) in ((-3, -3, "sage1"), (-2, -4, "sage2"), (-1, -5, "leaf3"), (0, -4, "sage1"), (1, -6, "sage2"), (2, -4, "sage0"), (3, -3, "sage1"), (0, -2, "sage0"), (-1, -3, "sage0"), (1, -3, "sage2"), (2, -5, "sage1")):
         c.px(px_ + dx, py_ + dy, col)
-    return save(c, "bookshelf")
+    return save(c, "bookshelf", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
 
 
 def window():
@@ -384,7 +387,7 @@ def window():
     For the back-right wall (flip for the other one). The glass is left empty: the engine
     paints the current sky into it and casts a sun patch on the floor."""
     c, sky, light = Canvas(110, 170), Canvas(110, 170), Canvas(110, 170)
-    L, z0, z1 = 14, 44, 116
+    L, z0, z1 = 16, 44, 116
     x0, y0 = 20, 140
     pt = lambda t, z: (x0 + 2 * t, y0 + t - z)
     COLS, ROWS = 3, 4
@@ -422,7 +425,7 @@ def window():
                 continue
             x, y = x0 + 2 * t - 2 * depth, y0 + t + depth
             light.px(x, y, "shine"); light.px(x + 1, y, "shine")
-    ax, ay = pt(L / 2, 0)
+    ax, ay = pt(0, 0)
     return save(c, "window", anchor=(ax, ay), sky=sky, light=light)
 
 
@@ -487,7 +490,7 @@ def potted_plant():
         r = rng.uniform(0, 1) ** 0.6
         import math
         leaf_cluster(c, round(cx + math.cos(a) * r * 11), round(floor_y - 32 + math.sin(a) * r * 9), rng, big=True)
-    return save(c, "potted-plant")
+    return save(c, "potted-plant", foot=(cx, floor_y))
 
 
 def flower_vase():
@@ -548,14 +551,14 @@ def rug():
         for a in (-0.6, A + 0.1):
             x, y = X0 + 2 * a - b2, Y0 + a + b2 / 2
             c.px(x, y, "key1"); c.px(x + 1, y, "key0")
-    return save(c, "rug")
+    return save(c, "rug", foot=(X0 + 2 * A - 2 * B, Y0 + A + B))
 
 
 def booth():
     """Tufted leather booth bench like the original's, for a back wall (seat faces down-left)."""
     c = Canvas(120, 100)
     X0, Y0 = 20, 50
-    L, D = 16, 7
+    L, D = 16, 8
     SEAT, BACK = 11, 30
     face_left(c, X0, Y0, 0, L, D, 0, SEAT - 3, lambda t, z: "wood0" if z < 2 else ("wood2" if t % 4 > 0.4 else "wood1"))  # wood plinth
     face_right(c, X0, Y0, L, 2.5, D, 0, SEAT, lambda s, z: "lea0" if z < SEAT - 3 else "lea1")
@@ -566,14 +569,14 @@ def booth():
     # seat cushion: rounded front edge
     face_left(c, X0, Y0, 0, L, D, SEAT - 3, SEAT, lambda t, z: "lea1" if t % 4 < 0.3 else ("lea3" if z >= 2 else "lea2"))
     face_top(c, X0, Y0, 0, L, 2.5, D, SEAT, lambda a, b: "lea1" if a % 4 < 0.3 else ("lea4" if b > D - 1 else "lea3"))
-    return save(c, "booth")
+    return save(c, "booth", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
 
 
 def armchair():
     """Green velvet armchair like the original's reading chair (seat faces down-left)."""
     c = Canvas(80, 80)
     X0, Y0 = 20, 40
-    L, D = 9, 8
+    L, D = 8, 8
     SEAT, ARM, BACK = 10, 16, 27
     for a0 in (0.3, L - 1.3):  # little wood feet
         face_left(c, X0, Y0, a0, a0 + 0.8, D, 0, 3, lambda t, z: "wood1")
@@ -589,7 +592,7 @@ def armchair():
     for a0 in (0, L - 1.5):
         face_left(c, X0, Y0, a0, a0 + 1.5, D, 3, ARM, lambda t, z: "olive2" if t < 0.6 else "olive1")
         face_top(c, X0, Y0, a0, a0 + 1.5, 2.5, D, ARM, lambda a, b: "olive3")
-    return save(c, "armchair")
+    return save(c, "armchair", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
 
 
 def floor_lamp():
@@ -610,7 +613,7 @@ def floor_lamp():
             c.px(x, y, col)
     for x in range(cx - 7, cx + 8):  # light spilling from under the shade
         c.px(x, top + 14, "gold3" if abs(x - cx) < 6 else "gold2")
-    return save(c, "floor-lamp")
+    return save(c, "floor-lamp", foot=(cx, floor_y))
 
 
 def special_board():
