@@ -81,6 +81,11 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "record-shelf": { hotspot: "books", label: "books + records" },
   "menu-board": { hotspot: "menu", label: "read the menu" },
   "aframe-sign": { hotspot: "now", label: "special of the day" },
+  "piano-stool": { hotspot: "piano", label: "play the piano" },
+  "cafe-table": { hotspot: "chill", label: "sit for a while" },
+  "cafe-chair": { hotspot: "chill", label: "sit for a while" },
+  "record-cabinet": { hotspot: "piano", label: "put on a record" },
+  "espresso-station": { hotspot: "about", label: "about me" },
   // pieces from the original café
   "cafe-pastry-counter": { hotspot: "projects", label: "browse the pastry case" },
   "cafe-piano": { hotspot: "piano", label: "play the piano" },
