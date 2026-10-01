@@ -56,12 +56,15 @@ export const HOTSPOTS = ["projects", "about", "menu", "now", "contact", "piano",
 export const BASE = "/cafe/";
 
 // What a freshly placed asset opens, so the furniture works the moment it's moved in.
+// Flat things (rugs) lie under everything else.
+export const FLAT_ASSETS = new Set(["iso-rug"]);
+
 export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> = {
   "iso-counter": { hotspot: "projects", label: "browse the pastry case" },
   "iso-pastry-case": { hotspot: "projects", label: "browse the pastry case" },
   "iso-bookshelf": { hotspot: "books", label: "books I love" },
   "iso-menu-board": { hotspot: "menu", label: "read the menu" },
-  "iso-piano": { hotspot: "piano", label: "my music" },
+  "iso-piano": { hotspot: "piano", label: "play the piano" },
   "iso-record-player": { hotspot: "piano", label: "put on a record" },
   "iso-armchair": { hotspot: "chill", label: "sit and listen" },
   "iso-tip-jar": { hotspot: "contact", label: "say hi" },

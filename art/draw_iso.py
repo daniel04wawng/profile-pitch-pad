@@ -30,6 +30,7 @@ PALETTE = {
     "blue0": "#3c5878", "blue1": "#6488aa", "blue2": "#9dbad3",
     "steel0": "#3b3f4a", "steel1": "#6d7380", "steel2": "#a9afba", "steel3": "#d9dde3",
     "glass0": "#9fcbd3", "glass1": "#d6eef1",
+    "chalk0": "#24342c", "chalk1": "#2f4538",
     "keyblack": "#1c1717",
 }
 P = {k: tuple(int(v[i : i + 2], 16) for i in (1, 3, 5)) + (255,) for k, v in PALETTE.items()}
@@ -43,6 +44,8 @@ class Iso:
     """
 
     def __init__(self, w, h):
+        # Generous canvas so nothing is ever clipped; save() crops to the drawing.
+        w, h = max(w, 200), max(h, 200)
         self.im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         self.d = ImageDraw.Draw(self.im)
         self.w, self.h = w, h
@@ -83,6 +86,14 @@ class Iso:
             for k in range(b + 1):
                 self.px(C[0] + 2 * k, C[1] - k, edge)
         return A, B, C, D
+
+    def block(self, X0, Y0, a, b, z, da, db, h, top, left, right, edge=None):
+        """Box whose footprint starts at floor coords (a, b), lifted z px, size da x db x h.
+        (X0, Y0) is the screen point of floor coords (0, 0) at height 0."""
+        return self.box(X0 + 2 * a - 2 * b, Y0 + a + b - (z + h), da, db, h, top, left, right, edge)
+
+    def pt(self, X0, Y0, a, b, z=0):
+        return (X0 + 2 * a - 2 * b, Y0 + a + b - z)
 
     def on_left_face(self, D, t, z):
         """Screen point on a left face: t units along it (down-right), z px up from its bottom-left D."""
@@ -211,7 +222,223 @@ def chair():
     return s.save("chair")
 
 
-ALL = [bookshelf, counter, table_round, chair]
+# ---------------------------------------------------------------- batch 2
+
+
+def pastry_case():
+    """Counter base with a glass display case of pastries on top. Opens your projects."""
+    s = Iso(120, 110)
+    X0, Y0 = 40, 30
+    # wood base
+    s.block(X0, Y0, 0, 0, 0, 22, 9, 16, "wood3", "wood2", "wood1", edge="wood4")
+    A, B, C, D = s.corners(*s.pt(X0, Y0, 0, 0, 16), 22, 9)
+    Dh = (D[0], D[1] + 16)
+    for p0 in range(2, 20, 6):  # panels on the front
+        pts = [s.on_left_face(Dh, p0, 12), s.on_left_face(Dh, p0 + 4, 12), s.on_left_face(Dh, p0 + 4, 3), s.on_left_face(Dh, p0, 3)]
+        s.poly(pts, "wood3")
+    # glass case on top, inset a little
+    gA, gB, gC, gD = s.block(X0, Y0, 1, 1, 16, 20, 7, 14, "glass1", "glass1", "glass0")
+    gDh = (gD[0], gD[1] + 14)
+    # two glass shelves of pastries seen through the front
+    goods = ["gold1", "pink1", "terra1", "gold2", "sage2", "pink2", "gold1", "terra2", "pink1"]
+    for row, z in enumerate((2, 8)):
+        for t in range(1, 20):
+            x, y = s.on_left_face(gDh, t, z)
+            s.px(x, y, "glass0"); s.px(x + 1, y, "glass0")
+        for k, t in enumerate(range(2, 19, 4)):
+            c = goods[(k + row * 3) % len(goods)]
+            x, y = s.on_left_face(gDh, t, z + 1)
+            for dx in range(4):
+                for dy in range(3):
+                    s.px(x + dx, y - dy + dx // 2, c)
+            s.px(x + 1, y - 2, "white")
+    # glare + brass trim along the top edges
+    for k in range(5):
+        x, y = s.on_left_face(gDh, 15 + k // 2, 12 - k)
+        s.px(x, y, "white")
+    for k in range(21):
+        s.px(gD[0] + 2 * k, gD[1] + k, "gold0"); s.px(gD[0] + 2 * k + 1, gD[1] + k, "gold0")
+    s.outline()
+    return s.save("pastry-case")
+
+
+def espresso_machine():
+    s = Iso(60, 60)
+    X0, Y0 = 20, 20
+    A, B, C, D = s.block(X0, Y0, 0, 0, 0, 7, 6, 12, "steel3", "steel2", "steel1", edge="white")
+    for k, (a, b) in enumerate([(1, 1), (3, 1), (5, 1)]):  # cups warming on top
+        x, y = s.pt(X0, Y0, a, b, 13)
+        s.px(x, y, "white"); s.px(x + 1, y, "white"); s.px(x, y + 1, "cream0"); s.px(x + 1, y + 1, "cream0")
+    Dh = (D[0], D[1] + 12)
+    for t in range(7):  # red name stripe
+        x, y = s.on_left_face(Dh, t, 9)
+        s.px(x, y, "terra1"); s.px(x + 1, y, "terra1")
+    gx, gy = s.on_left_face(Dh, 3, 6)  # group head, portafilter, cup
+    s.px(gx, gy, "steel0"); s.px(gx + 1, gy, "steel0"); s.px(gx, gy + 1, "steel0")
+    for k in range(3):
+        s.px(gx - 2 - k, gy + 1 + k, "keyblack")
+    cx, cy = s.on_left_face(Dh, 3, 2)
+    s.px(cx, cy, "white"); s.px(cx + 1, cy, "white"); s.px(cx, cy - 1, "wood1"); s.px(cx + 1, cy - 1, "wood1")
+    s.outline()
+    return s.save("espresso-machine")
+
+
+def register():
+    s = Iso(50, 50)
+    X0, Y0 = 18, 16
+    s.block(X0, Y0, 0, 0, 0, 5, 5, 5, "cream2", "terra1", "terra0", edge="white")
+    s.block(X0, Y0, 1, 0, 5, 3, 1, 5, "steel0", "steel1", "steel0")  # screen
+    x, y = s.pt(X0, Y0, 2, 1, 9)
+    s.px(x, y, "sage3"); s.px(x + 1, y, "sage3")
+    s.outline()
+    return s.save("register")
+
+
+def menu_board():
+    """Hangs on the back-right wall (flip for the other wall). A faint anchor pixel at floor
+    level keeps its base on the wall line, so it snaps to the floor right under itself."""
+    s = Iso(70, 90)
+    x0, y0 = 4, 30  # bottom-left corner of the board, on the wall plane
+    L, Hh = 14, 24  # length along the wall (units), height (px)
+    for t in range(L):
+        for z in range(Hh):
+            edge = t == 0 or t == L - 1 or z < 2 or z >= Hh - 2
+            c = "wood2" if edge else "chalk1"
+            if edge and (z >= Hh - 2 or t == 0):
+                c = "wood3"
+            for dx in (0, 1):
+                s.px(x0 + 2 * t + dx, y0 + t - z, c)
+    # chalk heading and menu lines (they follow the wall's slope)
+    for t in range(4, 10):
+        x, y = x0 + 2 * t, y0 + t - 19
+        s.px(x, y, "cream2"); s.px(x + 1, y, "cream2")
+    for z in (14, 10, 6):
+        for t in range(2, 9):
+            s.px(x0 + 2 * t, y0 + t - z, "cream1")
+        for t in range(10, 12):
+            s.px(x0 + 2 * t, y0 + t - z, "gold2")
+    s.outline()
+    # invisible anchor at floor level under the board's middle
+    s.im.putpixel((x0 + L, y0 + L // 2 + 40), (0, 0, 0, 1))
+    return s.save("menu-board")
+
+
+def piano():
+    s = Iso(110, 110)
+    X0, Y0 = 40, 50
+    s.block(X0, Y0, 0, 0, 0, 14, 5, 30, "wood2", "wood1", "wood0", edge="wood3")
+    # music sheet on the front, above the keys
+    A, B, C, D = s.corners(*s.pt(X0, Y0, 0, 0, 30), 14, 5)
+    Dh = (D[0], D[1] + 30)
+    s.poly([s.on_left_face(Dh, 5, 24), s.on_left_face(Dh, 9, 24), s.on_left_face(Dh, 9, 19), s.on_left_face(Dh, 5, 19)], "cream2")
+    # keyboard sticking out of the front
+    kA, kB, kC, kD = s.block(X0, Y0, 0, 5, 14, 14, 3, 3, "white", "wood1", "wood0")
+    for t in range(14):
+        if t % 7 not in (2, 6):
+            x, y = kA[0] + 2 * t - 2, kA[1] + t + 1
+            s.px(x, y, "keyblack"); s.px(x + 1, y, "keyblack")
+    for a in (0, 13):  # legs
+        x, y = s.pt(X0, Y0, a, 8, 14)
+        s.vline(x, y, y + 14, "wood1")
+    # bench in front
+    s.block(X0, Y0, 4, 11, 0, 6, 3, 8, "terra1", "wood1", "wood0", edge="terra2")
+    s.outline()
+    return s.save("piano")
+
+
+def record_player():
+    s = Iso(80, 80)
+    X0, Y0 = 30, 30
+    A, B, C, D = s.block(X0, Y0, 0, 0, 0, 10, 6, 14, "wood3", "wood2", "wood1", edge="wood4")
+    Dh = (D[0], D[1] + 14)
+    for p0 in (1, 5):  # two cabinet doors
+        s.poly([s.on_left_face(Dh, p0, 11), s.on_left_face(Dh, p0 + 3, 11), s.on_left_face(Dh, p0 + 3, 3), s.on_left_face(Dh, p0, 3)], "wood1")
+        x, y = s.on_left_face(Dh, p0 + 3 if p0 == 1 else p0, 7)
+        s.px(x, y, "gold1")
+    # turntable + record on top
+    s.block(X0, Y0, 1, 1, 14, 8, 4, 2, "cream2", "cream1", "cream0")
+    cx, cy = s.pt(X0, Y0, 4.5, 3, 16)
+    s.d.ellipse([cx - 6, cy - 3, cx + 5, cy + 2], fill=P["keyblack"])
+    s.d.ellipse([cx - 2, cy - 1, cx + 1, cy], fill=P["terra1"])
+    tx, ty = s.pt(X0, Y0, 8, 2, 16)
+    s.px(tx, ty - 1, "steel2"); s.px(tx - 1, ty, "steel2"); s.px(tx - 2, ty + 1, "steel2")
+    s.outline()
+    return s.save("record-player")
+
+
+def armchair():
+    s = Iso(80, 80)
+    X0, Y0 = 30, 30
+    s.block(X0, Y0, 0, 0, 0, 9, 2, 16, "sage2", "sage1", "sage0", edge="sage3")  # backrest
+    s.block(X0, Y0, 0, 2, 0, 2, 7, 9, "sage2", "sage1", "sage0", edge="sage3")  # arm (far)
+    s.block(X0, Y0, 2, 2, 0, 5, 7, 6, "sage3", "sage1", "sage0", edge="sage3")  # seat
+    s.block(X0, Y0, 7, 2, 0, 2, 7, 9, "sage2", "sage1", "sage0", edge="sage3")  # arm (near)
+    for (a, b) in ((0.5, 8.5), (8.5, 8.5)):
+        x, y = s.pt(X0, Y0, a, b, 0)
+        s.px(x, y + 1, "wood1")
+    s.outline()
+    return s.save("armchair")
+
+
+def stool():
+    s = Iso(40, 50)
+    cx, cy = 18, 14
+    for x in (cx - 4, cx + 3):
+        s.vline(x, cy + 2, cy + 18, "steel1")
+    s.vline(cx, cy + 3, cy + 20, "steel0")
+    for x in range(cx - 4, cx + 4):
+        s.px(x, cy + 12, "gold0")
+    s.d.ellipse([cx - 7, cy - 2, cx + 7, cy + 5], fill=P["wood2"])
+    s.d.ellipse([cx - 7, cy - 4, cx + 7, cy + 3], fill=P["wood3"])
+    s.d.ellipse([cx - 4, cy - 3, cx + 3, cy], fill=P["wood4"])
+    s.outline()
+    return s.save("stool")
+
+
+def plant_pot():
+    s = Iso(50, 60)
+    X0, Y0 = 20, 30
+    s.block(X0, Y0, 0, 0, 0, 5, 5, 8, "wood1", "terra1", "terra0", edge="terra2")
+    cx, cy = s.pt(X0, Y0, 2.5, 2.5, 8)
+    for (dx, dy, r, c) in [(0, -6, 6, "sage1"), (-5, -3, 5, "sage2"), (5, -3, 5, "sage1"), (0, -12, 5, "sage2"), (-3, -9, 4, "sage3"), (4, -10, 4, "sage2")]:
+        s.d.ellipse([cx + dx - r, cy + dy - r // 1.5, cx + dx + r, cy + dy + r // 1.5], fill=P[c])
+    s.outline()
+    return s.save("plant-pot")
+
+
+def floor_lamp():
+    s = Iso(40, 80)
+    cx = 18
+    s.d.ellipse([cx - 5, 60, cx + 5, 64], fill=P["steel0"])
+    s.vline(cx, 20, 62, "steel0"); s.vline(cx + 1, 20, 62, "steel1")
+    # shade: a little cone
+    for y in range(8, 20):
+        w = 4 + (y - 8) // 2
+        for x in range(cx - w, cx + w + 2):
+            s.px(x, y, "cream2" if x < cx + 1 else "cream1")
+    for x in range(cx - 9, cx + 11):
+        s.px(x, 20, "gold1")
+    s.outline()
+    return s.save("floor-lamp")
+
+
+def rug():
+    s = Iso(140, 80)
+    X0, Y0 = 60, 4
+    a, b = 24, 16
+    s.box(X0, Y0, a, b, 0, "terra1", "terra1", "terra1")
+    s.box(X0, Y0 + 2, a - 2, b - 2, 0, "cream1", "cream1", "cream1")
+    s.box(X0, Y0 + 4, a - 4, b - 4, 0, "terra0", "terra0", "terra0")
+    # little diamonds down the middle
+    for k in range(3):
+        cx, cy = X0 + 2 * (6 + k * 5) - 2 * (b // 2), Y0 + (6 + k * 5) + b // 2
+        s.poly([(cx, cy - 2), (cx + 4, cy), (cx, cy + 2), (cx - 4, cy)], "gold1")
+    s.outline()
+    return s.save("rug")
+
+
+ALL = [bookshelf, counter, table_round, chair, pastry_case, espresso_machine, register, menu_board,
+       piano, record_player, armchair, stool, plant_pot, floor_lamp, rug]
 
 
 def sheet(images, path, scale=5):

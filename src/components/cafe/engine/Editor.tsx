@@ -3,7 +3,7 @@ import { Stage } from "./Stage";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
 import { CafeScreen, SCREENS } from "./Screens";
-import { ASSET_DEFAULTS, BASE, DEFAULT_GRID, HOTSPOTS, snapIso, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, HOTSPOTS, snapIso, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -142,7 +142,7 @@ export function Editor({ initial }: { initial: Layout }) {
       ...l,
       assets: [
         ...l.assets,
-        { id, file, x: fx - Math.round(w / 2), y: fy - h, w, h, baseY: fy, hotspot: ASSET_DEFAULTS[nameOf(file)]?.hotspot ?? null, label: ASSET_DEFAULTS[nameOf(file)]?.label ?? null },
+        { id, file, x: fx - Math.round(w / 2), y: fy - h, w, h, baseY: FLAT_ASSETS.has(nameOf(file)) ? fy - h : fy, hotspot: ASSET_DEFAULTS[nameOf(file)]?.hotspot ?? null, label: ASSET_DEFAULTS[nameOf(file)]?.label ?? null },
       ],
     }));
     setSelected(id);
@@ -355,18 +355,19 @@ export function Editor({ initial }: { initial: Layout }) {
                 future.current = [];
                 drag.current = { id: s.id, sx: p.x, sy: p.y, x: s.x, y: s.y, baseY: s.baseY, footX: s.x + s.w / 2 };
               },
-              onPointerMove: (p) => {
+              onPointerMove: (p, e) => {
                 const d = drag.current;
                 if (!d) return;
                 let dx = Math.round(p.x - d.sx);
                 let dy = Math.round(p.y - d.sy);
-                if (snap) {
+                // hold Shift to place freely (e.g. a cup on top of the counter)
+                if (snap && !e.shiftKey) {
                   // snap the object's base (bottom-center) onto the iso grid
                   const foot = snapIso(d.footX + dx, d.baseY + dy, gridOf(layout));
                   dx = Math.round(foot.x - d.footX);
                   dy = Math.round(foot.y - d.baseY);
                   setMarker(foot);
-                }
+                } else setMarker(null);
                 editLive((l) => ({
                   ...l,
                   assets: l.assets.map((a) => (a.id === d.id ? { ...a, x: d.x + dx, y: d.y + dy, baseY: d.baseY + dy } : a)),
@@ -388,7 +389,7 @@ export function Editor({ initial }: { initial: Layout }) {
             }}
           />
           <p className="pointer-events-none absolute bottom-2 left-3 text-[11px] opacity-40">
-            drag to move · arrows move{snap ? " 1 grid step" : " 1px (⇧ 8px)"} · [ ] layer · F flip · H hide · ⌘D duplicate · ⌫ delete · ⌘Z undo · P play
+            drag to move (⇧ drag = no snap) · arrows move{snap ? " 1 grid step" : " 1px (⇧ 8px)"} · [ ] layer · F flip · H hide · ⌘D duplicate · ⌫ delete · ⌘Z undo · P play
           </p>
         </div>
 
