@@ -1320,6 +1320,29 @@ def coffee_table():
     return save(c, "coffee-table", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
 
 
+def booth_table():
+    """Table to set in front of a booth: as long as the booth (2 tiles), half a tile deep,
+    a thick wood top on a centre pedestal and a cross foot, café-table height."""
+    c = Canvas(90, 70)
+    X0, Y0 = 22, 34
+    L, D, H = 16, 4, 20
+    mid = lambda a, b, z: (round(X0 + 2 * a - 2 * b), round(Y0 + a + b - z))
+    # cross foot and the pedestal
+    for k in range(-5, 6):
+        x, y = mid(L / 2 + k * 0.5, D / 2, 0)
+        c.px(x, y, "iron"); c.px(x + 1, y, "iron")
+    for k in range(-3, 4):
+        x, y = mid(L / 2, D / 2 + k * 0.5, 0)
+        c.px(x, y, "iron")
+    x, y = mid(L / 2, D / 2, 0)
+    vline(c, x, y - H + 2, y - 1, "wood1"); vline(c, x + 1, y - H + 2, y - 1, "wood0")
+    # top: thick slab with a lit front edge and a sheen
+    face_left(c, X0, Y0, 0, L, D, H - 3, H, lambda t, z: "wood4" if z >= 2 else "wood2")
+    face_right(c, X0, Y0, L, 0, D, H - 3, H, lambda s_, z: "wood2" if z >= 2 else "wood1")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if (b > D - 0.6 or a > L - 0.6) else ("wood5" if abs(a - b * 2.5 - 4) < 0.5 else "wood4"))
+    return save(c, "booth-table", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
 def menu_board():
     """Large chalkboard menu for the wall, in a wood frame: a heading, three sections of items
     with prices, a coffee cup and a croissant drawn in chalk. For the back-right wall."""
@@ -1372,7 +1395,7 @@ ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key
        piano_back, bookshelf_back, armchair_back, booth_back, bar_counter_back, record_cabinet_back,
        espresso_station_back, laptop_back,
        fiddle_leaf_fig, snake_plant, fern_stand, succulent, tulip_pot, window_box,
-       couch, lambda: couch(back=True), menu_board, coffee_table,
+       couch, lambda: couch(back=True), menu_board, coffee_table, booth_table,
        lambda: couch(name="sofa-large", L=24, seats=4, R=("olive0", "olive1", "olive2", "olive3", "leaf3")),
        lambda: couch(back=True, name="sofa-large", L=24, seats=4, R=("olive0", "olive1", "olive2", "olive3", "leaf3"))]
 

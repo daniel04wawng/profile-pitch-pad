@@ -35,7 +35,7 @@ export type Layout = {
 // listed (your own drawings and imports) goes under "Your assets".
 export const ASSET_SECTIONS: [string, string[]][] = [
   ["Seating", ["cafe-chair", "armchair", "couch", "sofa-large", "booth", "piano-stool"]],
-  ["Tables & counters", ["cafe-table", "cafe-table-cloth", "cafe-table-linen", "coffee-table", "bar-counter", "pastry-counter"]],
+  ["Tables & counters", ["cafe-table", "cafe-table-cloth", "cafe-table-linen", "coffee-table", "booth-table", "bar-counter", "pastry-counter"]],
   ["Music & books", ["piano", "record-cabinet", "bookshelf"]],
   ["Walls & windows", ["window", "kitchen-doorway", "menu-board", "chalkboard-menu", "back-bar-shelves", "sax-poster", "record-art", "framed-picture-tall", "window-box"]],
   ["Lighting", ["globe-lamp", "wall-lamp", "floor-lamp"]],
@@ -168,6 +168,7 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   couch: { hotspot: "chill", label: "sit and listen" },
   "sofa-large": { hotspot: "chill", label: "sit and listen" },
   "coffee-table": { hotspot: "chill", label: "sit for a while" },
+  "booth-table": { hotspot: "chill", label: "sit for a while" },
   armchair: { hotspot: "chill", label: "sit and listen" },
   "cafe-table-cloth": { hotspot: "chill", label: "sit for a while" },
   "cafe-table-linen": { hotspot: "chill", label: "sit for a while" },
