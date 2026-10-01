@@ -19,9 +19,14 @@ from PIL import Image
 from draw_iso import P as BASE_P
 
 # The room gets a few warmer tones on top of the shared palette: golden walls, deep wood.
+# Colors sampled from the original café: orange-brown planks with dark seams and bright
+# reflections, warm cream walls over dark wood paneling.
 P = {**BASE_P, **{k: tuple(int(v[i : i + 2], 16) for i in (1, 3, 5)) + (255,) for k, v in {
-    "wall0": "#d9b27c", "wall1": "#e8c793", "wall2": "#f2d9aa",
-    "glow": "#e0a865", "deep0": "#3a2219", "deep1": "#56331f",
+    "wall0": "#d9b585", "wall1": "#e6c697", "wall2": "#f0d6aa",
+    "glow": "#e0a865", "deep0": "#2e1508", "deep1": "#4a2410",
+    "plank0": "#884517", "plank1": "#9e5a26", "plank2": "#a65927", "plank3": "#b1652b",
+    "seam": "#5a311c", "shine0": "#d0732a", "shine1": "#e78e31",
+    "panel0": "#4f2a16", "panel1": "#6b3d22", "panel2": "#7c4a29", "rail": "#9e5a26",
 }.items()}}
 
 ART = os.path.dirname(os.path.abspath(__file__))
@@ -47,19 +52,22 @@ def floor_uv(x, y):
 
 def wall_color(z, along, lit):
     if z >= WALL:
-        return "wood1" if z >= WALL + CAP - 1 else "deep1"  # the cut top of the wall
-    if z >= WALL - 7:  # crown molding: a stepped wooden trim along the top
-        return ("wood3" if lit else "wood2") if z in (WALL - 7, WALL - 3) else ("wood2" if lit else "wood1")
+        return "seam" if z >= WALL + CAP - 1 else "deep1"  # the cut top of the wall
+    if z >= WALL - 7:  # crown molding
+        return ("panel2" if lit else "panel1") if z in (WALL - 7, WALL - 3) else ("panel1" if lit else "panel0")
     if z < 4:
         return "deep0"  # baseboard
-    if z < 44:  # tall wood wainscot, a seam every quarter tile
-        seam = (along * 4) % 1 < 0.12
-        return ("wood1" if lit else "deep1") if seam else ("wood2" if lit else "wood1")
-    if z < 47:
-        return "wood3" if lit else "wood2"  # chair rail
-    # cozy striped wallpaper: soft stripes every half tile
-    stripe = (along * 2) % 1 < 0.18
-    if stripe:
+    if z < 48:  # dark wood paneling, framed panels every half tile
+        k = (along * 2) % 1
+        if k < 0.08 or z in (6, 44):
+            return "panel0"
+        if k < 0.14:
+            return "panel2" if lit else "panel1"  # lit panel edge
+        return "panel1" if lit else "panel0"
+    if z < 52:
+        return "rail" if lit else "panel2"  # chair rail
+    # warm cream wall with soft stripes
+    if (along * 2) % 1 < 0.16:
         return "wall1" if lit else "wall0"
     return "wall2" if lit else "wall1"
 
@@ -77,9 +85,9 @@ def main():
         for z in range(WALL + CAP):
             put(x, floor_y - z, wall_color(z, along, lit))
 
-    # ---- floor: planks along u, staggered joints, darker seams, soft shadow at the walls
-    PLANKS = 4
-    tones = ["wood2", "wood3", "wood3", "wood4", "wood2"]
+    # ---- floor: narrow orange-brown planks like the original, dark seams, glossy light streaks
+    PLANKS = 5
+    tones = ["plank1", "plank2", "plank1", "plank3", "plank0"]
     plank_tone, plank_offset = {}, {}
     for y in range(H):
         for x in range(W):
@@ -87,18 +95,25 @@ def main():
             if not (0 <= u < N and 0 <= v < N):
                 continue
             p = math.floor(v * PLANKS)
-            seg_len = 2.5
+            seg_len = 3.0
             off = plank_offset.setdefault(p, rng.random() * seg_len)
             seg = math.floor((u + off) / seg_len)
             c = plank_tone.setdefault((p, seg), rng.choice(tones))
-            if (v * PLANKS) % 1 < 0.13:
-                c = "wood2" if c != "wood2" else "wood1"
-            elif ((u + off) / seg_len) % 1 < 0.03:
-                c = "wood1"
-            if u < 0.12 or v < 0.12:
+            if (v * PLANKS) % 1 < 0.16:
+                c = "seam"
+            elif ((u + off) / seg_len) % 1 < 0.025:
+                c = "seam"
+            else:
+                # glossy floor: soft bands of reflected light running across the planks
+                g = math.sin(u * 0.55 - v * 0.25) + 0.6 * math.sin(v * 0.9 + u * 0.15)
+                if g > 1.35:
+                    c = "shine1" if (x + y) % 2 == 0 else "shine0"
+                elif g > 1.15 and (x + y) % 2 == 0:
+                    c = "shine0"
+            if u < 0.15 or v < 0.15:
                 c = "deep0"
-            elif (u < 0.3 or v < 0.3) and c in ("wood3", "wood4"):
-                c = "wood1"
+            elif (u < 0.45 or v < 0.45) and c not in ("seam",):
+                c = "plank0"  # darker where the floor meets the walls
             put(x, y, c)
 
     # ---- floating base under the two front edges of the floor
