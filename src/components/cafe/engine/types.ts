@@ -88,16 +88,21 @@ export function snapWall(x: number, y: number, g: NonNullable<Layout["grid"]> = 
 // Pieces drawn facing more than one way. Rotate steps a quarter turn clockwise through these;
 // each entry is the art for that facing and whether it's mirrored. Anything not listed can
 // only face two ways, so rotating it mirrors it.
-const CHAIR_TURNS = [
-  { name: "cafe-chair", flipX: false }, // facing you, to the left
-  { name: "cafe-chair-back", flipX: true }, // facing away, to the left
-  { name: "cafe-chair-back", flipX: false }, // facing away, to the right
-  { name: "cafe-chair", flipX: true }, // facing you, to the right
-];
-export const ROTATIONS: Record<string, { name: string; flipX: boolean }[]> = {
-  "cafe-chair": CHAIR_TURNS,
-  "cafe-chair-back": CHAIR_TURNS,
-};
+// Every piece listed here has a `<name>-back` drawing (art/draw_props.py), so it turns all
+// the way round: facing you to the left, away to the left, away to the right, you to the right.
+const TURNS_ALL_WAYS = ["cafe-chair", "piano", "bookshelf", "armchair", "booth", "bar-counter", "record-cabinet", "espresso-station", "laptop"];
+export const ROTATIONS: Record<string, { name: string; flipX: boolean }[]> = {};
+for (const name of TURNS_ALL_WAYS) {
+  const turns = [
+    { name, flipX: false },
+    { name: `${name}-back`, flipX: true },
+    { name: `${name}-back`, flipX: false },
+    { name, flipX: true },
+  ];
+  ROTATIONS[name] = ROTATIONS[`${name}-back`] = turns;
+}
+// The back drawings only exist for Rotate; the asset library doesn't list them.
+export const isBackView = (name: string) => name.endsWith("-back") && name in ROTATIONS;
 
 // What a freshly placed asset opens, so the furniture works the moment it's moved in.
 // Flat things (rugs) lie under everything else.

@@ -180,5 +180,48 @@
    "x": 11,
    "y": 30
   }
- }
+ },
+ "piano-back": {
+  "foot": {
+   "x": 41,
+   "y": 92
+  }
+ },
+ "bookshelf-back": {
+  "foot": {
+   "x": 25,
+   "y": 83
+  }
+ },
+ "armchair-back": {
+  "foot": {
+   "x": 17,
+   "y": 39
+  }
+ },
+ "booth-back": {
+  "foot": {
+   "x": 33,
+   "y": 49
+  }
+ },
+ "bar-counter-back": {
+  "foot": {
+   "x": 49,
+   "y": 57
+  }
+ },
+ "record-cabinet-back": {
+  "foot": {
+   "x": 25,
+   "y": 51
+  }
+ },
+ "espresso-station-back": {
+  "foot": {
+   "x": 21,
+   "y": 28
+  }
+ },
+ "laptop-back": {}
 }

@@ -944,10 +944,200 @@ def cafe_chair_back():
     return save(c, "cafe-chair-back", foot=(X0, Y0 + N))
 
 
+# ---------------------------------------------------------------- back views (for Rotate)
+# Each piece seen from behind: the same footprint turned 180 degrees, so what was its back
+# now faces you. Same canvas origin and foot as the front view, so rotating keeps its spot.
+
+
+def wood_back(t, z, step=4):
+    """Plain back panelling: vertical boards with a lit edge every `step` units."""
+    k = t % step
+    return "wood1" if k < 0.3 else ("wood3" if k < 0.6 else "wood2")
+
+
+def piano_back():
+    c = Canvas(140, 160)
+    X0, Y0 = 24, 76
+    L, D, KD = 20, 4, 4
+    KB, TOP = 22, 64
+    m = ["mah0", "mah1", "mah2", "mah3", "mah4", "mah5"]
+    # keybed sticks out behind (mostly hidden): its far end, then the tall body in front of it
+    face_right(c, X0, Y0, L, 0, KD, 0, KB + 3, lambda s_, z: m[1])
+    face_right(c, X0, Y0, L, KD, KD + D, 0, TOP, lambda s_, z: m[3] if z >= TOP - 1 else m[1])
+    def back(t, z):
+        if z < 2:
+            return m[0]
+        if z >= TOP - 3:
+            return m[3]
+        k = t % (L / 4)
+        if k < 0.4 or z in (2, 3, TOP - 4):
+            return m[1]  # frame of the back's braces
+        if abs(t - L / 2) < 0.5:
+            return m[2]  # the soundboard brace
+        return m[2] if (z // 6) % 2 else m[1]
+    face_left(c, X0, Y0, 0, L, KD + D, 0, TOP, back)
+    def lid(a, b):
+        d = abs(a - L * 0.4)
+        return m[5] if (d < 2.5 and b < KD + D - 1.5) else (m[4] if d < 6 or b > KD + D - 0.5 else m[3])
+    face_top(c, X0, Y0, -0.3, L + 0.3, KD - 0.3, KD + D + 0.3, TOP, lid)
+    # the brass lamp from behind (mirrored along the piano)
+    lx, ly = X0 + 2 * (L * 0.38) - 2 * (KD + D * 0.5), Y0 + L * 0.38 + KD + D * 0.5 - TOP
+    for dx in range(-3, 4):
+        c.px(lx + dx, ly, "brass1")
+    vline(c, lx, ly - 9, ly - 1, "brass1")
+    for dx in range(-6, 7):
+        y = ly - 12 + (dx + 6) // 3
+        c.px(lx + dx, y - 1, "brass2"); c.px(lx + dx, y, "brass1")
+    return save(c, "piano-back", foot=(X0 + 2 * L - 2 * (D + KD), Y0 + L + D + KD))
+
+
+def bookshelf_back():
+    c = Canvas(90, 140)
+    X0, Y0 = 20, 90
+    L, D, H = 12, 4, 66
+    face_left(c, X0, Y0, 0, L, D, 0, H, lambda t, z: "wood3" if z >= H - 3 else ("wood1" if z < 2 else wood_back(t, z, 3)))
+    face_right(c, X0, Y0, L, 0, D, 0, H, lambda s_, z: "wood1" if z < H - 1 else "wood2")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood4" if b > D - 0.6 else "wood3")
+    px_, py_ = round(X0 + 2 * 4 - 2 * 2.5), round(Y0 + 4 + 2.5 - H)  # the plant, now at the other end
+    for dx in range(-2, 3):
+        c.px(px_ + dx, py_, "terra1"); c.px(px_ + dx, py_ - 1, "terra2")
+    for (dx, dy, col) in ((-3, -3, "sage1"), (-2, -4, "sage2"), (-1, -5, "leaf3"), (0, -4, "sage1"), (1, -6, "sage2"), (2, -4, "sage0"), (3, -3, "sage1"), (0, -2, "sage0")):
+        c.px(px_ + dx, py_ + dy, col)
+    return save(c, "bookshelf-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
+def armchair_back():
+    c = Canvas(80, 80)
+    X0, Y0 = 22, 38
+    L, D = 8, 8
+    BASE, SEAT, ARM, BACK = 3, 10, 17, 28
+    BK, AW = 2.5, 1.6
+    for (a_, b_) in ((0.6, D - 0.4), (L - 0.4, D - 0.4), (L - 0.4, 0.6)):
+        x, y = X0 + 2 * a_ - 2 * b_, Y0 + a_ + b_
+        vline(c, x, y - BASE, y, "wood1"); vline(c, x + 1, y - BASE, y, "wood0")
+    # the far arms' tops peek over; the tall back is nearest you
+    for a0 in (0, L - AW):
+        face_top(c, X0, Y0, a0, a0 + AW, 0, D - BK, ARM, lambda a_, b_: "olive3")
+        face_right(c, X0, Y0, a0 + AW, 0, D - BK, SEAT, ARM, lambda s_, z: "olive1")
+    face_right(c, X0, Y0, L, 0, D, BASE, ARM, lambda s_, z: "olive0" if z < ARM - BASE - 1 else "olive1")
+    face_left(c, X0, Y0, 0, L, D, BASE, BACK, lambda t, z: "olive3" if z >= BACK - BASE - 2 else ("olive1" if (t < 0.4 or t > L - 0.4 or z < 2) else "olive2"))
+    face_right(c, X0, Y0, L, D - BK, D, BASE, BACK, lambda s_, z: "olive1" if z >= BACK - BASE - 1 else "olive0")
+    face_top(c, X0, Y0, 0, L, D - BK, D, BACK, lambda a_, b_: "olive3")
+    return save(c, "armchair-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
+def booth_back():
+    c = Canvas(120, 100)
+    X0, Y0 = 20, 50
+    L, D = 16, 8
+    SEAT, BACK = 11, 30
+    face_right(c, X0, Y0, L, 0, D - 2.5, 0, SEAT, lambda s_, z: "lea0" if z < SEAT - 3 else "lea1")
+    face_left(c, X0, Y0, 0, L, D, 0, BACK, lambda t, z: "wood0" if z < 2 else ("wood3" if z >= BACK - 2 else wood_back(t, z, 4)))
+    face_right(c, X0, Y0, L, D - 2.5, D, 0, BACK, lambda s_, z: "wood1" if z < BACK - 1 else "wood2")
+    face_top(c, X0, Y0, 0, L, D - 2.5, D, BACK, lambda a, b: "lea3" if b < D - 1.5 else "wood4")
+    return save(c, "booth-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
+def bar_counter_back():
+    """The bartender's side: open shelves under the top with cups and glasses."""
+    import random
+    rng = random.Random(3)
+    c = Canvas(130, 100)
+    X0, Y0 = 22, 40
+    L, D, H = 24, 8, 24
+    items = {}
+    for row, z0 in ((0, 3), (1, 12)):
+        t, run = 1.0, []
+        while t < L - 1.5:
+            kind = rng.choice(["cup", "cup", "glass", "jar", None])
+            run.append((t, kind))
+            t += 1.4
+        items[row] = run
+
+    def shelf(t, z):
+        if z < 2 or t < 0.5 or t > L - 0.5 or abs(t % 8) < 0.4:
+            return "wood2"  # frame and dividers
+        for row, (z0, z1) in enumerate(((3, 10), (12, 19))):
+            if z0 - 1 <= z < z0:
+                return "wood3"  # shelf board
+            if z0 <= z < z1:
+                for t0, kind in items[row]:
+                    if kind and t0 <= t < t0 + 0.9:
+                        h = {"cup": 3, "glass": 5, "jar": 6}[kind]
+                        if z < z0 + h:
+                            return {"cup": "key1" if t - t0 < 0.4 else "key0", "glass": "glass2" if t - t0 < 0.3 else "glass1", "jar": "choc1" if z < z0 + 4 else "brass1"}[kind]
+                return "wood0"  # the dark inside of the shelf
+        return "wood1"
+    face_left(c, X0, Y0, 0.3, L - 0.3, D - 0.3, 0, H - 3, shelf)
+    face_right(c, X0, Y0, L - 0.3, 0.3, D - 0.3, 0, H - 3, lambda s_, z: "wood1" if z > 1 else "wood0")
+    face_left(c, X0, Y0, 0, L, D, H - 3, H, lambda t, z: "wood4" if z >= 2 else "wood3")
+    face_right(c, X0, Y0, L, 0, D, H - 3, H, lambda s_, z: "wood2")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if (b > D - 0.6 or a > L - 0.6) else ("wood5" if abs(a - b * 1.4 - 3) < 0.6 else "wood4"))
+    return save(c, "bar-counter-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
+def record_cabinet_back():
+    c = Canvas(90, 90)
+    X0, Y0 = 20, 50
+    L, D, H = 12, 4, 30
+    face_left(c, X0, Y0, 0, L, D, 0, H, lambda t, z: "wood3" if z >= H - 2 else ("wood1" if z < 2 else wood_back(t, z, 3)))
+    face_right(c, X0, Y0, L, 0, D, 0, H, lambda s_, z: "wood1" if z < H - 1 else "wood2")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if b > D - 0.6 else "wood4")
+    face_top(c, X0, Y0, 4.5, 10.5, 0.4, D - 0.6, H + 2, lambda a, b: "wood1")  # turntable, now at the other end
+    face_left(c, X0, Y0, 4.5, 10.5, D - 0.6, H, H + 2, lambda t, z: "wood0")
+    rx, ry = X0 + 2 * 7.8 - 2 * 1.9, Y0 + 7.8 + 1.9 - H - 2
+    disc(c, rx, ry, 4.5, 2.3, lambda dx, dy: "red2" if dx * dx + dy * dy < 0.08 else ("slate1" if (dx * dx + dy * dy) % 0.3 < 0.15 else "iron"))
+    vx, vy = round(X0 + 2 * 2 - 2 * 2), round(Y0 + 2 + 2 - H)
+    for y in range(vy - 4, vy + 1):
+        c.px(vx, y, "glass1"); c.px(vx + 1, y, "glass0")
+    for dx, dy, col in ((-2, -6, "gold2"), (0, -7, "pink1"), (2, -6, "gold2"), (-1, -8, "gold3"), (1, -8, "pink2"), (-2, -5, "sage1"), (2, -5, "sage1")):
+        c.px(vx + dx, vy + dy, col)
+    return save(c, "record-cabinet-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
+def espresso_station_back():
+    c = Canvas(70, 60)
+    X0, Y0 = 14, 30
+    L, D, H = 8, 4, 14
+    # the grinder is now on the far left, behind the machine
+    gx, gy = round(X0 + 2 * (-2.0) - 2 * 2), round(Y0 - 2.0 + 2)
+    for yy in range(gy - 8, gy + 1):
+        for xx in range(gx - 2, gx + 2):
+            c.px(xx, yy, "wood1" if xx < gx else "wood0")
+    for yy in range(gy - 15, gy - 8):
+        half = 3 - (gy - 8 - yy) // 4
+        for xx in range(gx - half - 1, gx + half + 1):
+            c.px(xx, yy, ("choc1" if (xx + yy) % 2 else "choc0") if yy > gy - 13 else "glass1")
+    face_left(c, X0, Y0, 0, L, D, 0, H, lambda t, z: "brass2" if z >= H - 1 else ("brass1" if z >= H - 2 else ("silver0" if (t * 2) % 2 < 0.25 else "silver1")))
+    face_right(c, X0, Y0, L, 0, D, 0, H, lambda s_, z: "brass1" if z >= H - 2 else "silver0")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "silver2" if b > D - 0.6 else "silver1")
+    for cx in (2.5, 4.5, 6.5):
+        x, y = round(X0 + 2 * cx - 2 * 2), round(Y0 + cx + 2 - H)
+        for yy in range(y - 2, y + 1):
+            c.px(x, yy, "key2"); c.px(x + 1, yy, "key1")
+    return save(c, "espresso-station-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
+def laptop_back():
+    c = Canvas(30, 30)
+    x0, y0 = 6, 20
+    for t in range(12):  # lid seen from behind, base hidden behind it
+        for z in range(9):
+            col = "silver0" if t in (0, 11) or z in (0, 8) else "silver1"
+            if 4 <= t <= 6 and 3 <= z <= 5:
+                col = "silver2"  # a little logo
+            c.px(x0 + t, y0 + t // 2 - z - 1, col)
+    for t in range(12):
+        c.px(x0 + t + 1, y0 + t // 2, "silver0")
+    return save(c, "laptop-back")
+
+
 ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key1"),
        table_cloth("cafe-table-linen", "key1", "key0", "red2", "key2"), cafe_chair, piano, piano_stool, globe_lamp, wall_lamp,
        bookshelf, window, hanging_plant, potted_plant, flower_vase,
-       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves, bar_counter, espresso_station, cafe_chair_back]
+       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves, bar_counter, espresso_station, cafe_chair_back,
+       piano_back, bookshelf_back, armchair_back, booth_back, bar_counter_back, record_cabinet_back,
+       espresso_station_back, laptop_back]
 
 GLOWS = {"floor-lamp": {"x": 10, "y": 15, "r": 90}, "wall-lamp": {"x": 10, "y": 4, "r": 60}, "globe-lamp": {"x": 7, "y": 38, "r": 80}}
 

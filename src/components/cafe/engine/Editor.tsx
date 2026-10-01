@@ -6,7 +6,7 @@ import { CafeScreen } from "./Screens";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
-import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, ROTATIONS, WALL_ITEMS, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, ROTATIONS, WALL_ITEMS, isBackView, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -131,7 +131,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const refreshAssets = useCallback(async () => {
     try {
       const files: string[] = await (await fetch("/__cafe/assets")).json();
-      setAssets(files);
+      setAssets(files.filter((f) => !isBackView(nameOf(f))));
     } catch {
       setAssets([...new Set(layout.assets.map((a) => a.file))].sort());
     }
