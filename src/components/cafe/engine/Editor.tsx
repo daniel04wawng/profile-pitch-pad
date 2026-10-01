@@ -6,7 +6,7 @@ import { CafeScreen } from "./Screens";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
-import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, WALL_ASSETS, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, WALL_ITEMS, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -182,14 +182,20 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     const { w, h } = sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? 0}`));
     let fx = at ? Math.round(at.x) : Math.round(layout.width / 2);
     let fy = at ? Math.round(at.y) : Math.round(layout.height / 2 + h / 2);
-    if (snap) ({ x: fx, y: fy } = (WALL_ASSETS.has(nameOf(file)) ? snapWall : snapIso)(fx, fy, gridOf(layout)));
+    const wall = WALL_ITEMS[nameOf(file)];
+    let flipX = false;
+    if (snap && wall) {
+      const p = snapWall(fx, fy, gridOf(layout), wall.onFloor);
+      ({ x: fx, y: fy } = p);
+      flipX = !!wall.drawnFor && p.side !== wall.drawnFor;
+    } else if (snap) ({ x: fx, y: fy } = snapIso(fx, fy, gridOf(layout)));
     const id = uniqueId(nameOf(file));
-    const foot = footOf({ file, w, h });
+    const foot = footOf({ file, w, h, flipX });
     edit((l) => ({
       ...l,
       assets: [
         ...l.assets,
-        { id, file, x: fx - Math.round(foot.x), y: fy - Math.round(foot.y), w, h, baseY: FLAT_ASSETS.has(nameOf(file)) ? fy - Math.round(foot.y) : fy - Math.round(foot.y) + h, hotspot: ASSET_DEFAULTS[nameOf(file)]?.hotspot ?? null, label: ASSET_DEFAULTS[nameOf(file)]?.label ?? null },
+        { id, file, x: fx - Math.round(foot.x), y: fy - Math.round(foot.y), w, h, ...(flipX ? { flipX } : {}), baseY: FLAT_ASSETS.has(nameOf(file)) ? fy - Math.round(foot.y) : fy - Math.round(foot.y) + h, hotspot: ASSET_DEFAULTS[nameOf(file)]?.hotspot ?? null, label: ASSET_DEFAULTS[nameOf(file)]?.label ?? null },
       ],
     }));
     setSelected(id);
@@ -470,10 +476,23 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                 // hold Shift to place freely (e.g. a cup on top of the counter)
                 if (snap && !e.shiftKey) {
                   // snap the object's foot (its floor corner, or bottom-centre) onto the iso grid
-                  // wall items slide along the wall and keep their height; the rest sit on the floor
+                  // wall items slide along the wall, keep their height and face the wall they're on
                   const s = layout.assets.find((a) => a.id === d.id);
-                  const snapTo = s && WALL_ASSETS.has(nameOf(s.file)) ? snapWall : snapIso;
-                  const foot = snapTo(d.footX + dx, d.footY + dy, gridOf(layout));
+                  const wall = s && WALL_ITEMS[nameOf(s.file)];
+                  if (s && wall) {
+                    const p = snapWall(d.footX + dx, d.footY + dy, gridOf(layout), wall.onFloor);
+                    const flipX = wall.drawnFor ? p.side !== wall.drawnFor : !!s.flipX;
+                    const off = footOf({ ...s, flipX });
+                    const x = Math.round(p.x - off.x);
+                    const y = Math.round(p.y - off.y);
+                    setMarker({ x: p.x, y: p.y });
+                    editLive((l) => ({
+                      ...l,
+                      assets: l.assets.map((a) => (a.id === d.id ? { ...a, x, y, baseY: y + a.h, flipX } : a)),
+                    }));
+                    return;
+                  }
+                  const foot = snapIso(d.footX + dx, d.footY + dy, gridOf(layout));
                   dx = Math.round(foot.x - d.footX);
                   dy = Math.round(foot.y - d.footY);
                   setMarker(foot);

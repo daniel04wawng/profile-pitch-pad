@@ -29,10 +29,24 @@ def back_corner(name):
     return {"x": round(lx + rx - fx), "y": round(fy - A - B)}
 
 
+WALL_FEET = ["kitchen-doorway"]  # things on a wall that stand on the floor
+
+
+def wall_foot(name):
+    """The lowest point of a piece drawn flat on a wall: where it meets the floor line."""
+    a = np.asarray(Image.open(os.path.join(SPRITES, f"{name}.png")).convert("RGBA"))[..., 3] > 8
+    ys, xs = np.nonzero(a)
+    y = int(ys.max())
+    return {"x": int(round(xs[ys == y].mean())), "y": y}
+
+
 if __name__ == "__main__":
     path = os.path.join(SPRITES, "_companions.json")
     comp = json.load(open(path))
     for n in PIECES:
         comp[n] = {**comp.get(n, {}), "foot": back_corner(n)}
+        print(n, comp[n]["foot"])
+    for n in WALL_FEET:
+        comp[n] = {**comp.get(n, {}), "foot": wall_foot(n)}
         print(n, comp[n]["foot"])
     json.dump(comp, open(path, "w"), indent=1)

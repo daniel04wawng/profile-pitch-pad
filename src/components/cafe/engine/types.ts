@@ -57,22 +57,32 @@ export const HOTSPOTS = ["projects", "about", "menu", "now", "contact", "piano",
 
 export const BASE = "/cafe/";
 
-// Things that hang on a wall or from the ceiling. They slide along the wall in grid steps but
-// keep whatever height you give them, instead of being snapped down onto the floor.
-export const WALL_ASSETS = new Set([
-  "window", "wall-lamp", "sax-poster", "chalkboard-menu", "record-art", "framed-picture-tall",
-  "kitchen-doorway", "back-bar-shelves", "globe-lamp", "hanging-plant",
-]);
+// Things on a wall or hanging from the ceiling. They slide along the wall in grid steps and
+// keep whatever height you give them (doors stay on the floor). `drawnFor` is the wall the art
+// was drawn for: dragged onto the other wall, the piece mirrors itself to match.
+export const WALL_ITEMS: Record<string, { drawnFor?: "left" | "right"; onFloor?: boolean }> = {
+  window: { drawnFor: "right" },
+  "sax-poster": { drawnFor: "right" },
+  "chalkboard-menu": { drawnFor: "right" },
+  "record-art": { drawnFor: "right" },
+  "back-bar-shelves": { drawnFor: "right" },
+  "framed-picture-tall": { drawnFor: "left" },
+  "wall-lamp": { drawnFor: "left" },
+  "kitchen-doorway": { drawnFor: "left", onFloor: true },
+  "globe-lamp": {},
+  "hanging-plant": {},
+};
 
 // Snap a wall item's foot: along the wall to the half-tile grid, height above the floor line
-// to 2px. The wall is picked by which side of the back corner the point is on.
-export function snapWall(x: number, y: number, g: NonNullable<Layout["grid"]> = DEFAULT_GRID) {
+// to 2px (or 0 for things that stand on the floor). The wall is the side of the back corner
+// the point is on.
+export function snapWall(x: number, y: number, g: NonNullable<Layout["grid"]> = DEFAULT_GRID, onFloor = false) {
   const step = g.tile / 4;
   const floorAt = (px: number) => g.oy + Math.abs(px - g.ox) / 2;
-  const height = Math.max(0, Math.round((floorAt(x) - y) / 2) * 2);
+  const height = onFloor ? 0 : Math.max(0, Math.round((floorAt(x) - y) / 2) * 2);
   const reach = ((g.cols ?? 20) * g.tile) / 2;
   const sx = g.ox + Math.max(-reach, Math.min(reach, Math.round((x - g.ox) / step) * step));
-  return { x: sx, y: floorAt(sx) - height };
+  return { x: sx, y: floorAt(sx) - height, side: (sx < g.ox ? "left" : "right") as "left" | "right" };
 }
 
 // What a freshly placed asset opens, so the furniture works the moment it's moved in.
