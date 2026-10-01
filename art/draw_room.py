@@ -1,5 +1,8 @@
 """The empty café room: an isometric dollhouse cutaway drawn on the editor's grid.
 
+Just the shell (floor, two walls, base). Windows, lamps and everything else are assets
+placed in the editor, and lighting comes from the time of day, not from this image.
+
 Floor of N x N tiles (32x16px, 2:1 iso), two back walls, and a floating base, in the same
 simple palette as the iso assets. Nothing is baked in: furniture is placed in the editor.
 
@@ -45,6 +48,8 @@ def floor_uv(x, y):
 def wall_color(z, along, lit):
     if z >= WALL:
         return "wood1" if z >= WALL + CAP - 1 else "deep1"  # the cut top of the wall
+    if z >= WALL - 7:  # crown molding: a stepped wooden trim along the top
+        return ("wood3" if lit else "wood2") if z in (WALL - 7, WALL - 3) else ("wood2" if lit else "wood1")
     if z < 4:
         return "deep0"  # baseboard
     if z < 44:  # tall wood wainscot, a seam every quarter tile
@@ -52,8 +57,9 @@ def wall_color(z, along, lit):
         return ("wood1" if lit else "deep1") if seam else ("wood2" if lit else "wood1")
     if z < 47:
         return "wood3" if lit else "wood2"  # chair rail
-    # golden walls, a touch darker toward the top (lamplight sits low)
-    if z > WALL - 18:
+    # cozy striped wallpaper: soft stripes every half tile
+    stripe = (along * 2) % 1 < 0.18
+    if stripe:
         return "wall1" if lit else "wall0"
     return "wall2" if lit else "wall1"
 
@@ -73,7 +79,7 @@ def main():
 
     # ---- floor: planks along u, staggered joints, darker seams, soft shadow at the walls
     PLANKS = 4
-    tones = ["wood2", "wood3", "wood2", "wood3", "wood1"]
+    tones = ["wood2", "wood3", "wood3", "wood4", "wood2"]
     plank_tone, plank_offset = {}, {}
     for y in range(H):
         for x in range(W):
@@ -89,10 +95,6 @@ def main():
                 c = "wood2" if c != "wood2" else "wood1"
             elif ((u + off) / seg_len) % 1 < 0.03:
                 c = "wood1"
-            # warm pool of light in the middle of the room, dithered at its edge
-            d = math.hypot(u - N / 2, v - N / 2) / (N * 0.42)
-            if d < 0.75 or (d < 0.95 and (x + y) % 2 == 0):
-                c = {"wood1": "wood2", "wood2": "wood3", "wood3": "wood4"}.get(c, c)
             if u < 0.12 or v < 0.12:
                 c = "deep0"
             elif (u < 0.3 or v < 0.3) and c in ("wood3", "wood4"):

@@ -63,7 +63,8 @@ function cafeEditorSaver(): Plugin {
         }
         const files = fs
           .readdirSync(path.join(root, "sprites"))
-          .filter((f) => f.endsWith(".png"))
+          // companion layers (window sky masks, sun patches) aren't assets of their own
+          .filter((f) => f.endsWith(".png") && !/\.(sky|light)\.png$/.test(f))
           .sort()
           .map((f) => `sprites/${f}`);
         res.setHeader("Content-Type", "application/json");

@@ -1,5 +1,32 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Fragment } from "react";
 import { BASE, DEFAULT_GRID, type Layout, type SpriteDef } from "./types";
+import type { Light } from "./lighting";
+
+// Extra layers drawn by art/draw_iso.py: window sky masks, sun patches, lamp glow points.
+type Companion = {
+  sky?: string;
+  light?: { file: string; dx: number; dy: number; w: number; h: number };
+  glow?: { x: number; y: number; r: number };
+};
+let companionsCache: Promise<Record<string, Companion>> | null = null;
+function useCompanions() {
+  const [c, setC] = useState<Record<string, Companion>>({});
+  useEffect(() => {
+    companionsCache ??= fetch(`${BASE}sprites/_companions.json`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : {}))
+      .catch(() => ({}));
+    companionsCache.then(setC);
+  }, []);
+  return c;
+}
+const assetName = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/, "");
+const maskStyle = (url: string): React.CSSProperties => ({
+  WebkitMaskImage: `url(${url})`,
+  maskImage: `url(${url})`,
+  WebkitMaskSize: "100% 100%",
+  maskSize: "100% 100%",
+});
 
 // Alpha masks so clicks land on the actual drawn pixels, not the sprite's bounding box.
 function useAlphaMasks(layout: Layout | null, versions: Record<string, number>) {
@@ -50,6 +77,7 @@ export function Stage({
   versions = {},
   marker = null,
   camera = null,
+  light = null,
   handlers,
   children,
 }: {
@@ -67,12 +95,15 @@ export function Stage({
   marker?: { x: number; y: number } | null;
   // Scene rect to glide the camera into (walking up to an object). null = whole room.
   camera?: { x: number; y: number; w: number; h: number } | null;
+  // Time-of-day lighting; null draws the room flat (no sky, sun or lamps).
+  light?: Light | null;
   handlers: StageHandlers;
   children?: React.ReactNode;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ w: window.innerWidth, h: window.innerHeight });
   const masks = useAlphaMasks(layout, versions);
+  const companions = useCompanions();
   const src = (file: string) => `${BASE}${file}?v=${versions[file] ?? 0}`;
 
   useEffect(() => {
@@ -160,10 +191,58 @@ export function Stage({
           className="absolute left-0 top-0 max-w-none"
           style={{ opacity: showBackground ? 1 : 0.12 }}
         />
-        {ordered.map((s) =>
-          s.hidden ? null : (
+        {ordered.map((s) => {
+          if (s.hidden) return null;
+          const comp = companions[assetName(s.file)];
+          const flip = s.flipX ? "scaleX(-1)" : undefined;
+          return (
+            <Fragment key={s.id}>
+              {/* the window's glass: today's sky (and stars at night) */}
+              {light && comp?.sky && (
+                <div
+                  className="pointer-events-none absolute"
+                  style={{
+                    left: s.x,
+                    top: s.y,
+                    width: s.w,
+                    height: s.h,
+                    zIndex: s.baseY,
+                    transform: flip,
+                    background: `linear-gradient(${light.skyTop}, ${light.skyBottom})`,
+                    ...maskStyle(BASE + comp.sky),
+                  }}
+                >
+                  {light.stars > 0.05 && (
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        opacity: light.stars,
+                        backgroundImage: "radial-gradient(#fff 0.5px, transparent 0.6px), radial-gradient(#fff6c8 0.5px, transparent 0.6px)",
+                        backgroundSize: "9px 11px, 13px 7px",
+                        backgroundPosition: "1px 2px, 5px 4px",
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+              {/* the sun patch the window throws on the floor */}
+              {light && comp?.light && light.sun > 0.02 && (
+                <div
+                  className="pointer-events-none absolute mix-blend-screen"
+                  style={{
+                    left: s.flipX ? s.x + s.w - comp.light.dx - comp.light.w : s.x + comp.light.dx,
+                    top: s.y + comp.light.dy,
+                    width: comp.light.w,
+                    height: comp.light.h,
+                    zIndex: 1,
+                    transform: flip,
+                    opacity: light.sun * 0.55,
+                    background: light.sunColor,
+                    ...maskStyle(BASE + comp.light.file),
+                  }}
+                />
+              )}
             <img
-              key={s.id}
               src={src(s.file)}
               alt=""
               draggable={false}
@@ -185,7 +264,46 @@ export function Stage({
                         : undefined,
               }}
             />
-          ),
+            </Fragment>
+          );
+        })}
+        {light && (
+          <>
+            {/* the room's color cast for the time of day, kept to the room itself */}
+            <div
+              className="pointer-events-none absolute left-0 top-0 mix-blend-multiply"
+              style={{
+                width: layout.width,
+                height: layout.height,
+                zIndex: 900,
+                background: light.tint,
+                opacity: light.tintAlpha,
+                ...maskStyle(src(layout.scene)),
+              }}
+            />
+            {/* lamps glow once it gets dark */}
+            {light.lamps > 0.02 &&
+              ordered.map((s) => {
+                const g = !s.hidden && companions[assetName(s.file)]?.glow;
+                if (!g) return null;
+                const gx = s.flipX ? s.x + s.w - g.x : s.x + g.x;
+                return (
+                  <div
+                    key={`glow-${s.id}`}
+                    className="pointer-events-none absolute rounded-full mix-blend-screen"
+                    style={{
+                      left: gx - g.r,
+                      top: s.y + g.y - g.r,
+                      width: g.r * 2,
+                      height: g.r * 2,
+                      zIndex: 950,
+                      opacity: light.lamps,
+                      background: "radial-gradient(circle, rgba(255,214,140,0.55) 0%, rgba(255,180,100,0.22) 35%, rgba(255,160,80,0) 70%)",
+                    }}
+                  />
+                );
+              })}
+          </>
         )}
         {(showGrid || marker) && (
           <svg

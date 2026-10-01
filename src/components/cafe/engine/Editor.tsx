@@ -3,6 +3,7 @@ import { Stage } from "./Stage";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
 import { CafeScreen } from "./Screens";
+import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
 import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, snapIso, type Layout, type SpriteDef } from "./types";
@@ -71,6 +72,10 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const [painting, setPainting] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
+  // lighting preview: null = live San Francisco time; a number previews that hour
+  const [lightOn, setLightOn] = useState(true);
+  const [previewHour, setPreviewHour] = useState<number | null>(null);
+  const hour = previewHour ?? pacificHour();
   // live preview of the screen being designed, shown over the room while you edit it
   const [designOpen, setDesignOpen] = useState(true);
   const [versions, setVersions] = useState<Record<string, number>>({});
@@ -319,7 +324,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
 
   // ---------- render ----------
 
-  if (playing) return <Play layout={layout} screens={screens} versions={versions} onExit={() => setPlaying(false)} />;
+  if (playing) return <Play layout={layout} screens={screens} versions={versions} hour={previewHour} onExit={() => setPlaying(false)} />;
 
   const original = cut?.assets.find((a) => a.id === selected);
   const statusText = { saved: "saved", unsaved: "unsaved changes", saving: "saving…", error: "save failed (use download)" }[status];
@@ -360,6 +365,33 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
             {name}
           </label>
         ))}
+        <span className="mx-1 h-5 w-px bg-white/10" />
+        <label className="flex items-center gap-1.5 text-[12px]">
+          <input type="checkbox" checked={lightOn} onChange={(e) => setLightOn(e.target.checked)} />
+          lighting
+        </label>
+        {lightOn && (
+          <div className="flex items-center gap-2 text-[12px]">
+            <input
+              type="range"
+              min={0}
+              max={23.99}
+              step={0.05}
+              value={hour}
+              onChange={(e) => setPreviewHour(Number(e.target.value))}
+              className="w-28 accent-[#9bbf7a]"
+              aria-label="Preview time of day"
+            />
+            <span className="w-32 tabular-nums opacity-80">
+              {formatHour(hour)} · {phaseName(hour)}
+            </span>
+            {previewHour !== null && (
+              <button onClick={() => setPreviewHour(null)} className={btn} title="Follow the real time in San Francisco">
+                live
+              </button>
+            )}
+          </div>
+        )}
         <div className="ml-auto flex items-center gap-2">
           <button onClick={download} className={btn}>
             Download layout
@@ -382,6 +414,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
             showGrid={grid}
             versions={versions}
             marker={marker}
+            light={lightOn ? lightAt(hour) : null}
             handlers={{
               onHover: (s) => !drag.current && setHovered(s?.id ?? null),
               onPointerDown: (s, p, e) => {

@@ -116,6 +116,43 @@ class Iso:
         return im
 
 
+# Extra layers some assets carry, written to sprites/_companions.json for the engine:
+#   sky   = mask of window glass (the engine fills it with the current sky)
+#   light = sun patch the window casts on the floor (shown in daytime), with its offset
+#   glow  = where a lamp's light comes from (shown at night), and how far it reaches
+COMPANIONS = {}
+
+
+def save_set(name, frame, sky=None, light=None, glow=None):
+    bbox = frame.im.getbbox()
+    out = frame.im.crop(bbox)
+    out.save(os.path.join(OUT, f"iso-{name}.png"))
+    info = {}
+    if sky is not None:
+        sky.im.crop(bbox).save(os.path.join(OUT, f"iso-{name}.sky.png"))
+        info["sky"] = f"sprites/iso-{name}.sky.png"
+    if light is not None:
+        lb = light.im.getbbox()
+        light.im.crop(lb).save(os.path.join(OUT, f"iso-{name}.light.png"))
+        info["light"] = {"file": f"sprites/iso-{name}.light.png", "dx": lb[0] - bbox[0], "dy": lb[1] - bbox[1], "w": lb[2] - lb[0], "h": lb[3] - lb[1]}
+    if glow is not None:
+        gx, gy, r = glow
+        info["glow"] = {"x": gx - bbox[0], "y": gy - bbox[1], "r": r}
+    if info:
+        COMPANIONS[f"iso-{name}"] = info
+    return out
+
+
+def wall_pt(x0, y0, t, z):
+    """A point on the back-right wall plane: t units along the wall, z px up from the floor."""
+    return (x0 + 2 * t, y0 + t - z)
+
+
+def anchor(s, x, y):
+    """Invisible pixel at floor level so a wall item's base sits on the wall line."""
+    s.im.putpixel((int(x), int(y)), (0, 0, 0, 1))
+
+
 # ---------------------------------------------------------------- assets
 
 
@@ -419,7 +456,7 @@ def floor_lamp():
     for x in range(cx - 9, cx + 11):
         s.px(x, 20, "gold1")
     s.outline()
-    return s.save("floor-lamp")
+    return save_set("floor-lamp", s, glow=(cx, 22, 90))
 
 
 def rug():
@@ -437,8 +474,140 @@ def rug():
     return s.save("rug")
 
 
+# ---------------------------------------------------------------- wall pieces (batch 3)
+
+
+def window():
+    """Tall window for the back-right wall (flip for the other wall). The glass is left
+    transparent; the engine paints the current sky into it and casts a sun patch."""
+    L, z0, z1 = 12, 50, 98
+    x0, y0 = 40, 120
+    frame, sky, light = Iso(200, 200), Iso(200, 200), Iso(200, 200)
+    for t in range(L):
+        for z in range(z0, z1):
+            x, y = wall_pt(x0, y0, t, z)
+            border = t == 0 or t == L - 1 or z < z0 + 2 or z >= z1 - 2
+            mullion = t == L // 2 or z in ((z0 + z1) // 2, (z0 + z1) // 2 + 1)
+            for dx in (0, 1):
+                if border:
+                    frame.px(x + dx, y, "wood3" if (z >= z1 - 2 or t == 0) else "wood2")
+                elif mullion:
+                    frame.px(x + dx, y, "wood2")
+                else:
+                    sky.px(x + dx, y, "white")
+    # sill: a little ledge under the window
+    for t in range(-1, L + 1):
+        for k, c in ((0, "cream2"), (1, "cream1"), (2, "cream0")):
+            x, y = wall_pt(x0, y0, t, z0 - k)
+            frame.px(x, y, c); frame.px(x + 1, y, c)
+        x, y = wall_pt(x0, y0, t, z0 + 1)
+        frame.px(x - 2, y + 1, "cream2"); frame.px(x - 1, y + 1, "cream2")
+    frame.outline()
+    anchor(frame, *wall_pt(x0, y0, L // 2, 0))
+    # sun patch on the floor in front: the window's shape, thrown down and out from the wall
+    for ti in range(0, 2 * L):
+        for si in range(6, 24):
+            t, sdepth = ti / 2, si / 2
+            tt = t - sdepth * 0.45  # the sun comes in at an angle
+            if not (0.5 <= tt <= L - 1.5):
+                continue
+            if abs(tt - L / 2) < 0.4 or abs(sdepth - 7.5) < 0.3:  # mullion shadows
+                continue
+            x = x0 + 2 * t - 2 * sdepth
+            y = y0 + t + sdepth
+            light.px(x, y, "white"); light.px(x + 1, y, "white")
+    return save_set("window", frame, sky=sky, light=light)
+
+
+def wall_sconce():
+    s = Iso(60, 120)
+    x0, y0 = 10, 100
+    bx, by = wall_pt(x0, y0, 3, 78)
+    for k in range(4):  # brass arm out from the wall
+        s.px(bx - k, by + k // 2, "gold0")
+    # little shade, bulb glowing under it
+    for dy, w in ((0, 3), (1, 4), (2, 5), (3, 5)):
+        for dx in range(-w, w + 1):
+            s.px(bx - 4 + dx, by + 2 + dy, "sage1" if dy < 3 else "sage0")
+    s.px(bx - 4, by + 6, "gold2"); s.px(bx - 3, by + 6, "gold2")
+    s.outline()
+    anchor(s, *wall_pt(x0, y0, 3, 0))
+    return save_set("wall-sconce", s, glow=(bx - 4, by + 8, 70))
+
+
+def framed_picture():
+    s = Iso(70, 130)
+    x0, y0 = 6, 110
+    L, z0, z1 = 9, 62, 84
+    for t in range(L):
+        for z in range(z0, z1):
+            x, y = wall_pt(x0, y0, t, z)
+            border = t == 0 or t == L - 1 or z < z0 + 2 or z >= z1 - 2
+            if border:
+                c = "gold1" if z >= z1 - 2 else "gold0"
+            elif z > z0 + 12:
+                c = "blue2" if z > z0 + 16 else "glass1"  # sky
+            elif z > z0 + 7:
+                c = "sage2" if (t + z) % 5 else "sage1"  # hills
+            else:
+                c = "sage1"
+            s.px(x, y, c); s.px(x + 1, y, c)
+    sx, sy = wall_pt(x0, y0, 6, z0 + 17)
+    s.px(sx, sy, "gold2"); s.px(sx + 1, sy, "gold2")  # a little sun
+    s.outline()
+    anchor(s, *wall_pt(x0, y0, L // 2, 0))
+    return save_set("framed-picture", s)
+
+
+def wall_shelf():
+    s = Iso(80, 130)
+    x0, y0 = 10, 110
+    L, z = 12, 70
+    for t in range(L):  # the plank, sticking out of the wall
+        for k, c in ((0, "wood3"), (1, "wood2"), (2, "wood1")):
+            x, y = wall_pt(x0, y0, t, z - k)
+            s.px(x - 2, y + 1, c); s.px(x - 1, y + 1, c)
+    jars = [("glass1", "gold1"), ("glass1", "terra1"), ("cream2", "wood1"), ("glass1", "sage2"), ("cream2", "pink1")]
+    for k, (glass, inner) in enumerate(jars):
+        t = 1 + k * 2.2
+        bx, by = wall_pt(x0, y0, t, z + 1)
+        h = 7 if k % 2 == 0 else 5
+        for dy in range(h):
+            for dx in range(3):
+                s.px(bx - 1 + dx, by - dy, inner if dy < h - 2 else glass)
+        s.px(bx - 1, by - h, "wood1"); s.px(bx, by - h, "wood1"); s.px(bx + 1, by - h, "wood1")
+    s.outline()
+    anchor(s, *wall_pt(x0, y0, L // 2, 0))
+    return save_set("wall-shelf", s)
+
+
+def hanging_plant():
+    s = Iso(60, 130)
+    x0, y0 = 14, 110
+    bx, by = wall_pt(x0, y0, 3, 92)
+    for k in range(6):  # bracket arm
+        s.px(bx - k, by + k // 2, "keyblack")
+    px, py = bx - 7, by + 3
+    s.vline(px, py, py + 4, "steel1")
+    for dy in range(5):  # pot
+        for dx in range(-3, 4):
+            s.px(px + dx, py + 5 + dy, "cream1" if dx < 2 else "cream0")
+    for (dx, dy, r, c) in [(-3, 3, 3, "sage1"), (2, 3, 3, "sage2"), (0, 2, 3, "sage2")]:
+        s.d.ellipse([px + dx - r, py + dy - r // 1.5, px + dx + r, py + dy + r // 1.5], fill=P[c])
+    for vx, length in [(-4, 14), (-1, 19), (2, 16), (4, 10)]:  # trailing vines
+        for k in range(length):
+            x, y = px + vx + (k // 5) % 2, py + 10 + k
+            s.px(x, y, "sage0")
+            if k % 3 == 0:
+                s.px(x - 1, y, "sage2"); s.px(x + 1, y + 1, "sage1")
+    s.outline()
+    anchor(s, *wall_pt(x0, y0, 3, 0))
+    return save_set("hanging-plant", s)
+
+
 ALL = [bookshelf, counter, table_round, chair, pastry_case, espresso_machine, register, menu_board,
-       piano, record_player, armchair, stool, plant_pot, floor_lamp, rug]
+       piano, record_player, armchair, stool, plant_pot, floor_lamp, rug,
+       window, wall_sconce, framed_picture, wall_shelf, hanging_plant]
 
 
 def sheet(images, path, scale=5):
@@ -456,6 +625,10 @@ def sheet(images, path, scale=5):
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     imgs = [f() for f in ALL]
+    import json
+
+    with open(os.path.join(OUT, "_companions.json"), "w") as f:
+        json.dump(COMPANIONS, f, indent=2)
     print(f"{len(imgs)} iso assets -> {OUT}")
     if "--preview" in sys.argv:
         os.makedirs(os.path.join(ART, "preview"), exist_ok=True)

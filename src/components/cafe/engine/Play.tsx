@@ -3,6 +3,7 @@ import { Stage } from "./Stage";
 import { CafeScreen } from "./Screens";
 import { type Layout, type SpriteDef } from "./types";
 import type { Screens } from "./screenData";
+import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { LofiPlayer } from "../lofi";
 
 // What visitors see. Clicking an object walks the camera up to it, the room softly blurs,
@@ -13,12 +14,21 @@ export function Play({
   screens,
   versions,
   onExit,
+  hour: forcedHour,
 }: {
   layout: Layout;
   screens: Screens;
   versions?: Record<string, number>;
   onExit?: () => void;
+  // the editor passes its preview time; visitors get the live time in San Francisco
+  hour?: number | null;
 }) {
+  const [liveHour, setLiveHour] = useState(pacificHour);
+  useEffect(() => {
+    const t = window.setInterval(() => setLiveHour(pacificHour()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const hour = forcedHour ?? liveHour;
   const [hovered, setHovered] = useState<SpriteDef | null>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [focus, setFocus] = useState<SpriteDef | null>(null);
@@ -68,6 +78,7 @@ export function Play({
         interactive={(s) => !!s.hotspot && !!screens[s.hotspot] && !focus}
         hovered={focus ? null : hovered?.id ?? null}
         camera={focus ? { x: focus.x, y: focus.y, w: focus.w, h: focus.h } : null}
+        light={lightAt(hour)}
         handlers={{
           onHover: (s) => !focus && setHovered(s),
           onPointerMove: (_, e) => setMouse({ x: e.clientX, y: e.clientY }),
@@ -87,6 +98,11 @@ export function Play({
       <div className={`pointer-events-none absolute left-0 top-0 p-4 text-[#f7efe1] transition-opacity duration-500 sm:p-6 ${focus ? "opacity-0" : ""}`}>
         <h1 className="font-['Instrument_Serif'] text-3xl italic leading-none sm:text-4xl">Daniel's café</h1>
         <p className="mt-1 font-['Silkscreen'] text-[10px] uppercase tracking-wider opacity-70">coffee · pastries · records</p>
+      </div>
+      <div
+        className={`pointer-events-none absolute right-4 top-4 bg-[#f7efe1]/12 px-3 py-1 font-['Silkscreen'] text-[11px] text-[#f7efe1] backdrop-blur transition-opacity duration-500 sm:right-6 sm:top-6 ${focus ? "opacity-0" : ""}`}
+      >
+        {formatHour(hour)} in SF · {phaseName(hour)}
       </div>
 
       {/* the room blurs and dims behind the object's screen */}
