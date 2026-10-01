@@ -85,6 +85,20 @@ export function snapWall(x: number, y: number, g: NonNullable<Layout["grid"]> = 
   return { x: sx, y: floorAt(sx) - height, side: (sx < g.ox ? "left" : "right") as "left" | "right" };
 }
 
+// Pieces drawn facing more than one way. Rotate steps a quarter turn clockwise through these;
+// each entry is the art for that facing and whether it's mirrored. Anything not listed can
+// only face two ways, so rotating it mirrors it.
+const CHAIR_TURNS = [
+  { name: "cafe-chair", flipX: false }, // facing you, to the left
+  { name: "cafe-chair-back", flipX: true }, // facing away, to the left
+  { name: "cafe-chair-back", flipX: false }, // facing away, to the right
+  { name: "cafe-chair", flipX: true }, // facing you, to the right
+];
+export const ROTATIONS: Record<string, { name: string; flipX: boolean }[]> = {
+  "cafe-chair": CHAIR_TURNS,
+  "cafe-chair-back": CHAIR_TURNS,
+};
+
 // What a freshly placed asset opens, so the furniture works the moment it's moved in.
 // Flat things (rugs) lie under everything else.
 export const FLAT_ASSETS = new Set(["iso-rug", "rug"]);

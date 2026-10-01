@@ -6,7 +6,7 @@ import { CafeScreen } from "./Screens";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
-import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, WALL_ITEMS, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, ROTATIONS, WALL_ITEMS, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -210,6 +210,28 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     setSelected(nid);
   };
 
+  // Turn a piece a quarter turn, keeping it on the same floor spot. Pieces with art for each
+  // facing (ROTATIONS) step through it; the rest can only face two ways, so they mirror.
+  const rotate = async (id: string) => {
+    const s = layout.assets.find((a) => a.id === id);
+    if (!s) return;
+    const turns = ROTATIONS[nameOf(s.file)];
+    const here = footOf(s);
+    let next = { file: s.file, flipX: !s.flipX };
+    if (turns) {
+      const i = turns.findIndex((r) => `sprites/${r.name}.png` === s.file && r.flipX === !!s.flipX);
+      next = { file: `sprites/${turns[(i + 1) % turns.length].name}.png`, flipX: turns[(i + 1) % turns.length].flipX };
+    }
+    const nat = next.file === s.file ? { w: s.w, h: s.h } : sizes[next.file] ?? (await sizeOf(`${BASE}${next.file}?v=${versions[next.file] ?? 0}`));
+    const there = footOf({ file: next.file, w: nat.w, h: nat.h, flipX: next.flipX });
+    const x = Math.round(s.x + here.x - there.x);
+    const y = Math.round(s.y + here.y - there.y);
+    edit((l) => ({
+      ...l,
+      assets: l.assets.map((a) => (a.id === id ? { ...a, file: next.file, w: nat.w, h: nat.h, flipX: next.flipX, x, y, baseY: a.baseY + (y + nat.h) - (s.y + s.h) } : a)),
+    }));
+  };
+
   const remove = (id: string) => {
     edit((l) => ({ ...l, assets: l.assets.filter((a) => a.id !== id) }));
     setSelected(null);
@@ -352,8 +374,8 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
           patchObj(sel.id, { x: sel.x + dx, y: sel.y + dy, baseY: sel.baseY + dy });
         } else if (e.key === "[" || e.key === "]") {
           patchObj(sel.id, { baseY: sel.baseY + (e.key === "]" ? step : -step) });
-        } else if (k === "f") {
-          patchObj(sel.id, { flipX: !sel.flipX });
+        } else if (k === "f" || k === "r") {
+          rotate(sel.id);
         } else if (k === "h") {
           patchObj(sel.id, { hidden: !sel.hidden });
         }
@@ -542,7 +564,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
             {panelOpen ? "›" : "‹"}
           </button>
           <p className="pointer-events-none absolute bottom-2 left-3 text-[11px] opacity-40">
-            drag to move (⇧ drag = no snap) · arrows move{snap ? " 1 grid step" : " 1px (⇧ 8px)"} · [ ] layer · F flip · H hide · ⌘D duplicate · ⌫ delete · ⌘Z undo · P play · \\ panel
+            drag to move (⇧ drag = no snap) · arrows move{snap ? " 1 grid step" : " 1px (⇧ 8px)"} · [ ] layer · R rotate · H hide · ⌘D duplicate · ⌫ delete · ⌘Z undo · P play · \\ panel
           </p>
         </div>
 
@@ -645,8 +667,8 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                     Edit pixels
                   </button>
                   <div className="flex flex-wrap gap-1.5">
-                    <button onClick={() => patchObj(sel.id, { flipX: !sel.flipX })} className={btn}>
-                      flip
+                    <button onClick={() => rotate(sel.id)} className={btn} title="Turn a quarter turn (R)">
+                      rotate
                     </button>
                     <button onClick={() => duplicate(sel.id)} className={btn}>
                       duplicate

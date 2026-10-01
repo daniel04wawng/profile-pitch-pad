@@ -911,10 +911,43 @@ def espresso_station():
     return save(c, "espresso-station", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
 
 
+def cafe_chair_back():
+    """The bentwood café chair turned away from you (facing up-right; flip for up-left), for
+    the near side of a table: its hooped back is in front, the seat behind it."""
+    c = Canvas(50, 70)
+    X0, Y0 = 14, 30
+    N, SEAT, BACK = 5, 11, 29
+
+    def leg(a, b, col):
+        x, y = X0 + 2 * a - 2 * b, Y0 + a + b
+        vline(c, x, y - SEAT, y, col)
+
+    leg(0.5, 0.5, "wood1"); leg(N - 0.5, 0.5, "wood1")  # far legs
+    face_left(c, X0, Y0, 0, N, N, SEAT - 2, SEAT, lambda t, z: "wood2" if z < 1 else "wood3")
+    face_right(c, X0, Y0, N, 0, N, SEAT - 2, SEAT, lambda s_, z: "wood1")
+    face_top(c, X0, Y0, 0, N, 0, N, SEAT, lambda a_, b_: "wood5" if (b_ > N - 0.7 or a_ < 0.5) else "wood4")
+    for t2 in range(0, int(N * 2) + 1):  # stretcher ring
+        t = t2 / 2
+        for (a_, b_) in ((t, N - 0.5), (N - 0.5, t)):
+            x, y = X0 + 2 * a_ - 2 * b_, Y0 + a_ + b_ - 4
+            c.px(x, y, "wood1")
+    leg(0.5, N - 0.5, "wood2"); leg(N - 0.5, N - 0.5, "wood1")  # near legs, which carry the back
+
+    def back(t, z):
+        post = t < 0.7 or t > N - 1.2
+        rail = z >= BACK - SEAT - 3 or 5 <= z <= 6
+        slat = abs(t - N * 0.38) < 0.3 or abs(t - N * 0.62) < 0.3
+        if post or rail or slat:
+            return "wood3" if (z >= BACK - SEAT - 1 or t < 0.35) else ("wood2" if post or rail else "wood1")
+        return None  # you see the seat through the gaps
+    face_left(c, X0, Y0, 0.2, N - 0.5, N - 0.5, SEAT, BACK, back)
+    return save(c, "cafe-chair-back", foot=(X0, Y0 + N))
+
+
 ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key1"),
        table_cloth("cafe-table-linen", "key1", "key0", "red2", "key2"), cafe_chair, piano, piano_stool, globe_lamp, wall_lamp,
        bookshelf, window, hanging_plant, potted_plant, flower_vase,
-       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves, bar_counter, espresso_station]
+       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves, bar_counter, espresso_station, cafe_chair_back]
 
 GLOWS = {"floor-lamp": {"x": 10, "y": 15, "r": 90}, "wall-lamp": {"x": 10, "y": 4, "r": 60}, "globe-lamp": {"x": 7, "y": 38, "r": 80}}
 
