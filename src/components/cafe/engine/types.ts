@@ -59,7 +59,7 @@ export const BASE = "/cafe/";
 
 // What a freshly placed asset opens, so the furniture works the moment it's moved in.
 // Flat things (rugs) lie under everything else.
-export const FLAT_ASSETS = new Set(["iso-rug"]);
+export const FLAT_ASSETS = new Set(["iso-rug", "rug"]);
 
 export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> = {
   "iso-counter": { hotspot: "projects", label: "browse the pastry case" },
@@ -77,7 +77,6 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "kitchen-doorway": { hotspot: "now", label: "what's in the oven" },
   "record-art": { hotspot: "piano", label: "my music" },
   "piano": { hotspot: "piano", label: "play the piano" },
-  "armchair": { hotspot: "chill", label: "sit and listen" },
   "record-shelf": { hotspot: "books", label: "books + records" },
   "menu-board": { hotspot: "menu", label: "read the menu" },
   "aframe-sign": { hotspot: "now", label: "special of the day" },
@@ -86,6 +85,13 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "cafe-chair": { hotspot: "chill", label: "sit for a while" },
   "record-cabinet": { hotspot: "piano", label: "put on a record" },
   "espresso-station": { hotspot: "about", label: "about me" },
+  bookshelf: { hotspot: "books", label: "books I love" },
+  "special-board": { hotspot: "now", label: "special of the day" },
+  booth: { hotspot: "chill", label: "sit for a while" },
+  armchair: { hotspot: "chill", label: "sit and listen" },
+  "cafe-table-cloth": { hotspot: "chill", label: "sit for a while" },
+  "cafe-table-linen": { hotspot: "chill", label: "sit for a while" },
+  "cake-stand": { hotspot: "projects", label: "browse the pastry case" },
   // pieces from the original café
   "cafe-pastry-counter": { hotspot: "projects", label: "browse the pastry case" },
   "cafe-piano": { hotspot: "piano", label: "play the piano" },

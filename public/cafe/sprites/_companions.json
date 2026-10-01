@@ -36,5 +36,22 @@
    "y": 38,
    "r": 80
   }
+ },
+ "window": {
+  "sky": "sprites/window.sky.png",
+  "light": {
+   "file": "sprites/window.light.png",
+   "dx": -8,
+   "dy": 120,
+   "w": 37,
+   "h": 25
+  }
+ },
+ "floor-lamp": {
+  "glow": {
+   "x": 10,
+   "y": 15,
+   "r": 90
+  }
  }
 }
