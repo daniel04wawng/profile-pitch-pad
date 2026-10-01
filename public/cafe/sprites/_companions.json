@@ -130,8 +130,19 @@
    "y": 45
   }
  },
- "special-board": {},
+ "special-board": {
+  "foot": {
+   "x": 8,
+   "y": 31
+  }
+ },
  "coffee-cup": {},
  "laptop": {},
- "cake-stand": {}
+ "cake-stand": {},
+ "record-cabinet": {
+  "foot": {
+   "x": 25,
+   "y": 47
+  }
+ }
 }

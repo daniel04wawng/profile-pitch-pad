@@ -627,29 +627,29 @@ def floor_lamp():
 
 
 def special_board():
-    """Little A-frame chalkboard for the special of the day."""
-    c = Canvas(40, 50)
-    x0, floor_y, w, h = 12, 44, 16, 26
-    for y in range(floor_y - h, floor_y + 1):
-        lean = (floor_y - y) // 6  # leans back a little
-        for x in range(x0 + lean, x0 + w + lean):
-            edge = x in (x0 + lean, x0 + w + lean - 1) or y in (floor_y - h, floor_y - 6)
-            if y > floor_y - 6:
-                if x in (x0 + lean, x0 + lean + 1, x0 + w + lean - 2, x0 + w + lean - 1):
-                    c.px(x, y, "wood2")  # legs
-                continue
-            c.px(x, y, "wood3" if edge else "slate1")
-    # chalk: a heading line, a little pastry, two lines of text
-    for x in range(x0 + 5, x0 + w - 1):
-        c.px(x, floor_y - h + 4, "chalk" if x % 3 else "slate1")
-    for (dx, dy, col) in ((6, 9, "gold2"), (7, 9, "gold2"), (8, 9, "gold2"), (9, 9, "gold2"), (5, 10, "gold1"), (6, 10, "gold2"), (7, 10, "gold3"), (8, 10, "gold2"), (9, 10, "gold2"), (10, 10, "gold1")):
-        c.px(x0 + dx + 2, floor_y - h + dy, col)  # a croissant
-    for row, n in ((13, 9), (15, 7), (17, 8)):
-        for k in range(n):
-            if k % 4 != 3:
-                c.px(x0 + 4 + k + (floor_y - (floor_y - h + row)) // 6, floor_y - h + row, "chalk" if row == 13 else "silver1")
-    return save(c, "special-board")
+    """A-frame chalkboard for the special of the day, facing down-left like the furniture:
+    an upright framed slate on short legs."""
+    c = Canvas(50, 60)
+    X0, Y0 = 18, 40
+    W, B, LEG, H = 7, 2, 4, 26  # width (units), depth of the front board, leg height, top (px)
+    for t0 in (0, W - 0.8):  # front legs
+        face_left(c, X0, Y0, t0, t0 + 0.8, B, 0, LEG, lambda t, z: "wood2")
 
+    def slate(t, z):
+        if t < 0.6 or t > W - 0.6 or z < 1.5 or z > H - LEG - 1.5:
+            return "wood4" if (z > H - LEG - 1 or t < 0.3) else "wood3"  # frame
+        u = (t - 0.6) / (W - 1.2)
+        top = H - LEG - 1.5
+        if top - 4 <= z < top - 3 and 0.15 < u < 0.85:
+            return "chalk"  # heading
+        if top - 9 <= z < top - 6 and abs(u - 0.5) < 0.28 - abs(z - (top - 7.5)) * 0.08:
+            return "gold3" if z >= top - 7 else "gold1"  # a croissant
+        for zr, end in ((7, 0.8), (5, 0.65), (3, 0.75)):
+            if int(z) == zr and 0.15 < u < end:
+                return "silver1"
+        return "slate1"
+    face_left(c, X0, Y0, 0, W, B, LEG, H, slate)
+    return save(c, "special-board", foot=(X0 + 2 * (W / 2) - 2 * B, Y0 + W / 2 + B))
 
 def coffee_cup():
     c = Canvas(20, 20)
@@ -697,10 +697,58 @@ def cake_stand():
     return save(c, "cake-stand")
 
 
+def record_cabinet():
+    """Low wood cabinet of records with a turntable on top, after the original's (which is
+    too tangled with plants to cut). Faces down-left, 3 x 1 half-tiles."""
+    import random
+    rng = random.Random(5)
+    c = Canvas(90, 90)
+    X0, Y0 = 20, 50
+    L, D, H = 12, 4, 30
+    CUB = [(2, 14), (16, 27)]  # two rows of cubbies (z ranges)
+    sleeves = ["navy1", "red1", "key0", "sage0", "gold0", "red2", "navy2", "choc1", "key1", "terra1"]
+    cols = {}
+    for row in range(2):
+        t, run = 0.8, []
+        while t < L - 0.8:
+            w = rng.choice([0.25, 0.25, 0.5])
+            run.append((t, t + w, rng.choice(sleeves)))
+            t += w
+        cols[row] = run
+
+    def front(t, z):
+        if t < 0.6 or t > L - 0.6 or z >= H - 2 or abs(t - L / 2) < 0.3:
+            return "wood3" if (t < 0.3 or z >= H - 1) else "wood2"  # frame, top rail, middle divider
+        for row, (z0, z1) in enumerate(CUB):
+            if z0 <= z < z1:
+                for t0, t1, col in cols[row]:
+                    if t0 <= t < t1 and z < z1 - (1 if (t0 * 4) % 3 else 2):
+                        return "shine" if (t - t0 < 0.12 and col in ("navy1", "red1", "sage0", "choc1")) else col
+                return "wood0"
+        return "wood2" if z < 2 else "wood1"  # shelf boards
+    face_left(c, X0, Y0, 0, L, D, 0, H, front)
+    face_right(c, X0, Y0, L, 0, D, 0, H, lambda s_, z: "wood1" if z < H - 1 else "wood2")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if b > D - 0.6 else "wood4")
+    # turntable: a dark plinth with a black record and a brass tonearm
+    face_top(c, X0, Y0, 1.5, 7.5, 0.6, D - 0.4, H + 2, lambda a, b: "wood1")
+    face_left(c, X0, Y0, 1.5, 7.5, D - 0.4, H, H + 2, lambda t, z: "wood0")
+    rx, ry = X0 + 2 * 4.2 - 2 * 2.1, Y0 + 4.2 + 2.1 - H - 2
+    disc(c, rx, ry, 4.5, 2.3, lambda dx, dy: "red2" if dx * dx + dy * dy < 0.08 else ("slate1" if (dx * dx + dy * dy) % 0.3 < 0.15 else "iron"))
+    for k in range(5):
+        c.px(rx + 4 - k, ry - 2 + k // 2, "brass2" if k < 2 else "brass1")
+    # a little vase of flowers on the right
+    vx, vy = X0 + 2 * 10 - 2 * 2, Y0 + 10 + 2 - H
+    for y in range(vy - 4, vy + 1):
+        c.px(vx, y, "glass1"); c.px(vx + 1, y, "glass0")
+    for dx, dy, col in ((-2, -6, "gold2"), (0, -7, "pink1"), (2, -6, "gold2"), (-1, -8, "gold3"), (1, -8, "pink2"), (-2, -5, "sage1"), (2, -5, "sage1"), (0, -5, "sage0")):
+        c.px(vx + dx, vy + dy, col)
+    return save(c, "record-cabinet", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
 ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key1"),
        table_cloth("cafe-table-linen", "key1", "key0", "red2", "key2"), cafe_chair, piano, piano_stool, globe_lamp, wall_lamp,
        bookshelf, window, hanging_plant, potted_plant, flower_vase,
-       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand]
+       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet]
 
 GLOWS = {"floor-lamp": {"x": 10, "y": 15, "r": 90}, "wall-lamp": {"x": 10, "y": 4, "r": 60}, "globe-lamp": {"x": 7, "y": 38, "r": 80}}
 
