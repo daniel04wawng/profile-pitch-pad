@@ -71,6 +71,13 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "iso-armchair": { hotspot: "chill", label: "sit and listen" },
   "iso-tip-jar": { hotspot: "contact", label: "say hi" },
   "iso-register": { hotspot: "contact", label: "say hi" },
+  // the original café's pieces, cleaned into standalone assets
+  "pastry-counter": { hotspot: "projects", label: "browse the pastry case" },
+  "piano": { hotspot: "piano", label: "play the piano" },
+  "armchair": { hotspot: "chill", label: "sit and listen" },
+  "record-shelf": { hotspot: "books", label: "books + records" },
+  "menu-board": { hotspot: "menu", label: "read the menu" },
+  "aframe-sign": { hotspot: "now", label: "special of the day" },
   // pieces from the original café
   "cafe-pastry-counter": { hotspot: "projects", label: "browse the pastry case" },
   "cafe-piano": { hotspot: "piano", label: "play the piano" },
