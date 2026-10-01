@@ -6,7 +6,7 @@ import { CafeScreen } from "./Screens";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
-import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, ROTATIONS, WALL_ITEMS, isBackView, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, BACK, WALL_ITEMS, frontOf, rotOf, turnArt, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -58,12 +58,14 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const future = useRef<Layout[]>([]);
   const [cut, setCut] = useState<Layout | null>(null);
   const [assets, setAssets] = useState<string[]>([]);
+  const [allFiles, setAllFiles] = useState<string[]>([]);
   const [sizes, setSizes] = useState<Record<string, Size>>({});
   const companions = useCompanions();
   // The point of a sprite that stands on the grid: its drawn foot if it has one (scaled to
   // its current size, mirrored when flipped), otherwise its bottom-centre.
   const footOf = (s: Pick<SpriteDef, "file" | "w" | "h" | "flipX">) => {
-    const f = companions[assetName(s.file)]?.foot;
+    // a back drawing without its own foot (one you painted) stands where its front does
+    const f = companions[assetName(s.file)]?.foot ?? companions[frontOf(assetName(s.file))]?.foot;
     const nat = sizes[s.file];
     if (!f) return { x: s.w / 2, y: s.h };
     const kx = nat ? s.w / nat.w : 1;
@@ -131,7 +133,9 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const refreshAssets = useCallback(async () => {
     try {
       const files: string[] = await (await fetch("/__cafe/assets")).json();
-      setAssets(files.filter((f) => !isBackView(nameOf(f))));
+      setAllFiles(files);
+      // back drawings belong to their asset (Rotate shows them), so the library hides them
+      setAssets(files.filter((f) => !(nameOf(f).endsWith(BACK) && files.includes(`sprites/${frontOf(nameOf(f))}.png`))));
     } catch {
       setAssets([...new Set(layout.assets.map((a) => a.file))].sort());
     }
@@ -210,26 +214,47 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     setSelected(nid);
   };
 
-  // Turn a piece a quarter turn, keeping it on the same floor spot. Pieces with art for each
-  // facing (ROTATIONS) step through it; the rest can only face two ways, so they mirror.
+  // ---------- rotation (the same for every asset, see turnArt in types.ts) ----------
+
+  const hasBack = (name: string) => allFiles.includes(`sprites/${frontOf(name)}${BACK}.png`);
+  // The changes that put piece `s` at turn `rot`, keeping it on the same floor spot.
+  const turnPatch = async (s: SpriteDef, rot: number, back = hasBack(nameOf(s.file))) => {
+    const art = turnArt(nameOf(s.file), rot, back);
+    const file = `sprites/${art.name}.png`;
+    const nat = file === s.file ? { w: s.w, h: s.h } : sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? 0}`));
+    const here = footOf(s);
+    const there = footOf({ file, w: nat.w, h: nat.h, flipX: art.flipX });
+    const x = Math.round(s.x + here.x - there.x);
+    const y = Math.round(s.y + here.y - there.y);
+    return { file, w: nat.w, h: nat.h, flipX: art.flipX, rot: ((rot % 4) + 4) % 4, x, y, baseY: s.baseY + (y + nat.h) - (s.y + s.h) };
+  };
   const rotate = async (id: string) => {
     const s = layout.assets.find((a) => a.id === id);
     if (!s) return;
-    const turns = ROTATIONS[nameOf(s.file)];
-    const here = footOf(s);
-    let next = { file: s.file, flipX: !s.flipX };
-    if (turns) {
-      const i = turns.findIndex((r) => `sprites/${r.name}.png` === s.file && r.flipX === !!s.flipX);
-      next = { file: `sprites/${turns[(i + 1) % turns.length].name}.png`, flipX: turns[(i + 1) % turns.length].flipX };
+    const patch = await turnPatch(s, rotOf(s) + 1);
+    edit((l) => ({ ...l, assets: l.assets.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
+  };
+  // Paint what you see. A piece turned away from you with no back drawing yet gets one,
+  // started as a copy of its front, and every copy of it switches to the new back.
+  const paint = async (s: SpriteDef) => {
+    const r = rotOf(s);
+    const name = nameOf(s.file);
+    if ((r === 1 || r === 2) && !hasBack(name)) {
+      const back = `sprites/${frontOf(name)}${BACK}.png`;
+      try {
+        const blob = await (await fetch(`${BASE}${s.file}?v=${versions[s.file] ?? 0}`)).blob();
+        await writePng(back, await toPngDataUrl(new File([blob], "back.png", { type: "image/png" })));
+      } catch (e) {
+        return window.alert(`Couldn't make a back drawing: ${e}`);
+      }
+      setAllFiles((f) => [...f, back]);
+      const patches = await Promise.all(
+        layout.assets.map(async (a) => (frontOf(nameOf(a.file)) === frontOf(name) && (rotOf(a) === 1 || rotOf(a) === 2) ? { ...a, ...(await turnPatch(a, rotOf(a), true)) } : a)),
+      );
+      edit((l) => ({ ...l, assets: patches }));
+      return setPainting(back);
     }
-    const nat = next.file === s.file ? { w: s.w, h: s.h } : sizes[next.file] ?? (await sizeOf(`${BASE}${next.file}?v=${versions[next.file] ?? 0}`));
-    const there = footOf({ file: next.file, w: nat.w, h: nat.h, flipX: next.flipX });
-    const x = Math.round(s.x + here.x - there.x);
-    const y = Math.round(s.y + here.y - there.y);
-    edit((l) => ({
-      ...l,
-      assets: l.assets.map((a) => (a.id === id ? { ...a, file: next.file, w: nat.w, h: nat.h, flipX: next.flipX, x, y, baseY: a.baseY + (y + nat.h) - (s.y + s.h) } : a)),
-    }));
+    setPainting(s.file);
   };
 
   const remove = (id: string) => {
@@ -663,7 +688,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                       className="mt-0.5 w-full rounded bg-black/30 px-2 py-1 text-[13px]"
                     />
                   </label>
-                  <button onClick={() => setPainting(sel.file)} className="w-full rounded bg-[#f2c1b0] px-2 py-1.5 font-medium text-[#1a1512]">
+                  <button onClick={() => paint(sel)} className="w-full rounded bg-[#f2c1b0] px-2 py-1.5 font-medium text-[#1a1512]">
                     Edit pixels
                   </button>
                   <div className="flex flex-wrap gap-1.5">

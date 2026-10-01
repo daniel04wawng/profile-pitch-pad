@@ -12,6 +12,8 @@ export type SpriteDef = {
   hidden?: boolean;
   // Mirror left/right. Lets one asset face either way.
   flipX?: boolean;
+  // Quarter turns (0-3), see turnArt(). `file` and `flipX` are the art for the current turn.
+  rot?: number;
 };
 
 export type Layout = {
@@ -86,24 +88,24 @@ export function snapWall(x: number, y: number, g: NonNullable<Layout["grid"]> = 
   return { x: sx, y: floorAt(sx) - height, side: (sx < g.ox ? "left" : "right") as "left" | "right" };
 }
 
-// Pieces drawn facing more than one way. Rotate steps a quarter turn clockwise through these;
-// each entry is the art for that facing and whether it's mirrored. Anything not listed can
-// only face two ways, so rotating it mirrors it.
-// Every piece listed here has a `<name>-back` drawing (art/draw_props.py), so it turns all
-// the way round: facing you to the left, away to the left, away to the right, you to the right.
-const TURNS_ALL_WAYS = ["cafe-chair", "piano", "bookshelf", "armchair", "booth", "bar-counter", "record-cabinet", "espresso-station", "laptop"];
-export const ROTATIONS: Record<string, { name: string; flipX: boolean }[]> = {};
-for (const name of TURNS_ALL_WAYS) {
-  const turns = [
-    { name, flipX: false },
-    { name: `${name}-back`, flipX: true },
-    { name: `${name}-back`, flipX: false },
-    { name, flipX: true },
-  ];
-  ROTATIONS[name] = ROTATIONS[`${name}-back`] = turns;
+// Rotation works the same for every asset: four quarter turns, clockwise.
+//   0 facing you, to the left    1 facing away, to the left
+//   2 facing away, to the right  3 facing you, to the right
+// Turns 1 and 3 are mirrored. Turns 1 and 2 show the asset's back drawing, `<name>-back.png`,
+// when it has one; without one they show its front (paint a back in the pixel editor any time).
+export const BACK = "-back";
+export const frontOf = (name: string) => (name.endsWith(BACK) ? name.slice(0, -BACK.length) : name);
+export function turnArt(name: string, rot: number, hasBack: boolean) {
+  const r = ((rot % 4) + 4) % 4;
+  const away = r === 1 || r === 2;
+  return { name: away && hasBack ? frontOf(name) + BACK : frontOf(name), flipX: r === 1 || r === 3 };
 }
-// The back drawings only exist for Rotate; the asset library doesn't list them.
-export const isBackView = (name: string) => name.endsWith("-back") && name in ROTATIONS;
+// Which turn a placed piece is at, for pieces placed before rotation was stored.
+export function rotOf(s: Pick<SpriteDef, "file" | "flipX" | "rot">) {
+  if (s.rot !== undefined) return s.rot;
+  const back = s.file.replace(/\.png$/, "").endsWith(BACK);
+  return back ? (s.flipX ? 1 : 2) : s.flipX ? 3 : 0;
+}
 
 // What a freshly placed asset opens, so the furniture works the moment it's moved in.
 // Flat things (rugs) lie under everything else.
