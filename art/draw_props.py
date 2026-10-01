@@ -754,10 +754,92 @@ def record_cabinet():
     return save(c, "record-cabinet", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
 
 
+def back_bar_shelves():
+    """Floating wood shelves for the wall behind the counter, like the original's back bar:
+    jars of coffee, matcha, sugar and beans, mugs, stacked cups and a little plant.
+    For the back-right wall (flip for the other one)."""
+    import random
+    rng = random.Random(12)
+    c = Canvas(110, 110)
+    X0, Y0 = 16, 96
+    L, D = 16, 3
+    SHELVES = [0, 18, 36]  # heights of the shelf tops above the lowest one (px)
+
+    def at(t, b, z):
+        return X0 + 2 * t - 2 * b, Y0 + t + b - z
+
+    def jar(t, z, fill, lid):
+        x, y = at(t, D * 0.5, z)
+        x, y = round(x), round(y)
+        for yy in range(y - 7, y + 1):
+            for xx in range(x - 2, x + 2):
+                inside = yy > y - 6 and x - 2 < xx < x + 1
+                col = (fill if yy > y - 5 else "glass2") if inside else "glass1"
+                if xx == x - 2 and yy > y - 6:
+                    col = "shine" if yy == y - 4 else "glass2"
+                c.px(xx, yy, col)
+        for xx in range(x - 2, x + 2):
+            c.px(xx, y - 8, lid)
+
+    def mug(t, z, col):
+        x, y = at(t, D * 0.5, z)
+        x, y = round(x), round(y)
+        for yy in range(y - 3, y + 1):
+            for xx in range(x - 1, x + 2):
+                c.px(xx, yy, "key2" if xx == x - 1 else col)
+        c.px(x + 2, y - 2, col); c.px(x + 2, y - 1, col)
+
+    def cups(t, z):
+        x, y = at(t, D * 0.5, z)
+        x, y = round(x), round(y)
+        for k in range(3):
+            for xx in range(x - 2 + (k % 2 == 0) * 0, x + 2):
+                c.px(xx, y - k * 2, "key1" if k % 2 else "key2")
+                c.px(xx, y - k * 2 - 1, "key0")
+
+    def plant(t, z):
+        x, y = at(t, D * 0.5, z)
+        x, y = round(x), round(y)
+        for yy in range(y - 3, y + 1):
+            for xx in range(x - 2, x + 2):
+                c.px(xx, yy, "terra2" if xx < x else "terra1")
+        for dx, dy, col in ((-3, -5, "sage1"), (-2, -6, "sage2"), (-1, -7, "leaf3"), (0, -6, "sage1"), (1, -7, "sage2"),
+                            (2, -5, "sage0"), (3, -4, "sage1"), (-1, -4, "sage0"), (1, -4, "sage1"), (4, -2, "sage1"), (-4, -3, "sage2")):
+            c.px(x + dx, y + dy, col)
+
+    fills = [("choc1", "brass1"), ("sage1", "wood3"), ("key1", "brass2"), ("choc0", "wood3"), ("gold1", "brass1"), ("sage2", "wood4")]
+    for i, z in enumerate(SHELVES):
+        # brackets under the board, then the board (thin plank, lit front edge)
+        for t0 in (1.5, L - 2):
+            for k in range(4):
+                x, y = at(t0, 0.5 + k * 0.6, z - 1 - k)
+                c.px(round(x), round(y), "wood1")
+        face_top(c, X0, Y0, 0, L, 0, D, z, lambda a, b: "wood4" if b > D - 0.7 else "wood3")
+        face_left(c, X0, Y0, 0, L, D, z - 2, z, lambda t, zz: "wood2" if zz < 1 else "wood3")
+        face_right(c, X0, Y0, L, 0, D, z - 2, z, lambda s_, zz: "wood1")
+        # what's on the shelf, back to front along it
+        t = 1.0
+        while t < L - 1.5:
+            kind = rng.choice(["jar", "jar", "jar", "mug", "cups", "plant"] if i else ["jar", "mug", "mug", "cups"])
+            if kind == "jar":
+                jar(t, z, *fills[rng.randrange(len(fills))])
+                t += 2.2
+            elif kind == "mug":
+                mug(t, z, rng.choice(["key1", "sage1", "terra2", "navy2"]))
+                t += 1.8
+            elif kind == "cups":
+                cups(t, z)
+                t += 2.4
+            else:
+                plant(t, z)
+                t += 3.0
+    return save(c, "back-bar-shelves", foot=at(0, 0, SHELVES[0] - 2))
+
+
 ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key1"),
        table_cloth("cafe-table-linen", "key1", "key0", "red2", "key2"), cafe_chair, piano, piano_stool, globe_lamp, wall_lamp,
        bookshelf, window, hanging_plant, potted_plant, flower_vase,
-       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet]
+       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves]
 
 GLOWS = {"floor-lamp": {"x": 10, "y": 15, "r": 90}, "wall-lamp": {"x": 10, "y": 4, "r": 60}, "globe-lamp": {"x": 7, "y": 38, "r": 80}}
 
