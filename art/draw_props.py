@@ -762,7 +762,7 @@ def back_bar_shelves():
     For the back-right wall (flip for the other one)."""
     import random
     rng = random.Random(12)
-    c = Canvas(110, 110)
+    c = Canvas(110, 140)
     X0, Y0 = 16, 96
     L, D = 16, 3
     SHELVES = [0, 18, 36]  # heights of the shelf tops above the lowest one (px)
@@ -813,6 +813,9 @@ def back_bar_shelves():
     TOP = SHELVES[-1] + 16  # crown of the unit
     # the unit's back panel against the wall, then its two side uprights and crown
     face_left(c, X0, Y0, 0, L, 0.2, SHELVES[0] - 3, TOP, lambda t, zz: "wood1" if t % 2 < 0.25 else "wood2")
+    # inside of the near end panel (you look into the unit past it), then a bottom apron
+    face_right(c, X0, Y0, 0.8, 0.2, D, SHELVES[0] - 4, TOP, lambda s_, zz: "wood1" if s_ < D - 1 else "wood2")
+    face_left(c, X0, Y0, 0, L, D, SHELVES[0] - 4, SHELVES[0] - 2, lambda t, zz: "wood2")
     for i, z in enumerate(SHELVES):
         face_top(c, X0, Y0, 0, L, 0, D, z, lambda a, b: "wood4" if b > D - 0.7 else "wood3")
         face_left(c, X0, Y0, 0, L, D, z - 2, z, lambda t, zz: "wood2" if zz < 1 else "wood3")
@@ -833,12 +836,12 @@ def back_bar_shelves():
                 plant(t, z)
                 t += 3.0
     # side uprights and the crown, drawn last so they frame the shelves
-    face_left(c, X0, Y0, 0, 0.8, D, SHELVES[0] - 3, TOP, lambda t, zz: "wood4" if t < 0.35 else "wood3")
-    face_left(c, X0, Y0, L - 0.8, L, D, SHELVES[0] - 3, TOP, lambda t, zz: "wood3")
-    face_right(c, X0, Y0, L, 0, D, SHELVES[0] - 3, TOP, lambda s_, zz: "wood1")
+    face_left(c, X0, Y0, 0, 0.8, D, SHELVES[0] - 4, TOP, lambda t, zz: "wood4" if t < 0.35 else "wood3")
+    face_left(c, X0, Y0, L - 0.8, L, D, SHELVES[0] - 4, TOP, lambda t, zz: "wood3")
+    face_right(c, X0, Y0, L, 0, D, SHELVES[0] - 4, TOP, lambda s_, zz: "wood1")
     face_left(c, X0, Y0, -0.3, L + 0.3, D + 0.3, TOP - 3, TOP, lambda t, zz: "wood4" if zz >= 2 else "wood3")
     face_top(c, X0, Y0, -0.3, L + 0.3, 0, D + 0.3, TOP, lambda a, b: "wood5" if b > D - 0.4 else "wood4")
-    return save(c, "back-bar-shelves", foot=at(0, 0, SHELVES[0] - 3))
+    return save(c, "back-bar-shelves", foot=at(0, 0, SHELVES[0] - 4))
 
 
 def bar_counter():
