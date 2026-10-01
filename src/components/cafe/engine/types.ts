@@ -104,6 +104,7 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "record-cabinet": { hotspot: "piano", label: "put on a record" },
   "espresso-station": { hotspot: "about", label: "about me" },
   bookshelf: { hotspot: "books", label: "books I love" },
+  "bar-counter": { hotspot: "about", label: "about me" },
   "special-board": { hotspot: "now", label: "special of the day" },
   booth: { hotspot: "chill", label: "sit for a while" },
   armchair: { hotspot: "chill", label: "sit and listen" },

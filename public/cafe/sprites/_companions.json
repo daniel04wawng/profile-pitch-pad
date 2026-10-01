@@ -159,8 +159,14 @@
  },
  "espresso-station": {
   "foot": {
-   "x": 2,
-   "y": 6
+   "x": 18,
+   "y": 27
+  }
+ },
+ "bar-counter": {
+  "foot": {
+   "x": 49,
+   "y": 57
   }
  }
 }

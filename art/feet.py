@@ -14,7 +14,7 @@ from PIL import Image
 
 ART = os.path.dirname(os.path.abspath(__file__))
 SPRITES = os.path.join(os.path.dirname(ART), "public", "cafe", "sprites")
-PIECES = ["pastry-counter", "espresso-station"]
+PIECES = ["pastry-counter"]
 
 
 def back_corner(name):

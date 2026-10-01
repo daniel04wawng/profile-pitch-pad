@@ -836,10 +836,85 @@ def back_bar_shelves():
     return save(c, "back-bar-shelves", foot=at(0, 0, SHELVES[0] - 2))
 
 
+def bar_counter():
+    """Plain wooden bar counter, 3 tiles long, the pastry counter's height: framed panels on
+    the front, a thick lit top that overhangs a little. Line up copies for a longer bar."""
+    c = Canvas(130, 100)
+    X0, Y0 = 22, 40
+    L, D, H = 24, 8, 24
+
+    def panels(t, z):
+        if z < 2:
+            return "wood0"  # kick plate shadow
+        k = t % 4
+        if k < 0.35:
+            return "wood1"  # stile
+        if k < 0.7 or z >= H - 6:
+            return "wood3"  # moulding catching the light
+        if k > 3.6 or z < 4:
+            return "wood1"
+        return "wood2"
+    face_left(c, X0, Y0, 0.3, L - 0.3, D - 0.3, 0, H - 3, panels)
+    face_right(c, X0, Y0, L - 0.3, 0.3, D - 0.3, 0, H - 3, lambda s_, z: "wood1" if z > 1 else "wood0")
+    # top: thick slab with an overhang and a lit front edge
+    face_left(c, X0, Y0, 0, L, D, H - 3, H, lambda t, z: "wood4" if z >= 2 else "wood3")
+    face_right(c, X0, Y0, L, 0, D, H - 3, H, lambda s_, z: "wood2")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if (b > D - 0.6 or a > L - 0.6) else ("wood5" if abs(a - b * 1.4 - 3) < 0.6 else "wood4"))
+    return save(c, "bar-counter", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
+def espresso_station():
+    """Espresso machine with a grinder beside it, to sit on a counter: steel body with brass
+    trim, two group heads with wooden handles, drip tray, cups warming on top, steam wand,
+    and a pressure gauge. Faces down-left."""
+    c = Canvas(70, 60)
+    X0, Y0 = 14, 30
+    L, D, H = 8, 4, 14
+
+    def front(t, z):
+        if z < 1.5:
+            return "iron" if int(t * 4) % 2 else "slate1"  # drip tray grille
+        if z >= H - 2:
+            return "brass2" if z >= H - 1 else "brass1"  # brass trim on top
+        if 3 <= z < 6 and any(abs(t - g) < 0.6 for g in (2.2, 5.2)):
+            return "iron"  # group heads
+        if 9 <= z < 11 and abs(t - L / 2 - 0.2) < 0.7:
+            return "key1" if z == 10 else "iron"  # pressure gauge
+        return "silver2" if t < 0.6 else ("silver1" if z > 6 else "silver0")
+    face_left(c, X0, Y0, 0, L, D, 0, H, front)
+    face_right(c, X0, Y0, L, 0, D, 0, H, lambda s_, z: "brass1" if z >= H - 2 else "silver0")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "silver2" if b > D - 0.6 else "silver1")
+    for g in (2.2, 5.2):  # portafilter handles poking out toward the viewer
+        x, y = X0 + 2 * g - 2 * (D + 0.5), Y0 + g + D + 0.5 - 4
+        c.px(x - 1, y, "iron"); c.px(x - 2, y + 1, "wood2"); c.px(x - 3, y + 1, "wood3"); c.px(x - 4, y + 2, "wood2")
+        c.px(x + 1, y + 2, "key2")  # a shot cup waiting under it
+    for k, cx in enumerate((1.5, 3.5, 5.5)):  # cups warming on top
+        x, y = round(X0 + 2 * cx - 2 * 2), round(Y0 + cx + 2 - H)
+        for yy in range(y - 2, y + 1):
+            c.px(x, yy, "key2"); c.px(x + 1, yy, "key1")
+    sx, sy = round(X0 + 2 * L - 2 * (D - 0.5)), round(Y0 + L + D - 0.5 - 9)  # steam wand
+    for k in range(6):
+        c.px(sx + 1, sy + k, "silver2" if k < 5 else "silver1")
+    # grinder: a dark base, a glass hopper of beans
+    gx, gy = round(X0 + 2 * (L + 2.5) - 2 * 2), round(Y0 + L + 2.5 + 2)
+    for yy in range(gy - 8, gy + 1):
+        for xx in range(gx - 2, gx + 2):
+            c.px(xx, yy, "wood1" if xx < gx else "wood0")
+    for yy in range(gy - 15, gy - 8):
+        half = 3 - (gy - 8 - yy) // 4
+        for xx in range(gx - half - 1, gx + half + 1):
+            inside = yy > gy - 13
+            c.px(xx, yy, ("choc1" if (xx + yy) % 2 else "choc0") if inside else "glass1")
+        c.px(gx - half - 1, yy, "glass2")
+    for xx in range(gx - 3, gx + 3):
+        c.px(xx, gy - 16, "iron")
+    return save(c, "espresso-station", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
 ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key1"),
        table_cloth("cafe-table-linen", "key1", "key0", "red2", "key2"), cafe_chair, piano, piano_stool, globe_lamp, wall_lamp,
        bookshelf, window, hanging_plant, potted_plant, flower_vase,
-       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves]
+       rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves, bar_counter, espresso_station]
 
 GLOWS = {"floor-lamp": {"x": 10, "y": 15, "r": 90}, "wall-lamp": {"x": 10, "y": 4, "r": 60}, "globe-lamp": {"x": 7, "y": 38, "r": 80}}
 
