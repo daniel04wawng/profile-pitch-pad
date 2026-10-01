@@ -9,5 +9,17 @@
     "cols": 14,
     "rows": 14
   },
-  "assets": []
+  "assets": [
+    {
+      "id": "iso-bookshelf",
+      "file": "sprites/iso-bookshelf.png",
+      "x": 226,
+      "y": 62,
+      "w": 45,
+      "h": 70,
+      "baseY": 132,
+      "hotspot": "books",
+      "label": "books I love"
+    }
+  ]
 }

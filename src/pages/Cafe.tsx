@@ -4,7 +4,7 @@ import { Editor } from "@/components/cafe/engine/Editor";
 import { BASE, type Layout } from "@/components/cafe/engine/types";
 
 const FONTS =
-  "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500&family=Silkscreen&display=swap";
+  "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500&family=Silkscreen&family=Pixelify+Sans:wght@400;600&family=VT323&display=swap";
 
 // The editor only exists on the dev server; production builds drop it entirely.
 const EDIT = import.meta.env.DEV && new URLSearchParams(window.location.search).has("edit");

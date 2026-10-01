@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Stage } from "./Stage";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
+import { CafeScreen, SCREENS } from "./Screens";
 import { ASSET_DEFAULTS, BASE, DEFAULT_GRID, HOTSPOTS, snapIso, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
@@ -64,6 +65,7 @@ export function Editor({ initial }: { initial: Layout }) {
   const [playing, setPlaying] = useState(false);
   const [status, setStatus] = useState<"saved" | "unsaved" | "saving" | "error">("saved");
   const [painting, setPainting] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState<string | null>(null);
   const [versions, setVersions] = useState<Record<string, number>>({});
   const drag = useRef<{ id: string; sx: number; sy: number; x: number; y: number; baseY: number; footX: number } | null>(null);
   const gridOf = (l: Layout) => l.grid ?? DEFAULT_GRID;
@@ -225,6 +227,10 @@ export function Editor({ initial }: { initial: Layout }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (previewing) {
+        if (e.key === "Escape") setPreviewing(null);
+        return;
+      }
       if (painting || (e.target as HTMLElement).closest("input, select, textarea")) return;
       const mod = e.metaKey || e.ctrlKey;
       const k = e.key.toLowerCase();
@@ -430,21 +436,28 @@ export function Editor({ initial }: { initial: Layout }) {
                       </label>
                     ))}
                   </div>
-                  <label className="block text-[11px] opacity-80">
-                    clicking it opens
-                    <select
-                      value={sel.hotspot ?? ""}
-                      onChange={(e) => patchObj(sel.id, { hotspot: e.target.value || null })}
-                      className="mt-0.5 w-full rounded bg-black/30 px-2 py-1 text-[13px]"
-                    >
-                      <option value="">nothing (decoration)</option>
-                      {HOTSPOTS.map((h) => (
-                        <option key={h} value={h}>
-                          {h}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div className="rounded border border-white/10 bg-black/20 p-2">
+                    <label className="block text-[11px] opacity-80">
+                      screen (what opens when you walk up to it)
+                      <select
+                        value={sel.hotspot ?? ""}
+                        onChange={(e) => patchObj(sel.id, { hotspot: e.target.value || null })}
+                        className="mt-0.5 w-full rounded bg-black/30 px-2 py-1 text-[13px]"
+                      >
+                        <option value="">none (just decoration)</option>
+                        {HOTSPOTS.map((h) => (
+                          <option key={h} value={h}>
+                            {SCREENS[h] ?? h}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {sel.hotspot && (
+                      <button onClick={() => setPreviewing(sel.hotspot)} className={`${btn} mt-2 w-full`}>
+                        Preview screen
+                      </button>
+                    )}
+                  </div>
                   <label className="block text-[11px] opacity-80">
                     hover label
                     <input
@@ -568,6 +581,15 @@ export function Editor({ initial }: { initial: Layout }) {
           )}
         </aside>
       </div>
+
+      {previewing && (
+        <div
+          onClick={() => setPreviewing(null)}
+          className="fixed inset-0 z-40 flex items-center justify-center bg-[#15131c]/60 p-3 backdrop-blur-[3px]"
+        >
+          <CafeScreen hotspot={previewing} playing={false} onMusic={() => {}} onClose={() => setPreviewing(null)} />
+        </div>
+      )}
 
       {painting && (
         <PixelEditor
