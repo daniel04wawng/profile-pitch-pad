@@ -6,7 +6,7 @@ import { CafeScreen } from "./Screens";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
-import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, snapIso, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, WALL_ASSETS, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -182,7 +182,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     const { w, h } = sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? 0}`));
     let fx = at ? Math.round(at.x) : Math.round(layout.width / 2);
     let fy = at ? Math.round(at.y) : Math.round(layout.height / 2 + h / 2);
-    if (snap) ({ x: fx, y: fy } = snapIso(fx, fy, gridOf(layout)));
+    if (snap) ({ x: fx, y: fy } = (WALL_ASSETS.has(nameOf(file)) ? snapWall : snapIso)(fx, fy, gridOf(layout)));
     const id = uniqueId(nameOf(file));
     const foot = footOf({ file, w, h });
     edit((l) => ({
@@ -470,7 +470,10 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                 // hold Shift to place freely (e.g. a cup on top of the counter)
                 if (snap && !e.shiftKey) {
                   // snap the object's foot (its floor corner, or bottom-centre) onto the iso grid
-                  const foot = snapIso(d.footX + dx, d.footY + dy, gridOf(layout));
+                  // wall items slide along the wall and keep their height; the rest sit on the floor
+                  const s = layout.assets.find((a) => a.id === d.id);
+                  const snapTo = s && WALL_ASSETS.has(nameOf(s.file)) ? snapWall : snapIso;
+                  const foot = snapTo(d.footX + dx, d.footY + dy, gridOf(layout));
                   dx = Math.round(foot.x - d.footX);
                   dy = Math.round(foot.y - d.footY);
                   setMarker(foot);

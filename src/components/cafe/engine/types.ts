@@ -57,6 +57,24 @@ export const HOTSPOTS = ["projects", "about", "menu", "now", "contact", "piano",
 
 export const BASE = "/cafe/";
 
+// Things that hang on a wall or from the ceiling. They slide along the wall in grid steps but
+// keep whatever height you give them, instead of being snapped down onto the floor.
+export const WALL_ASSETS = new Set([
+  "window", "wall-lamp", "sax-poster", "chalkboard-menu", "record-art", "framed-picture-tall",
+  "kitchen-doorway", "back-bar-shelves", "globe-lamp", "hanging-plant",
+]);
+
+// Snap a wall item's foot: along the wall to the half-tile grid, height above the floor line
+// to 2px. The wall is picked by which side of the back corner the point is on.
+export function snapWall(x: number, y: number, g: NonNullable<Layout["grid"]> = DEFAULT_GRID) {
+  const step = g.tile / 4;
+  const floorAt = (px: number) => g.oy + Math.abs(px - g.ox) / 2;
+  const height = Math.max(0, Math.round((floorAt(x) - y) / 2) * 2);
+  const reach = ((g.cols ?? 20) * g.tile) / 2;
+  const sx = g.ox + Math.max(-reach, Math.min(reach, Math.round((x - g.ox) / step) * step));
+  return { x: sx, y: floorAt(sx) - height };
+}
+
 // What a freshly placed asset opens, so the furniture works the moment it's moved in.
 // Flat things (rugs) lie under everything else.
 export const FLAT_ASSETS = new Set(["iso-rug", "rug"]);

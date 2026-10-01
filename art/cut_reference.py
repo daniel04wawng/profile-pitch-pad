@@ -88,6 +88,28 @@ def close_frame(name):
     im.save(path)
 
 
+# The original isn't drawn at exactly 2:1, so its wall pieces tilt a little off the room's
+# walls. Shear them to the room's slope: +0.5 on the back-right wall, -0.5 on the back-left.
+WALL_SLOPE = {"sax-poster": 0.5, "chalkboard-menu": 0.5, "record-art": 0.5, "framed-picture-tall": -0.5}
+
+
+def to_wall_slope(name, target):
+    path = os.path.join(OUT, f"{name}.png")
+    im = Image.open(path).convert("RGBA")
+    a = np.asarray(im)
+    solid = a[..., 3] > 8
+    xs = [x for x in range(2, a.shape[1] - 2) if solid[:, x].any()]
+    top = [np.nonzero(solid[:, x])[0].min() for x in xs]
+    bot = [np.nonzero(solid[:, x])[0].max() for x in xs]
+    slope = (np.polyfit(xs, top, 1)[0] + np.polyfit(xs, bot, 1)[0]) / 2
+    shift = [round(x * (target - slope)) for x in range(a.shape[1])]
+    lo = min(shift)
+    out = np.zeros((a.shape[0] + max(shift) - lo, a.shape[1], 4), dtype=np.uint8)
+    for x in range(a.shape[1]):
+        out[shift[x] - lo : shift[x] - lo + a.shape[0], x] = a[:, x]
+    Image.fromarray(out).save(path)
+
+
 def palette():
     cols = []
     for line in open(PALETTE_GPL).read().splitlines()[4:]:
@@ -180,6 +202,8 @@ if __name__ == "__main__":
         im = cut(name, poly, remove, pal)
         if name in FRAME_BOTTOM:
             close_frame(name)
+        if name in WALL_SLOPE:
+            to_wall_slope(name, WALL_SLOPE[name])
         if name in WOODY:
             unify(name)  # same wood as everything else
         print(f"{name:22s} {im.size}")

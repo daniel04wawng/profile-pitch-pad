@@ -387,7 +387,7 @@ def bookshelf():
 
 
 def window():
-    """Tall café window with dark navy frames and small panes, like the original's.
+    """Tall café window in the room's wood, small panes with a glint of light on the glass.
     For the back-right wall (flip for the other one). The glass is left empty: the engine
     paints the current sky into it and casts a sun patch on the floor."""
     c, sky, light = Canvas(110, 170), Canvas(110, 170), Canvas(110, 170)
@@ -400,16 +400,25 @@ def window():
         for z in range(z0, z1):
             x, y = pt(t, z)
             x, y = int(x), int(y)
-            border = t < 1 or t >= L - 1 or z < z0 + 3 or z >= z1 - 3
-            inner_t = (t - 1) / (L - 2) * COLS
-            inner_z = (z - z0 - 3) / (z1 - z0 - 6) * ROWS
-            mullion = abs(inner_t - round(inner_t)) * (L - 2) / COLS < 0.3 or abs(inner_z - round(inner_z)) * (z1 - z0 - 6) / ROWS < 0.8
+            border = t < 1.5 or t >= L - 1.5 or z < z0 + 4 or z >= z1 - 4
+            inner_t = (t - 1.5) / (L - 3) * COLS
+            inner_z = (z - z0 - 4) / (z1 - z0 - 8) * ROWS
+            mullion = abs(inner_t - round(inner_t)) * (L - 3) / COLS < 0.35 or abs(inner_z - round(inner_z)) * (z1 - z0 - 8) / ROWS < 1.0
             if border:
-                c.px(x, y, "navy2" if (t < 0.5 or z >= z1 - 1) else ("navy1" if z >= z0 + 1 else "navy0"))
+                # chunky wood frame in the room's wood: lit on its left side and top, a groove inside
+                inner = (1 <= t < 1.5) or (L - 1.5 <= t < L - 1) or (z0 + 3 <= z < z0 + 4) or (z1 - 4 <= z < z1 - 3)
+                col = "wood1" if inner else ("wood4" if (t < 0.5 or z >= z1 - 1) else "wood3")
+                c.px(x, y, col)
             elif mullion:
-                c.px(x, y, "navy1")
+                c.px(x, y, "wood3" if (z % 2 or t2 % 2) else "wood2")
             else:
                 sky.px(x, y, "shine")
+                # glass catching the light: two thin diagonal glints per pane
+                pane_t = inner_t % 1
+                pane_z = inner_z % 1
+                g = pane_t - (1 - pane_z)
+                if abs(g) < 0.05 and (int(inner_t) + int(inner_z)) % 2 == 0:
+                    c.im.putpixel((x, y), (255, 246, 224, 80))
     # deep wooden sill with a lip
     for t2 in range(-2, L * 2 + 2):
         t = t2 / 2

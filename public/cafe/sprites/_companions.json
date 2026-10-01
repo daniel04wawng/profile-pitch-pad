@@ -144,5 +144,23 @@
    "x": 25,
    "y": 47
   }
+ },
+ "pastry-counter": {
+  "foot": {
+   "x": 22,
+   "y": 32
+  }
+ },
+ "back-bar-shelves": {
+  "foot": {
+   "x": 6,
+   "y": 14
+  }
+ },
+ "espresso-station": {
+  "foot": {
+   "x": 2,
+   "y": 6
+  }
  }
 }
