@@ -1132,12 +1132,134 @@ def laptop_back():
     return save(c, "laptop-back")
 
 
+# ---------------------------------------------------------------- more plants
+
+
+def pot(c, cx, floor_y, half, h, rim=True, colours=("terra3", "terra2", "terra1", "terra0")):
+    """A tapered pot standing on the floor, lit from the left, with a dark soil top."""
+    hi, mid, lo, dark = colours
+    for y in range(floor_y - h, floor_y + 1):
+        w = half - (y - (floor_y - h)) * 2 // max(h, 1) // 2
+        for x in range(cx - w, cx + w + 1):
+            c.px(x, y, hi if x < cx - w + 2 else (mid if x < cx + 1 else lo))
+    if rim:
+        for x in range(cx - half - 1, cx + half + 2):
+            c.px(x, floor_y - h, hi)
+    disc(c, cx, floor_y - h, half - 0.5, 1.2, lambda dx, dy: "choc0")
+
+
+def fiddle_leaf_fig():
+    """Tall fiddle-leaf fig in a big pot: a thin trunk and big glossy leaves."""
+    import math, random
+    rng = random.Random(21)
+    c = Canvas(50, 100)
+    cx, floor_y = 25, 92
+    pot(c, cx, floor_y, 7, 12)
+    for y in range(floor_y - 52, floor_y - 12):
+        c.px(cx + (1 if y < floor_y - 34 else 0), y, "wood1")
+    for _ in range(16):  # big leaves, each a small lit oval
+        y = rng.randint(floor_y - 76, floor_y - 30)
+        side = rng.choice([-1, 1])
+        x = cx + side * rng.randint(2, 8)
+        disc(c, x, y, 3.2, 2.4, lambda dx, dy: "leaf3" if dx + dy < -0.9 else ("sage2" if dx + dy < 0 else ("sage1" if dx + dy < 0.9 else "sage0")))
+        c.px(x, y, "leaf0")
+    return save(c, "fiddle-leaf-fig", foot=(cx, floor_y))
+
+
+def snake_plant():
+    """Snake plant: stiff upright striped leaves in a cream pot."""
+    import random
+    rng = random.Random(8)
+    c = Canvas(40, 60)
+    cx, floor_y = 20, 52
+    pot(c, cx, floor_y, 5, 9, colours=("key2", "key1", "key0", "silver0"))
+    for k, (dx, h) in enumerate(((-4, 16), (-2, 24), (0, 20), (2, 27), (4, 17), (-1, 13), (3, 12))):
+        lean = rng.choice([-1, 0, 1])
+        for y in range(h):
+            x = cx + dx + (lean * y) // 10
+            yy = floor_y - 10 - y
+            col = "sage0" if (y // 3) % 2 else "sage1"
+            if y > h - 3:
+                col = "leaf3"
+            c.px(x, yy, col)
+            c.px(x + 1, yy, "olive2" if y < h - 2 else col)
+    return save(c, "snake-plant", foot=(cx, floor_y))
+
+
+def fern_stand():
+    """Boston fern spilling over a tall wooden plant stand."""
+    import math, random
+    rng = random.Random(14)
+    c = Canvas(50, 70)
+    cx, floor_y = 25, 62
+    for dx in (-4, 4):  # stand legs
+        vline(c, cx + dx, floor_y - 20, floor_y, "wood2")
+    for x in range(cx - 5, cx + 6):
+        c.px(x, floor_y - 20, "wood4"); c.px(x, floor_y - 19, "wood3")
+        c.px(x, floor_y - 6, "wood2")
+    pot(c, cx, floor_y - 21, 4, 6)
+    for _ in range(110):  # arching fronds
+        a = rng.uniform(math.pi * 0.95, math.pi * 2.05)
+        r = rng.uniform(4, 13)
+        x = round(cx + math.cos(a) * r)
+        y = round(floor_y - 30 - math.sin(a) * r * 0.6 + (r * 0.45 if abs(math.cos(a)) > 0.6 else 0))
+        c.px(x, y, rng.choice(["sage2", "sage1", "leaf3", "sage1"]))
+        c.px(x + 1, y, rng.choice(["sage1", "sage0"]))
+    return save(c, "fern-stand", foot=(cx, floor_y))
+
+
+def succulent():
+    """Little succulent in a terracotta pot, for tables, shelves and the counter."""
+    c = Canvas(20, 20)
+    cx, base = 10, 15
+    for y in range(base - 4, base + 1):
+        for x in range(cx - 3, cx + 4):
+            c.px(x, y, "terra3" if x < cx - 1 else ("terra2" if x < cx + 2 else "terra1"))
+    for dx, dy, col in ((0, -6, "leaf3"), (-2, -5, "sage2"), (2, -5, "sage1"), (-3, -5, "sage1"), (3, -5, "sage0"), (-1, -7, "sage2"), (1, -7, "sage1"), (0, -8, "leaf3"), (-1, -5, "sage2"), (1, -5, "sage1")):
+        c.px(cx + dx, base + dy, col)
+    return save(c, "succulent")
+
+
+def tulip_pot():
+    """A pot of tulips, pink and yellow, like the original's flowers."""
+    c = Canvas(30, 40)
+    cx, floor_y = 15, 34
+    pot(c, cx, floor_y, 5, 8)
+    for k, (dx, h, col) in enumerate(((-4, 13, "pink1"), (-1, 17, "gold2"), (2, 15, "pink2"), (4, 12, "gold2"), (0, 11, "pink1"))):
+        x = cx + dx
+        vline(c, x, floor_y - 8 - h, floor_y - 9, "sage1")
+        top = floor_y - 9 - h
+        for yy, ww in ((top - 3, 1), (top - 2, 1), (top - 1, 1)):
+            c.px(x - 1, yy, col); c.px(x, yy, col); c.px(x + 1, yy, "pink0" if col.startswith("pink") else "gold1")
+        c.px(x - 2, top + 4, "sage2"); c.px(x + 2, top + 6, "sage1")
+    return save(c, "tulip-pot", foot=(cx, floor_y))
+
+
+def window_box():
+    """Herb planter for a window sill or a wall: a wood box of basil and rosemary.
+    For the back-right wall (flip for the other one)."""
+    import random
+    rng = random.Random(6)
+    c = Canvas(60, 40)
+    X0, Y0 = 8, 28
+    L, D, H = 12, 3, 6
+    face_left(c, X0, Y0, 0, L, D, 0, H, lambda t, z: "wood3" if z >= H - 1 else ("wood2" if t % 3 > 0.3 else "wood1"))
+    face_right(c, X0, Y0, L, 0, D, 0, H, lambda s_, z: "wood1")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "choc0")
+    for k in range(34):
+        t, b = rng.uniform(0.6, L - 0.6), rng.uniform(0.4, D - 0.4)
+        x, y = round(X0 + 2 * t - 2 * b), round(Y0 + t + b - H - rng.randint(1, 6))
+        leaf_cluster(c, x, y, rng)
+    return save(c, "window-box", foot=(X0, Y0))
+
+
 ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key1"),
        table_cloth("cafe-table-linen", "key1", "key0", "red2", "key2"), cafe_chair, piano, piano_stool, globe_lamp, wall_lamp,
        bookshelf, window, hanging_plant, potted_plant, flower_vase,
        rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves, bar_counter, espresso_station, cafe_chair_back,
        piano_back, bookshelf_back, armchair_back, booth_back, bar_counter_back, record_cabinet_back,
-       espresso_station_back, laptop_back]
+       espresso_station_back, laptop_back,
+       fiddle_leaf_fig, snake_plant, fern_stand, succulent, tulip_pot, window_box]
 
 GLOWS = {"floor-lamp": {"x": 10, "y": 15, "r": 90}, "wall-lamp": {"x": 10, "y": 4, "r": 60}, "globe-lamp": {"x": 7, "y": 38, "r": 80}}
 

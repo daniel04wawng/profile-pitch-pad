@@ -223,5 +223,36 @@
    "y": 28
   }
  },
- "laptop-back": {}
+ "laptop-back": {},
+ "fiddle-leaf-fig": {
+  "foot": {
+   "x": 12,
+   "y": 79
+  }
+ },
+ "snake-plant": {
+  "foot": {
+   "x": 7,
+   "y": 37
+  }
+ },
+ "fern-stand": {
+  "foot": {
+   "x": 13,
+   "y": 29
+  }
+ },
+ "succulent": {},
+ "tulip-pot": {
+  "foot": {
+   "x": 7,
+   "y": 30
+  }
+ },
+ "window-box": {
+  "foot": {
+   "x": 7,
+   "y": 11
+  }
+ }
 }

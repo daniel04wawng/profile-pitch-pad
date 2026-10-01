@@ -66,6 +66,7 @@ export const WALL_ITEMS: Record<string, { drawnFor?: "left" | "right"; onFloor?:
   "chalkboard-menu": { drawnFor: "right" },
   "record-art": { drawnFor: "right" },
   "back-bar-shelves": { drawnFor: "right" },
+  "window-box": { drawnFor: "right" },
   "framed-picture-tall": { drawnFor: "left" },
   "wall-lamp": { drawnFor: "left" },
   "kitchen-doorway": { drawnFor: "left", onFloor: true },
