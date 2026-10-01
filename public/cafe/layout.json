@@ -1,11 +1,11 @@
 {
   "scene": "room.png",
   "width": 672,
-  "height": 536,
+  "height": 492,
   "grid": {
     "tile": 32,
     "ox": 336,
-    "oy": 198,
+    "oy": 148,
     "cols": 20,
     "rows": 20
   },
@@ -14,13 +14,12 @@
       "id": "iso-bookshelf",
       "file": "sprites/iso-bookshelf.png",
       "x": 322,
-      "y": 140,
+      "y": 90,
       "w": 45,
       "h": 75,
-      "baseY": 215,
+      "baseY": 165,
       "hotspot": "books",
       "label": "books I love"
     }
-  ],
-  "sceneNight": "room-night.png"
+  ]
 }

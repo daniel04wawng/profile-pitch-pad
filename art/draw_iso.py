@@ -18,6 +18,14 @@ from PIL import Image, ImageDraw
 
 ART = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(ART), "public", "cafe", "sprites")
+# Outside pieces are for the landing page (the café from the street), so they're kept out of
+# the room's asset library until that page exists.
+LANDING = {"knee-wall", "storefront-glass", "door", "awning", "street-lamp", "sidewalk-tree", "bench"}
+LANDING_OUT = os.path.join(ART, "landing", "sprites")
+
+
+def out_dir(name):
+    return LANDING_OUT if name in LANDING else OUT
 
 PALETTE = {
     "ink": "#3d2418",
@@ -112,7 +120,8 @@ class Iso:
     def save(self, name):
         bbox = self.im.getbbox()
         im = self.im.crop(bbox) if bbox else self.im
-        im.save(os.path.join(OUT, f"iso-{name}.png"))
+        os.makedirs(out_dir(name), exist_ok=True)
+        im.save(os.path.join(out_dir(name), f"iso-{name}.png"))
         return im
 
 
@@ -126,7 +135,8 @@ COMPANIONS = {}
 def save_set(name, frame, sky=None, light=None, glow=None):
     bbox = frame.im.getbbox()
     out = frame.im.crop(bbox)
-    out.save(os.path.join(OUT, f"iso-{name}.png"))
+    os.makedirs(out_dir(name), exist_ok=True)
+    out.save(os.path.join(out_dir(name), f"iso-{name}.png"))
     info = {}
     if sky is not None:
         sky.im.crop(bbox).save(os.path.join(OUT, f"iso-{name}.sky.png"))
@@ -138,7 +148,7 @@ def save_set(name, frame, sky=None, light=None, glow=None):
     if glow is not None:
         gx, gy, r = glow
         info["glow"] = {"x": gx - bbox[0], "y": gy - bbox[1], "r": r}
-    if info:
+    if info and name not in LANDING:
         COMPANIONS[f"iso-{name}"] = info
     return out
 
