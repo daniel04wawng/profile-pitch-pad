@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Stage } from "./Stage";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
-import { BASE, DEFAULT_GRID, HOTSPOTS, snapIso, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, DEFAULT_GRID, HOTSPOTS, snapIso, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -138,7 +138,10 @@ export function Editor({ initial }: { initial: Layout }) {
     const id = uniqueId(nameOf(file));
     edit((l) => ({
       ...l,
-      assets: [...l.assets, { id, file, x: fx - Math.round(w / 2), y: fy - h, w, h, baseY: fy, hotspot: null, label: null }],
+      assets: [
+        ...l.assets,
+        { id, file, x: fx - Math.round(w / 2), y: fy - h, w, h, baseY: fy, hotspot: ASSET_DEFAULTS[nameOf(file)]?.hotspot ?? null, label: ASSET_DEFAULTS[nameOf(file)]?.label ?? null },
+      ],
     }));
     setSelected(id);
     setTab("scene");
@@ -570,16 +573,22 @@ export function Editor({ initial }: { initial: Layout }) {
         <PixelEditor
           file={painting}
           paletteFrom={layout.scene}
-          onClose={async (changed) => {
+          onClose={async (changed, shift) => {
             const file = painting;
             setPainting(null);
             if (!changed) return;
             setVersions((v) => ({ ...v, [file]: (v[file] ?? 0) + 1 }));
-            // A resized asset keeps every placed copy's size in sync with the PNG.
+            // A resized canvas keeps every placed copy's size in sync with the PNG, and growing it
+            // on the top/left moves the copies so the art itself stays put in the café.
             const { w, h } = await sizeOf(`${BASE}${file}?t=${Date.now()}`);
             setSizes((s) => ({ ...s, [file]: { w, h } }));
-            if (layout.assets.some((a) => a.file === file && (a.w !== w || a.h !== h)))
-              editLive((l) => ({ ...l, assets: l.assets.map((a) => (a.file === file ? { ...a, w, h } : a)) }));
+            if (layout.assets.some((a) => a.file === file && (a.w !== w || a.h !== h || shift.x || shift.y)))
+              editLive((l) => ({
+                ...l,
+                assets: l.assets.map((a) =>
+                  a.file === file ? { ...a, w, h, x: a.x - (a.flipX ? w - a.w - shift.x : shift.x), y: a.y - shift.y } : a,
+                ),
+              }));
           }}
         />
       )}

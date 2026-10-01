@@ -49,6 +49,7 @@ export function Stage({
   showGrid = false,
   versions = {},
   marker = null,
+  camera = null,
   handlers,
   children,
 }: {
@@ -64,6 +65,8 @@ export function Stage({
   versions?: Record<string, number>;
   // Floor tile to highlight (scene point at a tile's center), e.g. where a dragged object will land.
   marker?: { x: number; y: number } | null;
+  // Scene rect to glide the camera into (walking up to an object). null = whole room.
+  camera?: { x: number; y: number; w: number; h: number } | null;
   handlers: StageHandlers;
   children?: React.ReactNode;
 }) {
@@ -88,6 +91,15 @@ export function Stage({
 
   const g = layout.grid ?? DEFAULT_GRID;
   const ordered = useMemo(() => [...layout.assets].sort((a, b) => a.baseY - b.baseY), [layout.assets]);
+
+  // Camera: zoom so the focused rect fills a good chunk of the screen, centered a little high.
+  let cam = { k: 1, tx: 0, ty: 0 };
+  if (camera) {
+    const k = Math.max(1.4, Math.min(5, (box.w * 0.5) / (camera.w * scale), (box.h * 0.45) / (camera.h * scale)));
+    const cx = ox + (camera.x + camera.w / 2) * scale;
+    const cy = oy + (camera.y + camera.h / 2) * scale;
+    cam = { k, tx: box.w / 2 - k * cx, ty: box.h * 0.42 - k * cy };
+  }
 
   const toScene = (e: { clientX: number; clientY: number }) => {
     const r = wrap.current!.getBoundingClientRect();
@@ -134,6 +146,10 @@ export function Stage({
       }}
     >
       <div
+        className="absolute inset-0 origin-top-left transition-transform duration-700 ease-[cubic-bezier(.65,0,.35,1)]"
+        style={{ transform: `translate(${cam.tx}px, ${cam.ty}px) scale(${cam.k})` }}
+      >
+      <div
         className="absolute origin-top-left [&_img]:[image-rendering:pixelated]"
         style={{ left: ox, top: oy, width: layout.width, height: layout.height, transform: `scale(${scale})` }}
       >
@@ -178,21 +194,44 @@ export function Stage({
             height={layout.height}
             shapeRendering="crispEdges"
           >
-            {showGrid && (
-              <>
-                <defs>
-                  <pattern id="iso-grid" patternUnits="userSpaceOnUse" x={g.ox} y={g.oy} width={g.tile} height={g.tile / 2}>
-                    <path
-                      d={`M0 ${g.tile / 4} L${g.tile / 2} 0 L${g.tile} ${g.tile / 4} L${g.tile / 2} ${g.tile / 2} Z`}
-                      fill="none"
-                      stroke="rgba(120,255,240,0.35)"
-                      strokeWidth={0.5}
+            {showGrid &&
+              (g.cols && g.rows ? (
+                // just the floor: one line per tile edge along each iso axis
+                <g stroke="rgba(255,236,190,0.35)" strokeWidth={1} fill="none">
+                  {Array.from({ length: g.cols + 1 }, (_, i) => (
+                    <line
+                      key={`i${i}`}
+                      x1={g.ox + (i * g.tile) / 2}
+                      y1={g.oy + (i * g.tile) / 4}
+                      x2={g.ox + ((i - g.rows) * g.tile) / 2}
+                      y2={g.oy + ((i + g.rows) * g.tile) / 4}
                     />
-                  </pattern>
-                </defs>
-                <rect width={layout.width} height={layout.height} fill="url(#iso-grid)" />
-              </>
-            )}
+                  ))}
+                  {Array.from({ length: g.rows + 1 }, (_, j) => (
+                    <line
+                      key={`j${j}`}
+                      x1={g.ox - (j * g.tile) / 2}
+                      y1={g.oy + (j * g.tile) / 4}
+                      x2={g.ox + ((g.cols - j) * g.tile) / 2}
+                      y2={g.oy + ((g.cols + j) * g.tile) / 4}
+                    />
+                  ))}
+                </g>
+              ) : (
+                <>
+                  <defs>
+                    <pattern id="iso-grid" patternUnits="userSpaceOnUse" x={g.ox} y={g.oy} width={g.tile} height={g.tile / 2}>
+                      <path
+                        d={`M0 ${g.tile / 4} L${g.tile / 2} 0 L${g.tile} ${g.tile / 4} L${g.tile / 2} ${g.tile / 2} Z`}
+                        fill="none"
+                        stroke="rgba(120,255,240,0.35)"
+                        strokeWidth={0.5}
+                      />
+                    </pattern>
+                  </defs>
+                  <rect width={layout.width} height={layout.height} fill="url(#iso-grid)" />
+                </>
+              ))}
             {marker && (
               <path
                 d={`M${marker.x - g.tile / 2} ${marker.y} L${marker.x} ${marker.y - g.tile / 4} L${marker.x + g.tile / 2} ${marker.y} L${marker.x} ${marker.y + g.tile / 4} Z`}
@@ -204,6 +243,7 @@ export function Stage({
           </svg>
         )}
         {children}
+      </div>
       </div>
     </div>
   );

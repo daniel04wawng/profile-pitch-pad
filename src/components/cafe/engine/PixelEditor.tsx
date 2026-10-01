@@ -59,14 +59,27 @@ function colorsOf(data: Uint8ClampedArray, limit = 256) {
   });
 }
 
-export function PixelEditor({ file, paletteFrom, onClose }: { file: string; paletteFrom: string; onClose: (saved: boolean) => void }) {
+// `shift`: how far the art moved inside the PNG because the canvas grew/shrank on the top or left
+// (as of the last save), so the caller can move placed copies and keep the art where it was.
+export function PixelEditor({
+  file,
+  paletteFrom,
+  onClose,
+}: {
+  file: string;
+  paletteFrom: string;
+  onClose: (saved: boolean, shift: { x: number; y: number }) => void;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const img = useRef<{ w: number; h: number; data: Uint8ClampedArray } | null>(null);
   const off = useRef(document.createElement("canvas"));
   const floatCanvas = useRef(document.createElement("canvas"));
   const view = useRef({ z: 8, x: 40, y: 40 });
-  const history = useRef<Uint8ClampedArray[]>([]);
-  const future = useRef<Uint8ClampedArray[]>([]);
+  type Snap = { data: Uint8ClampedArray; w: number; h: number; sx: number; sy: number };
+  const history = useRef<Snap[]>([]);
+  const future = useRef<Snap[]>([]);
+  const shift = useRef({ x: 0, y: 0 });
+  const savedShift = useRef({ x: 0, y: 0 });
   const sel = useRef<Rect | null>(null);
   const float = useRef<Float | null>(null);
   const clip = useRef<Float | null>(null);
@@ -116,6 +129,10 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
     ctx.restore();
 
     const o = off.current;
+    if (o.width !== im.w || o.height !== im.h) {
+      o.width = im.w;
+      o.height = im.h;
+    }
     o.getContext("2d")!.putImageData(new ImageData(im.data, im.w, im.h), 0, 0);
     ctx.drawImage(o, ox, oy, im.w * z, im.h * z);
 
@@ -204,8 +221,20 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
 
   // ---------- pixel operations ----------
 
+  const current = (): Snap => ({ data: img.current!.data.slice(), w: img.current!.w, h: img.current!.h, sx: shift.current.x, sy: shift.current.y });
+  const restore = (snap: Snap) => {
+    const dx = snap.sx - shift.current.x;
+    const dy = snap.sy - shift.current.y;
+    img.current = { w: snap.w, h: snap.h, data: snap.data };
+    shift.current = { x: snap.sx, y: snap.sy };
+    view.current.x -= dx * view.current.z;
+    view.current.y -= dy * view.current.z;
+    sel.current = null;
+    draw();
+  };
+
   const snapshot = () => {
-    history.current.push(img.current!.data.slice());
+    history.current.push(current());
     if (history.current.length > 200) history.current.shift();
     future.current = [];
     setDirty(true);
@@ -319,16 +348,53 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
     commitFloat();
     const prev = history.current.pop();
     if (!prev) return;
-    future.current.push(img.current!.data.slice());
-    img.current!.data.set(prev);
-    draw();
+    future.current.push(current());
+    restore(prev);
   };
   const redo = () => {
     const next = future.current.pop();
     if (!next) return;
-    history.current.push(img.current!.data.slice());
-    img.current!.data.set(next);
+    history.current.push(current());
+    restore(next);
+  };
+
+  // Grow (positive) or shrink (negative) the canvas on each side, keeping the art in place.
+  const resizeCanvas = (left: number, top: number, right: number, bottom: number) => {
+    commitFloat();
+    const im = img.current!;
+    const w = im.w + left + right;
+    const h = im.h + top + bottom;
+    if (w < 1 || h < 1 || w > 1024 || h > 1024) return;
+    snapshot();
+    const data = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < im.h; y++)
+      for (let x = 0; x < im.w; x++) {
+        const nx = x + left;
+        const ny = y + top;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const s = (y * im.w + x) * 4;
+        data.set(im.data.subarray(s, s + 4), (ny * w + nx) * 4);
+      }
+    img.current = { w, h, data };
+    shift.current = { x: shift.current.x + left, y: shift.current.y + top };
+    sel.current = null;
+    // keep the art visually still on screen
+    view.current.x -= left * view.current.z;
+    view.current.y -= top * view.current.z;
     draw();
+  };
+
+  // Shrink the canvas to the drawn pixels.
+  const trimCanvas = () => {
+    const im = img.current!;
+    let x0 = im.w, y0 = im.h, x1 = -1, y1 = -1;
+    for (let y = 0; y < im.h; y++)
+      for (let x = 0; x < im.w; x++)
+        if (im.data[(y * im.w + x) * 4 + 3] > 0) {
+          x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+        }
+    if (x1 < 0) return;
+    resizeCanvas(-x0, -y0, -(im.w - 1 - x1), -(im.h - 1 - y1));
   };
 
   const clampRect = (r: Rect): Rect | null => {
@@ -353,6 +419,7 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
       if (!r.ok) throw new Error(await r.text());
       setDirty(false);
       setStatus("saved");
+      savedShift.current = { ...shift.current };
     } catch (e) {
       setStatus("save failed: " + String(e));
     }
@@ -361,7 +428,7 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
 
   const close = () => {
     if (dirty && !window.confirm("Discard unsaved pixel changes?")) return;
-    onClose(status === "saved" || history.current.length > 0);
+    onClose(status === "saved" || history.current.length > 0, savedShift.current);
   };
 
   const zoomAt = (dir: number, sx: number, sy: number) => {
@@ -650,6 +717,22 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
             <div>
               <p className="font-mono text-[12px]">{color}</p>
               <p className="text-[11px] opacity-50">{palette.length} colors</p>
+            </div>
+          </div>
+          <div className="border-b border-white/10 p-3">
+            <p className="mb-2 text-[11px] opacity-60">
+              canvas {img.current ? `${img.current.w}×${img.current.h}` : ""} · add room to draw
+            </p>
+            <div className="grid grid-cols-3 gap-1 text-[11px]">
+              <span />
+              <button onClick={() => resizeCanvas(0, 8, 0, 0)} className="rounded border border-white/15 py-1 hover:bg-white/10">+ top</button>
+              <span />
+              <button onClick={() => resizeCanvas(8, 0, 0, 0)} className="rounded border border-white/15 py-1 hover:bg-white/10">+ left</button>
+              <button onClick={() => resizeCanvas(8, 8, 8, 8)} className="rounded border border-white/15 py-1 hover:bg-white/10">+ all</button>
+              <button onClick={() => resizeCanvas(0, 0, 8, 0)} className="rounded border border-white/15 py-1 hover:bg-white/10">+ right</button>
+              <span />
+              <button onClick={() => resizeCanvas(0, 0, 0, 8)} className="rounded border border-white/15 py-1 hover:bg-white/10">+ bottom</button>
+              <button onClick={trimCanvas} className="rounded border border-white/15 py-1 hover:bg-white/10" title="Shrink to the drawn pixels">trim</button>
             </div>
           </div>
           <div className="grid flex-1 auto-rows-min grid-cols-8 gap-px overflow-y-auto p-2">

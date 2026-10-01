@@ -20,13 +20,14 @@ export type Layout = {
   height: number;
   assets: SpriteDef[];
   // Isometric floor grid: 2:1 diamond tiles, `tile` px wide, anchored so (ox, oy) is a tile corner.
-  grid?: { tile: number; ox: number; oy: number };
+  // cols x rows = the room's floor size in tiles; the grid is only drawn (and snapped) there.
+  grid?: { tile: number; ox: number; oy: number; cols?: number; rows?: number };
 };
 
-export const DEFAULT_GRID = { tile: 32, ox: 0, oy: 0 };
+export const DEFAULT_GRID: NonNullable<Layout["grid"]> = { tile: 32, ox: 0, oy: 0 };
 
 // Snap a point to the iso lattice at half-tile resolution (the corners and centers of tiles).
-export function snapIso(x: number, y: number, g = DEFAULT_GRID) {
+export function snapIso(x: number, y: number, g: NonNullable<Layout["grid"]> = DEFAULT_GRID) {
   const sx = g.tile / 4; // half-tile step across
   const sy = g.tile / 8; // half-tile step down
   let m = Math.round((x - g.ox) / sx);
@@ -38,9 +39,31 @@ export function snapIso(x: number, y: number, g = DEFAULT_GRID) {
     if (Math.abs(fx) * sx > Math.abs(fy) * sy) m += Math.sign(fx) || 1;
     else n += Math.sign(fy) || 1;
   }
+  // keep it on the floor: m, n -> tile coords (i along down-right, j along down-left)
+  if (g.cols && g.rows) {
+    let i = (m + n) / 4;
+    let j = (n - m) / 4;
+    i = Math.max(0, Math.min(g.cols, i));
+    j = Math.max(0, Math.min(g.rows, j));
+    m = Math.round(2 * (i - j));
+    n = Math.round(2 * (i + j));
+  }
   return { x: g.ox + m * sx, y: g.oy + n * sy };
 }
 
 export const HOTSPOTS = ["projects", "about", "menu", "now", "contact", "piano", "books", "chill"] as const;
 
 export const BASE = "/cafe/";
+
+// What a freshly placed asset opens, so the furniture works the moment it's moved in.
+export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> = {
+  "iso-counter": { hotspot: "projects", label: "browse the pastry case" },
+  "iso-pastry-case": { hotspot: "projects", label: "browse the pastry case" },
+  "iso-bookshelf": { hotspot: "books", label: "books I love" },
+  "iso-menu-board": { hotspot: "menu", label: "read the menu" },
+  "iso-piano": { hotspot: "piano", label: "my music" },
+  "iso-record-player": { hotspot: "piano", label: "put on a record" },
+  "iso-armchair": { hotspot: "chill", label: "sit and listen" },
+  "iso-tip-jar": { hotspot: "contact", label: "say hi" },
+  "iso-register": { hotspot: "contact", label: "say hi" },
+};
