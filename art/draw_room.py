@@ -129,7 +129,7 @@ def main():
                     c = "shine1" if g > 1.38 else "shine0"
             # lamp-lit middle, dimmer toward the walls and the front edges
             d = ((u - N * 0.5) ** 2 + (v - N * 0.5) ** 2) ** 0.5 / (N * 0.7)
-            if c in ("plank1", "plank2", "plank3") and d > 0.55 and BAYER[y % 4][x % 4] < (d - 0.55) * 40:
+            if c in ("plank1", "plank2", "plank3") and d > 0.8 and BAYER[y % 4][x % 4] < (d - 0.8) * 60:
                 c = "plank0"
             if u < 0.15 or v < 0.15:
                 c = "deep0"

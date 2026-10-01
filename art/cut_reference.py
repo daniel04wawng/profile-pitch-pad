@@ -38,11 +38,19 @@ def floor(px):
 def rug(px):
     """The deep red patterned rug under the piano corner."""
     r, g, b = px[..., 0].astype(int), px[..., 1].astype(int), px[..., 2].astype(int)
-    return (r > 90) & (g < 75) & (b < 75) & ((r - g) > 45)
+    red = (r > 90) & (g < 75) & (b < 75) & ((r - g) > 45)
+    dark_threads = (b >= r - 6) & (r < 120)  # navy and grey pattern; the wood is always warmer
+    pink = (r > 150) & (b > 90) & ((r - g) > 50)
+    return red | dark_threads | pink
+
+
+def leaves(px):
+    r, g, b = px[..., 0].astype(int), px[..., 1].astype(int), px[..., 2].astype(int)
+    return (g > r) & (g > b)
 
 
 def around_floor_piece(px):
-    return floor(px) | wall(px) | rug(px)
+    return floor(px) | wall(px) | rug(px) | leaves(px)
 
 
 # name: (outline in high-res pixels, what to remove inside it)
@@ -54,7 +62,7 @@ PIECES = {
     "wall-lamp": ([(1166, 250), (1198, 250), (1198, 300), (1166, 300)], wall),
     "back-bar-shelves": ([(766, 34), (962, 112), (962, 196), (766, 150)], wall),
     "espresso-station": ([(776, 178), (902, 214), (902, 268), (776, 236)], wall),
-    "piano": ([(1172, 330), (1300, 318), (1336, 372), (1350, 380), (1350, 476), (1172, 476)], around_floor_piece),
+    "piano": ([(1165, 330), (1240, 320), (1322, 320), (1332, 372), (1352, 384), (1352, 495), (1328, 500), (1324, 522), (1312, 522), (1290, 508), (1274, 515), (1242, 515), (1238, 497), (1234, 542), (1190, 542), (1186, 495), (1180, 503), (1168, 503), (1165, 470)], around_floor_piece),
     "record-cabinet": ([(1352, 436), (1490, 436), (1490, 566), (1352, 566)], around_floor_piece),
 }
 
