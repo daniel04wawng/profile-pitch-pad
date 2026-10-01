@@ -21,7 +21,9 @@ P = COZY
 for k, v in {
     "red0": "#4a1012", "red1": "#7a1f1f", "red2": "#a8352a", "red3": "#c95a3a",
     "navy0": "#1b2040", "navy1": "#2c3463", "navy2": "#46508a",
-    "iron": "#24170f", "key0": "#c9b28c", "key1": "#f3e6c8", "key2": "#fff8e6",
+    "iron": "#24170f",
+    # the original piano's mahogany, sampled from it: near-black body, lamp-lit glossy lid
+    "mah0": "#1b0801", "mah1": "#33140a", "mah2": "#4a2212", "mah3": "#6e3414", "mah4": "#903f02", "mah5": "#c7875d", "key0": "#c9b28c", "key1": "#f3e6c8", "key2": "#fff8e6",
 }.items():
     P[k] = tuple(int(v[i : i + 2], 16) for i in (1, 3, 5)) + (255,)
 
@@ -108,51 +110,97 @@ def cafe_chair():
 
 
 def piano():
-    """Upright piano in dark warm wood, keyboard facing down-left, a brass lamp on top."""
-    c = Canvas(120, 110)
-    X0, Y0 = 20, 40
+    """Upright piano after the original's: near-black mahogany, glossy lamp-lit lid, framed
+    panels, gold strip over the keys, turned front legs, brass pedals, a brass desk lamp and
+    a black phone on top. Keyboard faces down-left."""
+    c = Canvas(120, 130)
+    X0, Y0 = 20, 60
     L, D = 16, 5  # length along the keyboard, depth (units: 2px across, 1px down)
-    KB, TOP = 16, 36  # keyboard height and body height (px)
+    KB, TOP = 18, 52  # keyboard height and body height (px): tall, like the original
+    KD = 4  # how far the keyboard sticks out
+    m0, m1, m2, m3, m4, m5 = "mah0", "mah1", "mah2", "mah3", "mah4", "mah5"
 
-    def panel(t, z, lo, hi):
-        if z <= lo or z >= hi - 1:
-            return "wood1"
-        k = t % (L / 3)
-        return "wood1" if k < 0.4 else ("wood3" if k < 0.8 else "wood2")
+    def framed(t, z, z0, z1, panels):
+        """Recessed panels with a lit moulding on their top and left edges."""
+        w = L / panels
+        k = t % w
+        if z <= z0 or z >= z1 - 1 or k < 0.35 or k > w - 0.35:
+            return m3  # stiles and rails
+        if k < 0.75 or z >= z1 - 2:
+            return m4  # moulding catching the light
+        if k > w - 0.75 or z <= z0 + 1:
+            return m0  # shadowed moulding
+        return m2  # panel face
 
-    # body: right end, then the recessed lower front, legs, keyboard, upper front, lid
-    face_right(c, X0, Y0, L, 0, D + 3, 0, KB + 3, lambda s, z: "wood1" if s < D else "wood2")
-    face_right(c, X0, Y0, L, 0, D, KB + 3, TOP, lambda s, z: "wood1" if z < TOP - 2 else "wood2")
-    face_left(c, X0, Y0, 0, L, D, 1, KB, lambda t, z: "wood0" if z < 2 else panel(t, z, 2, KB))
-    for a0 in (0.3, L - 1.3):  # front legs under the keyboard
-        face_left(c, X0, Y0, a0, a0 + 1, D + 3, 0, KB, lambda t, z: "wood2" if t < 0.5 else "wood1")
-        face_right(c, X0, Y0, a0 + 1, D, D + 3, 0, KB, lambda s, z: "wood0")
-    # pedals
-    for a in (L / 2 - 1, L / 2, L / 2 + 1):
-        x, y = c and (X0 + 2 * a - 2 * (D + 1), Y0 + a + D + 1 - 1)
+    # right end of the case (in shadow), lower front, legs, keyboard, upper front, lid
+    face_right(c, X0, Y0, L, 0, D + KD, 0, KB + 3, lambda s, z: m0 if s < D else m1)
+    face_right(c, X0, Y0, L, 0, D, KB + 3, TOP, lambda s, z: m3 if z >= TOP - 1 else (m1 if s > D - 1 else m0))
+    face_left(c, X0, Y0, 0, L, D, 1, KB, lambda t, z: m0 if z < 2 else framed(t, z, 2, KB, 1))
+    for a0 in (0.2, L - 1.4):  # turned front legs under the keyboard cheeks
+        face_left(c, X0, Y0, a0, a0 + 1.2, D + KD, 0, KB, lambda t, z: (m3 if t < 0.4 else m2) if (z % 5) not in (0, 1) else m1)
+        face_right(c, X0, Y0, a0 + 1.2, D, D + KD, 0, KB, lambda s, z: m0)
+    for a in (L / 2 - 1.2, L / 2, L / 2 + 1.2):  # brass pedals
+        x, y = X0 + 2 * a - 2 * (D + 0.5), Y0 + a + D + 0.5 - 1
         c.px(x, y, "brass2"); c.px(x + 1, y, "brass1")
-    face_left(c, X0, Y0, 0, L, D + 3, KB, KB + 3, lambda t, z: "wood2" if z < 2 else "wood3")  # key slip
-    # keys: whites with groups of blacks toward the back
+    face_left(c, X0, Y0, 0, L, D + KD, KB, KB + 3, lambda t, z: m2 if z < 2 else m3)  # key slip
+
     def keys(a, b):
-        if b < 0.5:
-            return "wood0"  # shadow under the fallboard
+        if b < 0.6:
+            return m0  # shadow under the fallboard
         black = b < 1.9 and (int(a * 3.5) % 7) in (1, 2, 4, 5, 6) and (a * 3.5) % 1 < 0.6
         if black:
             return "iron"
-        return "key2" if b > 2.4 else ("key1" if (a * 3.5) % 1 > 0.15 else "key0")
-    face_top(c, X0, Y0, 0.3, L - 0.3, D, D + 3, KB + 3, keys)
-    face_left(c, X0, Y0, 0, L, D, KB + 3, TOP, lambda t, z: (
-        "key1" if (L / 2 - 1.6 < t < L / 2 + 1.6 and 6 < z < 12 and not (int(z) == 9 and t % 1 < 0.5)) else
-        ("wood1" if z in (KB + 3, TOP - 1) else panel(t, z, 0, TOP - KB - 3))))
-    face_top(c, X0, Y0, 0, L, 0, D, TOP, lambda a, b: "wood5" if b > D - 0.6 else ("wood4" if a < L - 0.6 else "wood3"))
-    # brass lamp on the lid
-    lx, ly = X0 + 2 * (L * 0.62) - 2 * (D / 2), Y0 + L * 0.62 + D / 2 - TOP
-    vline(c, lx, ly - 5, ly, "brass1")
-    for dx in range(-4, 4):
-        c.px(lx + dx, ly - 6 - dx // 3, "brass2")
-        c.px(lx + dx, ly - 5 - dx // 3, "gold3" if -2 <= dx <= 1 else "brass1")
-    c.px(lx - 1, ly, "brass0"); c.px(lx + 1, ly, "brass0")
-    darker(c, {"wood1": "wood0", "wood2": "wood1", "wood3": "wood2", "wood4": "wood3", "wood5": "wood4"})  # polished dark wood
+        return "key2" if b > 2.6 else ("key1" if (a * 3.5) % 1 > 0.15 else "key0")
+    face_top(c, X0, Y0, 0.2, L - 0.2, D, D + KD, KB + 3, keys)
+    # keyboard cheeks: the blocks at each end of the keys
+    for a0 in (0, L - 0.8):
+        face_top(c, X0, Y0, a0, a0 + 0.8, D, D + KD, KB + 4, lambda a, b: m3)
+        face_left(c, X0, Y0, a0, a0 + 0.8, D + KD, KB + 2, KB + 4, lambda t, z: m2)
+
+    def upper(t, z):
+        if z < 2:
+            return m0  # fallboard shadow
+        if z < 4:
+            return ("gold2" if z == 3 else "gold0") if 1 < t < L - 1 else m3  # gold strip over the fallboard
+        if L / 2 - 1.6 < t < L / 2 + 1.6 and 6 < z < 13:  # sheet music on the stand
+            return "key1" if not (int(z) in (8, 10) and t % 1 < 0.5) else "key0"
+        if L / 2 - 2.2 < t < L / 2 + 2.2 and int(z) == 5:
+            return m4  # music-stand ledge
+        return framed(t, z, 4, TOP - KB - KD, 2)
+    face_left(c, X0, Y0, 0, L, D, KB + 3, TOP, upper)
+    # glossy lid, lit by the lamp toward its middle
+    def lid(a, b):
+        d = abs(a - L * 0.6)  # the lamp lights the lid around it
+        if b > D - 0.5:
+            return m5 if d < 5 else m4  # front edge
+        if b < 0.4 or a < 0 or a > L:
+            return m3
+        return m5 if (d < 2.5 and 1.5 < b < 3.5) else (m4 if d < 6 else m3)
+    face_top(c, X0, Y0, -0.3, L + 0.3, -0.3, D + 0.3, TOP, lid)
+
+    # brass banker's lamp: round foot, curved stem, long shade with warm light under it
+    lx, ly = X0 + 2 * (L * 0.62) - 2 * (D * 0.5), Y0 + L * 0.62 + D * 0.5 - TOP
+    for dx in range(-3, 4):
+        c.px(lx + dx, ly, "brass1" if abs(dx) < 3 else "brass0")
+        if abs(dx) < 2:
+            c.px(lx + dx, ly - 1, "brass2")
+    vline(c, lx, ly - 9, ly - 2, "brass1")
+    c.px(lx - 1, ly - 6, "brass2")
+    for dx in range(-7, 6):  # the shade runs along the piano, a little downhill
+        y = ly - 12 + (dx + 7) // 3
+        c.px(lx + dx, y - 1, "brass2" if dx < 3 else "brass1")
+        c.px(lx + dx, y, "brass1")
+        c.px(lx + dx, y + 1, "gold3" if -6 <= dx <= 4 else "brass0")
+    c.px(lx - 7, ly - 13, "brass2")
+    # black rotary phone toward the left end
+    px_, py_ = X0 + 2 * 2.5 - 2 * (D * 0.4), Y0 + 2.5 + D * 0.4 - TOP
+    for dx in range(-3, 4):
+        c.px(px_ + dx, py_, "iron")
+        c.px(px_ + dx, py_ - 1, "iron" if abs(dx) < 3 else None) if abs(dx) < 3 else None
+    for dx in range(-3, 4):
+        c.px(px_ + dx, py_ - 3 + (1 if abs(dx) == 3 else 0), "navy0")  # handset
+    c.px(px_ - 1, py_ - 1, "key0")
+    c.px(px_, py_ - 1, "navy1")
     return save(c, "piano")
 
 
@@ -165,7 +213,7 @@ def piano_stool():
             t = (y - sy) / h
             c.px(round(x0 + (x1 - x0) * t), y, col)
     disc(c, cx, sy + 1.5, 6, 3, lambda dx, dy: "wood1")
-    disc(c, cx, sy, 6, 3, lambda dx, dy: "red3" if dx + dy < -0.6 else "red2")  # padded top
+    disc(c, cx, sy, 6, 3, lambda dx, dy: "mah5" if dx + dy < -0.8 else ("mah4" if dx + dy < 0.4 else "mah3"))  # brown leather top, like the original
     return save(c, "piano-stool")
 
 
