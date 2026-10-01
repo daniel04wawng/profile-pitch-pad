@@ -12,6 +12,7 @@ import sys
 from PIL import Image
 
 from draw_cozy import P as COZY, Canvas, face_left, face_right, face_top
+from draw_room import WOOD
 
 ART = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(ART), "public", "cafe", "sprites")
@@ -30,6 +31,9 @@ for k, v in {
     "mah0": "#1b0801", "mah1": "#33140a", "mah2": "#4a2212", "mah3": "#6e3414", "mah4": "#903f02", "mah5": "#c7875d", "key0": "#c9b28c", "key1": "#f3e6c8", "key2": "#fff8e6",
 }.items():
     P[k] = tuple(int(v[i : i + 2], 16) for i in (1, 3, 5)) + (255,)
+# one wood for everything (the piano too), from the room's ramp
+for i, v in enumerate(WOOD):
+    P[f"wood{i}"] = P[f"mah{i}"] = tuple(int(v[j : j + 2], 16) for j in (1, 3, 5)) + (255,)
 
 
 EXTRA = {}  # name -> companion info (sky mask, sun patch) for _companions.json

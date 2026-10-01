@@ -154,8 +154,10 @@ def cut(name, poly, remove, pal):
 
 
 if __name__ == "__main__":
+    from unify_wood import unify
     pal = palette()
     for name in sys.argv[1:] or PIECES:
         poly, remove = PIECES[name]
         im = cut(name, poly, remove, pal)
+        unify(name)  # same wood as everything else
         print(f"{name:22s} {im.size}")

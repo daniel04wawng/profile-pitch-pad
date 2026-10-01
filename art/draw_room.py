@@ -21,14 +21,18 @@ from draw_iso import P as BASE_P
 # The room gets a few warmer tones on top of the shared palette: golden walls, deep wood.
 # Colors sampled from the original café: orange-brown planks with dark seams and bright
 # reflections, warm cream walls over dark wood paneling.
+# The café's one wood, dark to light. Every wooden thing (wainscot, furniture, piano, frames)
+# uses these six colours so it all reads as the same wood.
+WOOD = ["#241208", "#3a1d0d", "#552c15", "#74401f", "#94582b", "#b8763c"]
+
 P = {**BASE_P, **{k: tuple(int(v[i : i + 2], 16) for i in (1, 3, 5)) + (255,) for k, v in {
     # walls: the original's lamp-lit orange-tan plaster (sampled from the high-res original)
     "wall0": "#a4693f", "wall1": "#b97644", "wall2": "#c4814d", "wall3": "#d38c54", "wall4": "#e09a5c",
-    "glow": "#eba868", "deep0": "#2e1508", "deep1": "#4a2410",
+    "glow": "#eba868", "deep0": WOOD[0], "deep1": WOOD[1],
     # floor: golden honey planks with bright glossy reflections
     "plank0": "#934b1c", "plank1": "#ac5f27", "plank2": "#c76b28", "plank3": "#cd7536",
     "seam": "#6a3415", "shine0": "#e08738", "shine1": "#ffa640",
-    "panel0": "#4f2a16", "panel1": "#6b3d22", "panel2": "#8a5530", "rail": "#b0703a",
+    "panel0": WOOD[1], "panel1": WOOD[2], "panel2": WOOD[3], "rail": WOOD[4],
     # navy trim and base, like the original's outer walls
     "navy0": "#0a192f", "navy1": "#22253e", "navy2": "#363763",
 }.items()}}
