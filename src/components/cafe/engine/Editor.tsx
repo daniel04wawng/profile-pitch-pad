@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Stage } from "./Stage";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
-import { CafeScreen, SCREENS } from "./Screens";
-import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, HOTSPOTS, snapIso, type Layout, type SpriteDef } from "./types";
+import { CafeScreen } from "./Screens";
+import { ScreenEditor } from "./ScreenEditor";
+import { blankScreen, type ScreenDef, type Screens } from "./screenData";
+import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, snapIso, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -47,14 +49,16 @@ async function writePng(file: string, data: string) {
   if (!r.ok) throw new Error(await r.text());
 }
 
-export function Editor({ initial }: { initial: Layout }) {
+export function Editor({ initial, initialScreens }: { initial: Layout; initialScreens: Screens }) {
+  const [screens, setScreens] = useState(initialScreens);
+  const [screenSel, setScreenSel] = useState<string | null>(null);
   const [layout, setLayoutRaw] = useState(initial);
   const past = useRef<Layout[]>([]);
   const future = useRef<Layout[]>([]);
   const [cut, setCut] = useState<Layout | null>(null);
   const [assets, setAssets] = useState<string[]>([]);
   const [sizes, setSizes] = useState<Record<string, Size>>({});
-  const [tab, setTab] = useState<"scene" | "assets">("scene");
+  const [tab, setTab] = useState<"scene" | "assets" | "screens">("scene");
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [showBg, setShowBg] = useState(true);
@@ -66,6 +70,9 @@ export function Editor({ initial }: { initial: Layout }) {
   const [status, setStatus] = useState<"saved" | "unsaved" | "saving" | "error">("saved");
   const [painting, setPainting] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
+  // live preview of the screen being designed, shown over the room while you edit it
+  const [designOpen, setDesignOpen] = useState(true);
   const [versions, setVersions] = useState<Record<string, number>>({});
   const drag = useRef<{ id: string; sx: number; sy: number; x: number; y: number; baseY: number; footX: number } | null>(null);
   const gridOf = (l: Layout) => l.grid ?? DEFAULT_GRID;
@@ -202,13 +209,43 @@ export function Editor({ initial }: { initial: Layout }) {
     setPainting(file);
   };
 
+  // ---------- screens ----------
+
+  const newScreen = (): string | null => {
+    const name = window.prompt("Name for the new screen", "My new screen")?.trim();
+    if (!name) return null;
+    const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "screen";
+    let id = base;
+    for (let n = 2; screens[id]; n++) id = `${base}-${n}`;
+    setScreens((all) => ({ ...all, [id]: blankScreen(name) }));
+    setStatus("unsaved");
+    return id;
+  };
+  const changeScreen = (id: string, def: ScreenDef) => {
+    setScreens((all) => ({ ...all, [id]: def }));
+    setStatus("unsaved");
+  };
+  const deleteScreen = (id: string) => {
+    setScreens((all) => {
+      const next = { ...all };
+      delete next[id];
+      return next;
+    });
+    edit((l) => ({ ...l, assets: l.assets.map((a) => (a.hotspot === id ? { ...a, hotspot: null } : a)) }));
+    setScreenSel(null);
+  };
+  const usedBy = (id: string) => layout.assets.filter((a) => a.hotspot === id).map((a) => a.id);
+
   // ---------- saving ----------
 
   const save = async () => {
     setStatus("saving");
     try {
-      const r = await fetch("/__cafe/layout", { method: "POST", body: JSON.stringify(layout) });
-      setStatus(r.ok ? "saved" : "error");
+      const [r1, r2] = await Promise.all([
+        fetch("/__cafe/layout", { method: "POST", body: JSON.stringify(layout) }),
+        fetch("/__cafe/screens", { method: "POST", body: JSON.stringify({ screens }) }),
+      ]);
+      setStatus(r1.ok && r2.ok ? "saved" : "error");
     } catch {
       setStatus("error");
     }
@@ -235,6 +272,7 @@ export function Editor({ initial }: { initial: Layout }) {
       const mod = e.metaKey || e.ctrlKey;
       const k = e.key.toLowerCase();
       if (k === "p" && !mod) return setPlaying((p) => !p);
+      if (e.key === "\\" && !mod) return setPanelOpen((o) => !o);
       if (playing) return;
       if (mod && k === "s") {
         e.preventDefault();
@@ -281,7 +319,7 @@ export function Editor({ initial }: { initial: Layout }) {
 
   // ---------- render ----------
 
-  if (playing) return <Play layout={layout} versions={versions} onExit={() => setPlaying(false)} />;
+  if (playing) return <Play layout={layout} screens={screens} versions={versions} onExit={() => setPlaying(false)} />;
 
   const original = cut?.assets.find((a) => a.id === selected);
   const statusText = { saved: "saved", unsaved: "unsaved changes", saving: "saving…", error: "save failed (use download)" }[status];
@@ -388,20 +426,47 @@ export function Editor({ initial }: { initial: Layout }) {
               },
             }}
           />
+          {tab === "screens" && screenSel && screens[screenSel] && (
+            <>
+              <div
+                className={`absolute inset-0 z-[5] flex items-center justify-center bg-[#15131c]/55 p-4 backdrop-blur-[2px] transition-all duration-300 ease-out ${
+                  designOpen ? "opacity-100" : "pointer-events-none translate-x-10 opacity-0"
+                }`}
+              >
+                <CafeScreen screen={screens[screenSel]} playing={false} onMusic={() => {}} onClose={() => setDesignOpen(false)} />
+              </div>
+              <button
+                onClick={() => setDesignOpen((o) => !o)}
+                className="absolute left-3 top-3 z-10 rounded border border-white/15 bg-[#1d1a26] px-2.5 py-1 text-[12px] hover:bg-white/10"
+              >
+                {designOpen ? "hide screen preview" : "show screen preview"}
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => setPanelOpen((o) => !o)}
+            title={panelOpen ? "Hide the side panel (\\)" : "Show the side panel (\\)"}
+            className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-l border border-r-0 border-white/15 bg-[#1d1a26] px-1 py-4 text-[12px] opacity-70 hover:opacity-100"
+          >
+            {panelOpen ? "›" : "‹"}
+          </button>
           <p className="pointer-events-none absolute bottom-2 left-3 text-[11px] opacity-40">
-            drag to move (⇧ drag = no snap) · arrows move{snap ? " 1 grid step" : " 1px (⇧ 8px)"} · [ ] layer · F flip · H hide · ⌘D duplicate · ⌫ delete · ⌘Z undo · P play
+            drag to move (⇧ drag = no snap) · arrows move{snap ? " 1 grid step" : " 1px (⇧ 8px)"} · [ ] layer · F flip · H hide · ⌘D duplicate · ⌫ delete · ⌘Z undo · P play · \\ panel
           </p>
         </div>
 
-        <aside className="flex w-[300px] flex-col border-l border-white/10 bg-[#1d1a26]">
+        <aside
+          className={`flex shrink-0 flex-col overflow-hidden border-l border-white/10 bg-[#1d1a26] transition-[width] duration-300 ease-out ${panelOpen ? "w-[300px]" : "w-0 border-l-0"}`}
+        >
+          <div className="flex w-[300px] min-h-0 flex-1 flex-col">
           <div className="flex border-b border-white/10">
-            {(["scene", "assets"] as const).map((t) => (
+            {(["scene", "assets", "screens"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`flex-1 py-2 font-['Silkscreen'] text-[11px] uppercase ${tab === t ? "border-b-2 border-[#9bbf7a]" : "opacity-50"}`}
               >
-                {t === "scene" ? `scene (${layout.assets.length})` : `assets (${assets.length})`}
+                {t === "scene" ? `scene (${layout.assets.length})` : t === "assets" ? `assets (${assets.length})` : `screens (${Object.keys(screens).length})`}
               </button>
             ))}
           </div>
@@ -442,21 +507,39 @@ export function Editor({ initial }: { initial: Layout }) {
                       screen (what opens when you walk up to it)
                       <select
                         value={sel.hotspot ?? ""}
-                        onChange={(e) => patchObj(sel.id, { hotspot: e.target.value || null })}
+                        onChange={(e) => {
+                          if (e.target.value === "__new") {
+                            const id = newScreen();
+                            if (id) patchObj(sel.id, { hotspot: id });
+                          } else patchObj(sel.id, { hotspot: e.target.value || null });
+                        }}
                         className="mt-0.5 w-full rounded bg-black/30 px-2 py-1 text-[13px]"
                       >
                         <option value="">none (just decoration)</option>
-                        {HOTSPOTS.map((h) => (
-                          <option key={h} value={h}>
-                            {SCREENS[h] ?? h}
+                        {Object.entries(screens).map(([id, def]) => (
+                          <option key={id} value={id}>
+                            {def.name}
                           </option>
                         ))}
+                        {sel.hotspot && !screens[sel.hotspot] && <option value={sel.hotspot}>{sel.hotspot} (missing)</option>}
+                        <option value="__new">+ new screen…</option>
                       </select>
                     </label>
-                    {sel.hotspot && (
-                      <button onClick={() => setPreviewing(sel.hotspot)} className={`${btn} mt-2 w-full`}>
-                        Preview screen
-                      </button>
+                    {sel.hotspot && screens[sel.hotspot] && (
+                      <div className="mt-2 flex gap-1.5">
+                        <button onClick={() => setPreviewing(sel.hotspot)} className={`${btn} flex-1`}>
+                          Preview screen
+                        </button>
+                        <button
+                          onClick={() => {
+                            setScreenSel(sel.hotspot);
+                            setTab("screens");
+                          }}
+                          className={`${btn} flex-1`}
+                        >
+                          Edit screen
+                        </button>
+                      </div>
                     )}
                   </div>
                   <label className="block text-[11px] opacity-80">
@@ -514,6 +597,23 @@ export function Editor({ initial }: { initial: Layout }) {
                   ))}
               </ul>
             </>
+          ) : tab === "screens" ? (
+            <ScreenEditor
+              screens={screens}
+              selected={screenSel}
+              setSelected={(id) => {
+                setScreenSel(id);
+                if (id) setDesignOpen(true);
+              }}
+              usedBy={usedBy}
+              onChange={changeScreen}
+              onCreate={() => {
+                const id = newScreen();
+                if (id) setScreenSel(id);
+              }}
+              onDelete={deleteScreen}
+              onPreview={setPreviewing}
+            />
           ) : (
             <div
               className="flex min-h-0 flex-1 flex-col"
@@ -580,6 +680,7 @@ export function Editor({ initial }: { initial: Layout }) {
               <p className="border-t border-white/10 p-3 text-[11px] opacity-50">Drag assets onto the scene. Drop image files here to import.</p>
             </div>
           )}
+          </div>
         </aside>
       </div>
 
@@ -588,7 +689,7 @@ export function Editor({ initial }: { initial: Layout }) {
           onClick={() => setPreviewing(null)}
           className="fixed inset-0 z-40 flex items-center justify-center bg-[#15131c]/60 p-3 backdrop-blur-[3px]"
         >
-          <CafeScreen hotspot={previewing} playing={false} onMusic={() => {}} onClose={() => setPreviewing(null)} />
+          {screens[previewing] && <CafeScreen screen={screens[previewing]} playing={false} onMusic={() => {}} onClose={() => setPreviewing(null)} />}
         </div>
       )}
 

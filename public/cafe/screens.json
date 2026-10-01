@@ -1,0 +1,187 @@
+{
+  "screens": {
+    "projects": {
+      "name": "Pastry case: projects",
+      "template": "case",
+      "tone": "cream",
+      "kicker": "The pastry case",
+      "title": "Fresh from the oven",
+      "body": [
+        "Each pastry is a project. Pick one to read the story behind it."
+      ],
+      "items": [
+        {
+          "title": "Surplus",
+          "meta": "Fresh croissant",
+          "sprite": "pastry-croissant",
+          "note": "Placeholder. An AI agent that does the relationship work for you."
+        },
+        {
+          "title": "Duet",
+          "meta": "Macarons",
+          "sprite": "pastry-macaron",
+          "note": "Placeholder. Brain-computer interface that turns EEG signals into music. First place grand prize, Cal Hacks 11.0."
+        },
+        {
+          "title": "Mira AI",
+          "meta": "Cinnamon roll",
+          "sprite": "pastry-cinnamon",
+          "note": "Placeholder. Digital patient twin, shipped at NimbleRx."
+        },
+        {
+          "title": "VGC bench",
+          "meta": "Blueberry muffin",
+          "sprite": "pastry-muffin",
+          "note": "Placeholder. A benchmark for AI agents playing competitive Pokémon."
+        }
+      ],
+      "links": []
+    },
+    "menu": {
+      "name": "Menu board: blog",
+      "template": "menu",
+      "tone": "chalk",
+      "kicker": "Today's menu",
+      "title": "The blog",
+      "body": [
+        "Placeholder. Posts go here, newest first, like a menu that changes daily."
+      ],
+      "items": [
+        {
+          "title": "First post",
+          "meta": "coming soon"
+        },
+        {
+          "title": "Second post",
+          "meta": "coming soon"
+        }
+      ],
+      "links": []
+    },
+    "books": {
+      "name": "Bookshelf: books I love",
+      "template": "shelf",
+      "tone": "wood",
+      "kicker": "The bookshelf",
+      "title": "Books I love",
+      "body": [
+        "Placeholder. Your favorite books, with a line on why each one stuck."
+      ],
+      "items": [
+        {
+          "title": "Favourite book",
+          "note": "Placeholder note on why it stuck with you."
+        },
+        {
+          "title": "Another one",
+          "note": "Placeholder note on why it stuck with you."
+        },
+        {
+          "title": "A third",
+          "note": "Placeholder note on why it stuck with you."
+        },
+        {
+          "title": "Something else",
+          "note": "Placeholder note on why it stuck with you."
+        },
+        {
+          "title": "One more",
+          "note": "Placeholder note on why it stuck with you."
+        }
+      ],
+      "links": []
+    },
+    "piano": {
+      "name": "Music player",
+      "template": "music",
+      "tone": "wood",
+      "kicker": "The piano",
+      "title": "My music",
+      "body": [
+        "Placeholder. Your piano pieces and compositions, each playable right here."
+      ],
+      "items": [
+        {
+          "title": "Piano piece",
+          "meta": "coming soon"
+        },
+        {
+          "title": "Café loop",
+          "meta": "on the record player"
+        }
+      ],
+      "links": []
+    },
+    "chill": {
+      "name": "Sit and listen: music",
+      "template": "music",
+      "tone": "wood",
+      "kicker": "The armchair",
+      "title": "Stay a while",
+      "body": [
+        "Sink into the armchair, put the music on, and stay as long as you like."
+      ],
+      "items": [
+        {
+          "title": "Café loop",
+          "meta": "now playing"
+        }
+      ],
+      "links": []
+    },
+    "contact": {
+      "name": "Receipt: contact",
+      "template": "receipt",
+      "tone": "cream",
+      "kicker": "The register",
+      "title": "Say hi",
+      "body": [
+        "The best way to reach me is email. I'm always up for coffee.",
+        "Résumé: coming soon."
+      ],
+      "items": [],
+      "links": [
+        {
+          "label": "Email",
+          "href": "mailto:daniel04wang@gmail.com"
+        },
+        {
+          "label": "LinkedIn",
+          "href": "https://www.linkedin.com/in/daniel04wang/"
+        },
+        {
+          "label": "GitHub",
+          "href": "https://github.com/daniel04wawng"
+        },
+        {
+          "label": "Devpost",
+          "href": "https://devpost.com/daniel04wang"
+        }
+      ]
+    },
+    "about": {
+      "name": "About me",
+      "template": "text",
+      "tone": "cream",
+      "kicker": "About",
+      "title": "About me",
+      "body": [
+        "Placeholder. Who you are, in your own voice. One day this café is going to be real."
+      ],
+      "items": [],
+      "links": []
+    },
+    "now": {
+      "name": "Special of the day",
+      "template": "text",
+      "tone": "cream",
+      "kicker": "Special of the day",
+      "title": "In the oven",
+      "body": [
+        "Placeholder. What you're working on right now, plus anything freshly launched."
+      ],
+      "items": [],
+      "links": []
+    }
+  }
+}

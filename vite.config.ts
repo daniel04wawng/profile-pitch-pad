@@ -46,6 +46,14 @@ function cafeEditorSaver(): Plugin {
           fs.writeFileSync(path.join(root, "layout.json"), JSON.stringify(layout, null, 2) + "\n");
         }),
       );
+      server.middlewares.use(
+        "/__cafe/screens",
+        handle((body) => {
+          const data = JSON.parse(body);
+          if (typeof data.screens !== "object" || Array.isArray(data.screens)) throw new Error("screens missing");
+          fs.writeFileSync(path.join(root, "screens.json"), JSON.stringify(data, null, 2) + "\n");
+        }),
+      );
       // Asset library: every PNG in public/cafe/sprites.
       server.middlewares.use("/__cafe/assets", (req, res) => {
         if (req.method !== "GET" || !local.includes(req.socket.remoteAddress ?? "")) {

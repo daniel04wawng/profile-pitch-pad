@@ -2,12 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import { Stage } from "./Stage";
 import { CafeScreen } from "./Screens";
 import { type Layout, type SpriteDef } from "./types";
+import type { Screens } from "./screenData";
 import { LofiPlayer } from "../lofi";
 
 // What visitors see. Clicking an object walks the camera up to it, the room softly blurs,
 // and that object's own screen opens (browse the pastry case, read the menu...).
 // The editor also runs this in place (P) to try a scene before saving it.
-export function Play({ layout, versions, onExit }: { layout: Layout; versions?: Record<string, number>; onExit?: () => void }) {
+export function Play({
+  layout,
+  screens,
+  versions,
+  onExit,
+}: {
+  layout: Layout;
+  screens: Screens;
+  versions?: Record<string, number>;
+  onExit?: () => void;
+}) {
   const [hovered, setHovered] = useState<SpriteDef | null>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [focus, setFocus] = useState<SpriteDef | null>(null);
@@ -54,7 +65,7 @@ export function Play({ layout, versions, onExit }: { layout: Layout; versions?: 
       <Stage
         layout={layout}
         versions={versions}
-        interactive={(s) => !!s.hotspot && !focus}
+        interactive={(s) => !!s.hotspot && !!screens[s.hotspot] && !focus}
         hovered={focus ? null : hovered?.id ?? null}
         camera={focus ? { x: focus.x, y: focus.y, w: focus.w, h: focus.h } : null}
         handlers={{
@@ -86,7 +97,9 @@ export function Play({ layout, versions, onExit }: { layout: Layout; versions?: 
         }`}
       >
         <div className={`transition-all duration-500 ${screenOpen ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0"}`}>
-          {focus?.hotspot && <CafeScreen hotspot={focus.hotspot} playing={playing} onMusic={setMusic} onClose={close} />}
+          {focus?.hotspot && screens[focus.hotspot] && (
+            <CafeScreen screen={screens[focus.hotspot]} playing={playing} onMusic={setMusic} onClose={close} />
+          )}
         </div>
       </div>
 
