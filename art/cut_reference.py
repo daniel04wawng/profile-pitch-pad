@@ -19,6 +19,7 @@ PALETTE_GPL = os.path.join(ART, "source", "cafe-night-palette.gpl")
 OUT = os.path.join(os.path.dirname(ART), "public", "cafe", "sprites")
 EDGE = (36, 20, 13, 255)
 SCALE = 4  # high-res original pixels per room pixel
+SCALES = {"sax-poster": 3}  # wall art a bit bigger so the picture still reads
 
 
 def wall(px):
@@ -61,13 +62,31 @@ def around_floor_piece(px):
 # name: (outline in high-res pixels, what to remove inside it)
 PIECES = {
     "chalkboard-menu": ([(956, 120), (1016, 120), (1016, 238), (956, 238)], wall),
-    "sax-poster": ([(1302, 214), (1418, 214), (1418, 350), (1302, 350)], wall),
+    "sax-poster": ([(1305, 210), (1407, 247), (1407, 345), (1305, 308)], lambda px: np.zeros(px.shape[:2], bool)),
     "record-art": ([(1428, 345), (1490, 345), (1490, 430), (1428, 430)], wall),
     "framed-picture-tall": ([(712, 78), (768, 78), (768, 164), (712, 164)], wall),
     "back-bar-shelves": ([(766, 34), (962, 112), (962, 196), (766, 150)], wall),
     "espresso-station": ([(776, 178), (902, 214), (902, 268), (776, 236)], wall),
     "record-cabinet": ([(1352, 436), (1490, 436), (1490, 566), (1352, 566)], around_floor_piece),
 }
+
+
+FRAME_BOTTOM = {"sax-poster"}  # pieces cut off above something in front of them
+
+
+def close_frame(name):
+    """Draw the bottom of a frame whose real bottom is hidden in the original."""
+    path = os.path.join(OUT, f"{name}.png")
+    im = Image.open(path).convert("RGBA")
+    a = im.load()
+    for x in range(1, im.width - 1):
+        ys = [y for y in range(im.height) if a[x, y][3] > 0]
+        if len(ys) < 4:
+            continue
+        bottom = ys[-1]
+        a[x, bottom - 1] = (58, 29, 13, 255)  # frame
+        a[x, bottom - 2] = (85, 44, 21, 255)
+    im.save(path)
 
 
 def palette():
@@ -101,18 +120,19 @@ def cut(name, poly, remove, pal):
     keep = inside & ~reach
     x0, y0 = min(p[0] for p in poly), min(p[1] for p in poly)
     x1, y1 = max(p[0] for p in poly), max(p[1] for p in poly)
-    x0, y0 = x0 - x0 % SCALE, y0 - y0 % SCALE
-    w, h = (x1 - x0) // SCALE + 1, (y1 - y0) // SCALE + 1
-    rgb = ref[y0 : y0 + h * SCALE, x0 : x0 + w * SCALE]
-    k = keep[y0 : y0 + h * SCALE, x0 : x0 + w * SCALE]
-    hh, ww = rgb.shape[0] // SCALE, rgb.shape[1] // SCALE
-    rgb = rgb[: hh * SCALE, : ww * SCALE].reshape(hh, SCALE, ww, SCALE, 3).transpose(0, 2, 1, 3, 4).reshape(hh, ww, SCALE * SCALE, 3)
-    k = k[: hh * SCALE, : ww * SCALE].reshape(hh, SCALE, ww, SCALE).transpose(0, 2, 1, 3).reshape(hh, ww, SCALE * SCALE)
+    SC = SCALES.get(name, SCALE)
+    x0, y0 = x0 - x0 % SC, y0 - y0 % SC
+    w, h = (x1 - x0) // SC + 1, (y1 - y0) // SC + 1
+    rgb = ref[y0 : y0 + h * SC, x0 : x0 + w * SC]
+    k = keep[y0 : y0 + h * SC, x0 : x0 + w * SC]
+    hh, ww = rgb.shape[0] // SC, rgb.shape[1] // SC
+    rgb = rgb[: hh * SC, : ww * SC].reshape(hh, SC, ww, SC, 3).transpose(0, 2, 1, 3, 4).reshape(hh, ww, SC * SC, 3)
+    k = k[: hh * SC, : ww * SC].reshape(hh, SC, ww, SC).transpose(0, 2, 1, 3).reshape(hh, ww, SC * SC)
     out = np.zeros((hh, ww, 4), dtype=np.uint8)
     for yy in range(hh):
         for xx in range(ww):
             sel = k[yy, xx]
-            if sel.sum() < (SCALE * SCALE) // 2:
+            if sel.sum() < (SC * SC) // 2:
                 continue  # mostly background: leave transparent
             c = np.median(rgb[yy, xx][sel], axis=0)
             c = pal[np.argmin(((pal - c) ** 2).sum(axis=1))]  # snap to the original's palette
@@ -154,10 +174,13 @@ def cut(name, poly, remove, pal):
 
 
 if __name__ == "__main__":
-    from unify_wood import unify
+    from unify_wood import CUT as WOODY, unify
     pal = palette()
     for name in sys.argv[1:] or PIECES:
         poly, remove = PIECES[name]
         im = cut(name, poly, remove, pal)
-        unify(name)  # same wood as everything else
+        if name in FRAME_BOTTOM:
+            close_frame(name)
+        if name in WOODY:
+            unify(name)  # same wood as everything else
         print(f"{name:22s} {im.size}")

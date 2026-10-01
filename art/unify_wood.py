@@ -18,7 +18,7 @@ from draw_room import WOOD
 ART = os.path.dirname(os.path.abspath(__file__))
 SPRITES = os.path.join(os.path.dirname(ART), "public", "cafe", "sprites")
 CUT = ["pastry-counter", "back-bar-shelves", "espresso-station", "record-cabinet", "chalkboard-menu",
-       "sax-poster", "record-art", "framed-picture-tall"]
+       "framed-picture-tall"]  # not the posters: their gold and browns are the art
 RAMP = np.array([[int(v[i : i + 2], 16) for i in (1, 3, 5)] for v in WOOD])
 RAMP_LUM = RAMP @ np.array([0.299, 0.587, 0.114])
 EDGE = (36, 20, 13)  # the dark outline: keep it

@@ -109,35 +109,39 @@ def cafe_table():
 
 
 def cafe_chair():
-    """Bentwood café chair, facing down-right (flip it in the editor for the other way)."""
-    c = Canvas(50, 60)
-    cx, floor_y, seat = 25, 50, 12
-    sy = floor_y - seat
-    # legs, splayed a little; back legs first
-    for (x0, x1, col) in ((cx - 3, cx - 4, "wood0"), (cx + 4, cx + 5, "wood0"), (cx - 5, cx - 6, "wood1"), (cx + 2, cx + 3, "wood1")):
-        for y in range(sy + 1, floor_y + 1):
-            t = (y - sy) / seat
-            c.px(round(x0 + (x1 - x0) * t), y + (2 if col == "wood1" else 0) - (0 if col == "wood1" else 2), col)
-    # leg ring
-    for x in range(cx - 5, cx + 5):
-        c.px(x, floor_y - 4 + (1 if x > cx else 0), "wood1")
-    # back: two posts from the back of the seat, a hooped top rail, one cross rail
-    bx0, bx1 = cx - 6, cx + 1
-    for x, col in ((bx0, "wood2"), (bx1, "wood1")):
-        vline(c, x, sy - 14 + (x - bx0) // 3, sy - 1, col)
-    for x in range(bx0, bx1 + 1):
-        y = sy - 15 + (x - bx0) // 3 - (1 if bx0 < x < bx1 else 0)
-        c.px(x, y, "wood3")
-        c.px(x, y + 1, "wood2")
-        c.px(x, sy - 7 + (x - bx0) // 3, "wood2")
-    # round seat
-    disc(c, cx, sy + 1, 7, 3.5, lambda dx, dy: "wood1")
-    disc(c, cx, sy, 7, 3.5, lambda dx, dy: "wood4" if dx + dy < -0.3 else "wood3")
-    return save(c, "cafe-chair", foot=(cx, floor_y))
+    """Bentwood café chair facing down-left (flip it in the editor to face down-right):
+    four thin legs, a round-edged seat, a hooped back with two slats."""
+    c = Canvas(50, 70)
+    X0, Y0 = 14, 30
+    N, SEAT, BACK = 5, 11, 29  # seat size (units), seat height, top of the back (px)
 
+    def leg(a, b, col):
+        x, y = X0 + 2 * a - 2 * b, Y0 + a + b
+        vline(c, x, y - SEAT, y, col)
 
-# ---------------------------------------------------------------- the piano corner
-
+    leg(0.5, 0.5, "wood0"); leg(N - 0.5, 0.5, "wood1")  # back legs
+    # the back: two posts rising from the back legs, a hoop on top, a rail, two slats
+    def back(t, z):
+        post = t < 0.7 or t > N - 1.2
+        rail = z >= BACK - SEAT - 3 or SEAT + 5 <= z + SEAT <= SEAT + 6
+        slat = abs(t - N * 0.38) < 0.3 or abs(t - N * 0.62) < 0.3
+        if post or rail or slat:
+            return "wood4" if (z >= BACK - SEAT - 1 or t < 0.35) else ("wood3" if post or rail else "wood2")
+        return None
+    face_left(c, X0, Y0, 0.2, N - 0.5, 0.5, SEAT, BACK, back)
+    # seat: thin top with a lit edge
+    face_left(c, X0, Y0, 0, N, N, SEAT - 2, SEAT, lambda t, z: "wood2" if z < 1 else "wood3")
+    face_right(c, X0, Y0, N, 0, N, SEAT - 2, SEAT, lambda s_, z: "wood1")
+    face_top(c, X0, Y0, 0, N, 0, N, SEAT, lambda a_, b_: "wood5" if (b_ > N - 0.7 or a_ < 0.5) else "wood4")
+    leg(0.5, N - 0.5, "wood2"); leg(N - 0.5, N - 0.5, "wood1")  # front legs
+    # a stretcher ring between the legs
+    for t2 in range(0, int(N * 2) + 1):
+        t = t2 / 2
+        for (a_, b_) in ((t, N - 0.5), (N - 0.5, t)):
+            x, y = X0 + 2 * a_ - 2 * b_, Y0 + a_ + b_ - 4
+            c.px(x, y, "wood1")
+    cx, cy = X0 + N - N, Y0 + N  # the seat's centre on the floor
+    return save(c, "cafe-chair", foot=(X0, Y0 + N))
 
 def piano():
     """Upright piano after the original's: near-black mahogany, glossy lamp-lit lid, framed
@@ -573,27 +577,33 @@ def booth():
 
 
 def armchair():
-    """Green velvet armchair like the original's reading chair (seat faces down-left)."""
+    """Green velvet armchair like the original's reading chair, facing down-left: a plinth,
+    a tall rounded back, two padded arms and a seat cushion, on little wooden feet."""
     c = Canvas(80, 80)
-    X0, Y0 = 20, 40
+    X0, Y0 = 22, 38
     L, D = 8, 8
-    SEAT, ARM, BACK = 10, 16, 27
-    for a0 in (0.3, L - 1.3):  # little wood feet
-        face_left(c, X0, Y0, a0, a0 + 0.8, D, 0, 3, lambda t, z: "wood1")
-    face_left(c, X0, Y0, 0, L, D, 3, SEAT - 2, lambda t, z: "olive1")
-    face_right(c, X0, Y0, L, 0, D, 3, ARM, lambda s, z: "olive0" if z < ARM - 2 else "olive1")
+    BASE, SEAT, ARM, BACK = 3, 10, 17, 28
+    BK, AW = 2.5, 1.6  # back thickness, arm width (units)
+    for (a_, b_) in ((0.6, D - 0.4), (L - 0.4, D - 0.4), (L - 0.4, 0.6)):  # feet
+        x, y = X0 + 2 * a_ - 2 * b_, Y0 + a_ + b_
+        vline(c, x, y - BASE, y, "wood1"); vline(c, x + 1, y - BASE, y, "wood0")
+    # plinth under everything
+    face_left(c, X0, Y0, 0, L, D, BASE, SEAT, lambda t, z: "olive1" if z < SEAT - BASE - 1 else "olive2")
+    face_right(c, X0, Y0, L, 0, D, BASE, SEAT, lambda s_, z: "olive0")
     # back
-    face_left(c, X0, Y0, 0, L, 2.5, SEAT, BACK, lambda t, z: "olive3" if z > BACK - SEAT - 3 else ("olive2" if t % 3 > 0.3 else "olive1"))
-    face_top(c, X0, Y0, 0, L, 0, 2.5, BACK, lambda a, b: "olive3")
-    # cushion
-    face_left(c, X0, Y0, 1.5, L - 1.5, D, SEAT - 2, SEAT, lambda t, z: "olive2")
-    face_top(c, X0, Y0, 1.5, L - 1.5, 2.5, D, SEAT, lambda a, b: "olive3" if b > D - 1 else "olive2")
-    # arms: the left one shows its top and front, the right one its outside
-    for a0 in (0, L - 1.5):
-        face_left(c, X0, Y0, a0, a0 + 1.5, D, 3, ARM, lambda t, z: "olive2" if t < 0.6 else "olive1")
-        face_top(c, X0, Y0, a0, a0 + 1.5, 2.5, D, ARM, lambda a, b: "olive3")
+    face_left(c, X0, Y0, 0, L, BK, SEAT, BACK, lambda t, z: "olive3" if z >= BACK - SEAT - 2 else ("olive1" if t % (L / 3) < 0.3 else "olive2"))
+    face_right(c, X0, Y0, L, 0, BK, SEAT, BACK, lambda s_, z: "olive1" if z >= BACK - SEAT - 1 else "olive0")
+    face_top(c, X0, Y0, 0, L, 0, BK, BACK, lambda a_, b_: "olive3")
+    # left arm (its inner side faces the seat), then the cushion, then the right arm in front
+    def arm(a0):
+        face_left(c, X0, Y0, a0, a0 + AW, D, SEAT, ARM, lambda t, z: "olive3" if z >= ARM - SEAT - 1 else "olive2")
+        face_right(c, X0, Y0, a0 + AW, BK, D, SEAT, ARM, lambda s_, z: "olive1" if z >= ARM - SEAT - 1 else "olive0")
+        face_top(c, X0, Y0, a0, a0 + AW, BK, D, ARM, lambda a_, b_: "olive3" if b_ > D - 0.8 else "olive2")
+    arm(0)
+    face_left(c, X0, Y0, AW, L - AW, D, SEAT, SEAT + 3, lambda t, z: "olive2" if z < 2 else "olive3")
+    face_top(c, X0, Y0, AW, L - AW, BK, D, SEAT + 3, lambda a_, b_: "olive3" if b_ > D - 1 else "olive2")
+    arm(L - AW)
     return save(c, "armchair", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
-
 
 def floor_lamp():
     """Brass floor lamp with a cream pleated shade, warm light inside."""

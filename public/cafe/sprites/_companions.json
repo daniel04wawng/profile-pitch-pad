@@ -82,8 +82,8 @@
  },
  "cafe-chair": {
   "foot": {
-   "x": 8,
-   "y": 29
+   "x": 11,
+   "y": 34
   }
  },
  "piano": {
@@ -127,7 +127,7 @@
  "armchair": {
   "foot": {
    "x": 17,
-   "y": 44
+   "y": 45
   }
  },
  "special-board": {},
