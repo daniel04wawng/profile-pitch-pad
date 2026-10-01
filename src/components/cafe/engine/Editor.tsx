@@ -6,7 +6,7 @@ import { CafeScreen } from "./Screens";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
-import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, DEFAULT_CLUTTER, BACK, WALL_ITEMS, frontOf, isClutter, rotOf, turnArt, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, DEFAULT_CLUTTER, SECTION_ORDER, sectionOf, BACK, WALL_ITEMS, frontOf, isClutter, rotOf, turnArt, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -287,7 +287,8 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
 
   const importFiles = async (files: FileList | File[], at?: { x: number; y: number }) => {
     const imgs = [...files].filter((f) => f.type.startsWith("image/"));
-    const existing = new Set(assets);
+    const existing = new Set(allFiles);
+    const imported: string[] = [];
     for (const f of imgs) {
       let name = slug(f.name);
       for (let n = 2; existing.has(`sprites/${name}.png`); n++) name = `${slug(f.name)}-${n}`;
@@ -300,9 +301,12 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
         continue;
       }
       if (at) await place(file, at);
+      imported.push(file);
     }
     await refreshAssets();
     if (!at) setTab("assets");
+    // one new asset: open it straight in the pixel editor, like New asset does
+    if (imported.length === 1) setPainting(imported[0]);
   };
 
   const newAsset = async () => {
@@ -569,8 +573,8 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                     const under = surfaceUnder(p, s.id);
                     if (under) {
                       setMarker(null);
-                      const x = d.x + (p.x - d.footX);
-                      const y = d.y + (p.y - d.footY);
+                      const x = Math.round(d.x + (p.x - d.footX));
+                      const y = Math.round(d.y + (p.y - d.footY));
                       editLive((l) => ({ ...l, assets: l.assets.map((a) => (a.id === d.id ? { ...a, x, y, baseY: under.baseY + 1 } : a)) }));
                       return;
                     }
@@ -833,8 +837,17 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                   />
                 </label>
               </div>
-              <div className="grid flex-1 auto-rows-min grid-cols-3 gap-2 overflow-y-auto p-3">
-                {assets.map((file) => {
+              <div className="flex-1 overflow-y-auto p-3">
+                {SECTION_ORDER.map((section) => {
+                  const files = assets.filter((f) => sectionOf(layout, nameOf(f)) === section);
+                  if (!files.length) return null;
+                  return (
+                    <details key={section} open className="mb-3">
+                      <summary className="mb-2 cursor-pointer select-none text-[11px] uppercase tracking-wider opacity-60">
+                        {section} <span className="opacity-60">({files.length})</span>
+                      </summary>
+                      <div className="grid auto-rows-min grid-cols-3 gap-2">
+                {files.map((file) => {
                   const used = layout.assets.filter((a) => a.file === file).length;
                   return (
                     <div key={file} className="group relative rounded bg-black/25 p-1.5 hover:bg-black/40">
@@ -865,6 +878,10 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                         edit
                       </button>
                     </div>
+                  );
+                })}
+                      </div>
+                    </details>
                   );
                 })}
               </div>

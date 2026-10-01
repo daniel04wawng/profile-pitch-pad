@@ -31,6 +31,23 @@ export type Layout = {
   clutter?: string[];
 };
 
+// How the asset library is grouped. Clutter-marked assets go under Clutter; anything not
+// listed (your own drawings and imports) goes under "Your assets".
+export const ASSET_SECTIONS: [string, string[]][] = [
+  ["Seating", ["cafe-chair", "armchair", "couch", "sofa-large", "booth", "piano-stool"]],
+  ["Tables & counters", ["cafe-table", "cafe-table-cloth", "cafe-table-linen", "coffee-table", "bar-counter", "pastry-counter"]],
+  ["Music & books", ["piano", "record-cabinet", "bookshelf"]],
+  ["Walls & windows", ["window", "kitchen-doorway", "menu-board", "chalkboard-menu", "back-bar-shelves", "sax-poster", "record-art", "framed-picture-tall", "window-box"]],
+  ["Lighting", ["globe-lamp", "wall-lamp", "floor-lamp"]],
+  ["Plants", ["potted-plant", "fiddle-leaf-fig", "snake-plant", "fern-stand", "hanging-plant", "tulip-pot"]],
+  ["Floor", ["rug", "special-board"]],
+];
+export function sectionOf(l: Layout, name: string) {
+  if (isClutter(l, name)) return "Clutter";
+  return ASSET_SECTIONS.find(([, names]) => names.includes(frontOf(name)))?.[0] ?? "Your assets";
+}
+export const SECTION_ORDER = [...ASSET_SECTIONS.map(([s]) => s), "Clutter", "Your assets"];
+
 export const DEFAULT_CLUTTER = [
   "coffee-cup", "flower-vase", "succulent", "tulip-pot", "laptop", "cake-stand", "espresso-station",
 ];
@@ -77,6 +94,7 @@ export const WALL_ITEMS: Record<string, { drawnFor?: "left" | "right"; onFloor?:
   "record-art": { drawnFor: "right" },
   "back-bar-shelves": { drawnFor: "right" },
   "window-box": { drawnFor: "right" },
+  "menu-board": { drawnFor: "right" },
   "framed-picture-tall": { drawnFor: "left" },
   "wall-lamp": { drawnFor: "left" },
   "kitchen-doorway": { drawnFor: "left", onFloor: true },
@@ -147,6 +165,9 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "bar-counter": { hotspot: "about", label: "about me" },
   "special-board": { hotspot: "now", label: "special of the day" },
   booth: { hotspot: "chill", label: "sit for a while" },
+  couch: { hotspot: "chill", label: "sit and listen" },
+  "sofa-large": { hotspot: "chill", label: "sit and listen" },
+  "coffee-table": { hotspot: "chill", label: "sit for a while" },
   armchair: { hotspot: "chill", label: "sit and listen" },
   "cafe-table-cloth": { hotspot: "chill", label: "sit for a while" },
   "cafe-table-linen": { hotspot: "chill", label: "sit for a while" },

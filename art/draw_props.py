@@ -23,6 +23,7 @@ for k, v in {
     "red0": "#4a1012", "red1": "#7a1f1f", "red2": "#a8352a", "red3": "#c95a3a",
     "navy0": "#1b2040", "navy1": "#2c3463", "navy2": "#46508a",
     "iron": "#24170f",
+    "rust0": "#4a1d12", "rust1": "#6e2c1a", "rust2": "#94402a", "rust3": "#b85a3a", "rust4": "#d47a55",
     "olive0": "#2a3319", "olive1": "#45522a", "olive2": "#647538", "olive3": "#8a9a4e",
     "lea0": "#5e2e12", "lea1": "#8a4a20", "lea2": "#b8682e", "lea3": "#d88a45", "lea4": "#efae6a",
     "slate0": "#1c1f1e", "slate1": "#2c302e", "chalk": "#e8e2d0", "silver0": "#7d8080", "silver1": "#b4b6b0", "silver2": "#dcdcd4",
@@ -1257,13 +1258,123 @@ def window_box():
     return save(c, "window-box", foot=(X0, Y0))
 
 
+# ---------------------------------------------------------------- couch and menu board
+
+
+def couch(back=False, name="couch", L=16, seats=3, R=("rust0", "rust1", "rust2", "rust3", "rust4")):
+    """Velvet couch on little wooden feet, facing down-left: `seats` cushions over `L` units, in
+    the colours R (dark to light). back=True draws it from behind (for Rotate)."""
+    c = Canvas(150, 100)
+    X0, Y0 = 26, 40
+    D = 8
+    BASE, SEAT, ARM, BACK = 3, 10, 16, 26
+    BK, AW = 2.5, 1.6
+    for (a_, b_) in ((0.6, D - 0.4), (L - 0.4, D - 0.4), (L - 0.4, 0.6), (L / 2, D - 0.4)):
+        x, y = X0 + 2 * a_ - 2 * b_, Y0 + a_ + b_
+        vline(c, x, y - BASE, y, "wood1"); vline(c, x + 1, y - BASE, y, "wood0")
+    if not back:
+        face_left(c, X0, Y0, 0, L, D, BASE, SEAT, lambda t, z: R[1] if z < SEAT - BASE - 1 else R[2])
+        face_right(c, X0, Y0, L, 0, D, BASE, SEAT, lambda s_, z: R[0])
+        face_left(c, X0, Y0, 0, L, BK, SEAT, BACK, lambda t, z: R[4] if z >= BACK - SEAT - 2 else (R[1] if (t - AW) % ((L - 2 * AW) / seats) < 0.3 else R[2]))
+        face_right(c, X0, Y0, L, 0, BK, SEAT, BACK, lambda s_, z: R[1] if z >= BACK - SEAT - 1 else R[0])
+        face_top(c, X0, Y0, 0, L, 0, BK, BACK, lambda a_, b_: R[3])
+
+        def arm(a0):
+            face_left(c, X0, Y0, a0, a0 + AW, D, SEAT, ARM, lambda t, z: R[4] if z >= ARM - SEAT - 1 else R[3])
+            face_right(c, X0, Y0, a0 + AW, BK, D, SEAT, ARM, lambda s_, z: R[1] if z >= ARM - SEAT - 1 else R[0])
+            face_top(c, X0, Y0, a0, a0 + AW, BK, D, ARM, lambda a_, b_: R[4] if b_ > D - 0.8 else R[3])
+        arm(0)
+        cw = (L - 2 * AW) / seats
+        for k in range(seats):  # seat cushions
+            a0 = AW + k * cw
+            face_left(c, X0, Y0, a0, a0 + cw, D, SEAT, SEAT + 3, lambda t, z: R[1] if (t < 0.25 or t > cw - 0.25) else (R[2] if z < 2 else R[3]))
+            face_top(c, X0, Y0, a0, a0 + cw, BK, D, SEAT + 3, lambda a_, b_: R[1] if (a_ < 0.25) else (R[4] if b_ > D - 1 else R[3]))
+        arm(L - AW)
+    else:
+        for a0 in (0, L - AW):
+            face_top(c, X0, Y0, a0, a0 + AW, 0, D - BK, ARM, lambda a_, b_: R[3])
+            face_right(c, X0, Y0, a0 + AW, 0, D - BK, SEAT, ARM, lambda s_, z: R[1])
+        face_right(c, X0, Y0, L, 0, D, BASE, ARM, lambda s_, z: R[0] if z < ARM - BASE - 1 else R[1])
+        face_left(c, X0, Y0, 0, L, D, BASE, BACK, lambda t, z: R[3] if z >= BACK - BASE - 2 else (R[1] if (t < 0.4 or t > L - 0.4 or z < 2) else R[2]))
+        face_right(c, X0, Y0, L, D - BK, D, BASE, BACK, lambda s_, z: R[1] if z >= BACK - BASE - 1 else R[0])
+        face_top(c, X0, Y0, 0, L, D - BK, D, BACK, lambda a_, b_: R[3])
+    return save(c, name + "-back" if back else name, foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
+def coffee_table():
+    """Low wooden coffee table with a lower shelf of books, 2 x 1 tiles."""
+    c = Canvas(90, 60)
+    X0, Y0 = 22, 24
+    L, D, H = 16, 8, 9
+    for (a_, b_) in ((0.5, D - 0.5), (L - 0.5, D - 0.5), (L - 0.5, 0.5)):  # legs
+        x, y = X0 + 2 * a_ - 2 * b_, Y0 + a_ + b_
+        vline(c, x, y - H, y, "wood2"); vline(c, x + 1, y - H, y, "wood1")
+    # lower shelf with a couple of books
+    face_top(c, X0, Y0, 0.5, L - 0.5, 0.5, D - 0.5, 2, lambda a, b: "wood2")
+    for t0, t1, col in ((3, 6, "navy1"), (3.3, 5.6, "red2"), (10, 13, "sage1")):
+        face_top(c, X0, Y0, t0, t1, 2.5, 5.5, 3 if col != "red2" else 4, lambda a, b, col=col: col)
+    # the top: a thick slab with a lit edge
+    face_left(c, X0, Y0, 0, L, D, H - 2, H, lambda t, z: "wood4" if z >= 1 else "wood3")
+    face_right(c, X0, Y0, L, 0, D, H - 2, H, lambda s_, z: "wood2")
+    face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if (b > D - 0.6 or a > L - 0.6) else ("wood5" if abs(a - b * 1.4 - 3) < 0.5 else "wood4"))
+    return save(c, "coffee-table", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+
+
+def menu_board():
+    """Large chalkboard menu for the wall, in a wood frame: a heading, three sections of items
+    with prices, a coffee cup and a croissant drawn in chalk. For the back-right wall."""
+    c = Canvas(90, 110)
+    X0, Y0 = 10, 96
+    L, Z0, Z1, F = 22, 30, 78, 1.2  # width (units), bottom/top height (px), frame (units)
+    FZ = 3  # frame thickness (px)
+
+    def board(t, zr):
+        z = zr + Z0  # face_left hands over the height above the face's bottom
+        if t < F or t > L - F or z < Z0 + FZ or z >= Z1 - FZ:
+            return "wood4" if (t < 0.4 or z >= Z1 - 1) else ("wood2" if z < Z0 + 1 else "wood3")
+        u = (t - F) / (L - 2 * F)  # 0..1 across
+        v = (Z1 - FZ - z) / (Z1 - Z0 - 2 * FZ)  # 0..1 down
+        if v < 0.13:  # heading: four chunky chalk letters
+            return "chalk" if (0.25 < u < 0.75 and int(u * 24) % 3 != 2 and v > 0.04) else "slate1"
+        if 0.16 < v < 0.18 and 0.1 < u < 0.9:
+            return "silver0"  # rule under the heading
+        for top, n in ((0.24, 3), (0.5, 3), (0.76, 2)):
+            if abs(v - top) < 0.022 and 0.08 < u < 0.42:
+                return "gold2"  # section title
+            for k in range(n):
+                row = top + 0.06 + k * 0.055
+                if abs(v - row) < 0.015:
+                    if 0.08 < u < 0.08 + 0.28 + (k % 2) * 0.08 and int(u * 40) % 5 != 4:
+                        return "chalk"  # item
+                    if 0.6 < u < 0.66 or 0.68 < u < 0.72:
+                        return "chalk"  # price
+                    if 0.45 < u < 0.58 and int(u * 60) % 2 == 0:
+                        return "silver0"  # dots
+        # chalk doodles on the right: a coffee cup and a croissant
+        if 0.78 < u < 0.92 and 0.26 < v < 0.36:
+            return "chalk" if (u < 0.8 or u > 0.9 or v > 0.34) else "slate1"
+        if 0.76 < u < 0.94 and 0.58 < v < 0.66 and abs(u - 0.85) < 0.09 - abs(v - 0.62) * 1.2:
+            return "gold2"
+        return "slate1" if (u * 3 + v * 2) % 1 > 0.06 else "slate0"
+    face_left(c, X0, Y0, 0, L, 0, Z0, Z1, board)
+    face_right(c, X0, Y0, L, 0, 0.8, Z0, Z1, lambda s_, z: "wood2")  # frame edge standing off the wall
+    face_top(c, X0, Y0, 0, L, 0, 0.8, Z1, lambda a, b: "wood4")
+    # a chalk ledge along the bottom with a stub of chalk
+    face_top(c, X0, Y0, 0, L, 0, 1.4, Z0, lambda a, b: "wood4" if not (4 < a < 5) else "chalk")
+    face_left(c, X0, Y0, 0, L, 1.4, Z0 - 1, Z0, lambda t, z: "wood2")
+    return save(c, "menu-board", foot=(X0, Y0 - Z0 + 1))
+
+
 ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key1"),
        table_cloth("cafe-table-linen", "key1", "key0", "red2", "key2"), cafe_chair, piano, piano_stool, globe_lamp, wall_lamp,
        bookshelf, window, hanging_plant, potted_plant, flower_vase,
        rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves, bar_counter, espresso_station, cafe_chair_back,
        piano_back, bookshelf_back, armchair_back, booth_back, bar_counter_back, record_cabinet_back,
        espresso_station_back, laptop_back,
-       fiddle_leaf_fig, snake_plant, fern_stand, succulent, tulip_pot, window_box]
+       fiddle_leaf_fig, snake_plant, fern_stand, succulent, tulip_pot, window_box,
+       couch, lambda: couch(back=True), menu_board, coffee_table,
+       lambda: couch(name="sofa-large", L=24, seats=4, R=("olive0", "olive1", "olive2", "olive3", "leaf3")),
+       lambda: couch(back=True, name="sofa-large", L=24, seats=4, R=("olive0", "olive1", "olive2", "olive3", "leaf3"))]
 
 GLOWS = {"floor-lamp": {"x": 10, "y": 15, "r": 90}, "wall-lamp": {"x": 10, "y": 4, "r": 60}, "globe-lamp": {"x": 7, "y": 38, "r": 80}}
 

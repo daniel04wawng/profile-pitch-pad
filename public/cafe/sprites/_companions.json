@@ -254,5 +254,41 @@
    "x": 7,
    "y": 11
   }
+ },
+ "couch": {
+  "foot": {
+   "x": 33,
+   "y": 51
+  }
+ },
+ "couch-back": {
+  "foot": {
+   "x": 33,
+   "y": 45
+  }
+ },
+ "menu-board": {
+  "foot": {
+   "x": 4,
+   "y": 50
+  }
+ },
+ "coffee-table": {
+  "foot": {
+   "x": 33,
+   "y": 34
+  }
+ },
+ "sofa-large": {
+  "foot": {
+   "x": 49,
+   "y": 59
+  }
+ },
+ "sofa-large-back": {
+  "foot": {
+   "x": 49,
+   "y": 53
+  }
  }
 }
