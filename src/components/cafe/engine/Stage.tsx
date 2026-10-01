@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Fragment } from "react";
-import { BASE, DEFAULT_GRID, type Layout, type SpriteDef } from "./types";
+import { BASE, BOOT, DEFAULT_GRID, type Layout, type SpriteDef } from "./types";
 import type { Light } from "./lighting";
 
 // Extra info drawn alongside some sprites (art/draw_props.py): window sky masks, sun patches,
@@ -39,7 +39,7 @@ export function opaqueAt(s: SpriteDef, p: { x: number; y: number }, versions: Re
   const lx = s.flipX ? s.w - 1 - rx : rx;
   const ly = Math.floor(p.y - s.y);
   if (lx < 0 || ly < 0 || lx >= s.w || ly >= s.h) return false;
-  const m = MASKS.get(`${s.file}?v=${versions[s.file] ?? 0}`);
+  const m = MASKS.get(`${s.file}?v=${versions[s.file] ?? BOOT}`);
   return !m || m.data[(ly * m.w + lx) * 4 + 3] > 0;
 }
 function useAlphaMasks(layout: Layout | null, versions: Record<string, number>) {
@@ -48,7 +48,7 @@ function useAlphaMasks(layout: Layout | null, versions: Record<string, number>) 
     if (!layout) return;
     let alive = true;
     layout.assets.forEach((s) => {
-      const key = `${s.file}?v=${versions[s.file] ?? 0}`;
+      const key = `${s.file}?v=${versions[s.file] ?? BOOT}`;
       if (masks[key]) return;
       const img = new Image();
       img.onload = () => {
@@ -118,7 +118,7 @@ export function Stage({
   const [box, setBox] = useState({ w: window.innerWidth, h: window.innerHeight });
   const masks = useAlphaMasks(layout, versions);
   const companions = useCompanions();
-  const src = (file: string) => `${BASE}${file}?v=${versions[file] ?? 0}`;
+  const src = (file: string) => `${BASE}${file}?v=${versions[file] ?? BOOT}`;
 
   useEffect(() => {
     const el = wrap.current;
@@ -159,7 +159,7 @@ export function Stage({
       const lx = s.flipX ? s.w - 1 - rx : rx;
       const ly = Math.floor(p.y - s.y);
       if (lx < 0 || ly < 0 || lx >= s.w || ly >= s.h) continue;
-      const m = masks[`${s.file}?v=${versions[s.file] ?? 0}`];
+      const m = masks[`${s.file}?v=${versions[s.file] ?? BOOT}`];
       if (!m || m.data[(ly * m.w + lx) * 4 + 3] > 0) return s;
     }
     return null;

@@ -53,6 +53,11 @@ export const DEFAULT_CLUTTER = [
 ];
 export const isClutter = (l: Layout, name: string) => (l.clutter ?? DEFAULT_CLUTTER).includes(frontOf(name));
 
+// Added to image URLs so a fresh editor session never shows a stale copy of art that was
+// redrawn while the old one sat in the browser's cache. (Edits made in the session bump
+// their own version on top.) In production the art is served with revalidation anyway.
+export const BOOT = import.meta.env.DEV ? Date.now() : 0;
+
 export const DEFAULT_GRID: NonNullable<Layout["grid"]> = { tile: 32, ox: 0, oy: 0 };
 
 // Snap a point to the iso lattice at half-tile resolution (the corners and centers of tiles).

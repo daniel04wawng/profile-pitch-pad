@@ -6,7 +6,7 @@ import { CafeScreen } from "./Screens";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
-import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, DEFAULT_CLUTTER, SECTION_ORDER, sectionOf, BACK, WALL_ITEMS, frontOf, isClutter, rotOf, turnArt, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, BOOT, FLAT_ASSETS, DEFAULT_GRID, DEFAULT_CLUTTER, SECTION_ORDER, sectionOf, BACK, WALL_ITEMS, frontOf, isClutter, rotOf, turnArt, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -183,7 +183,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
 
   // Place an asset with its feet at `at` (scene pixels); defaults to the middle of the scene.
   const place = async (file: string, at?: { x: number; y: number }) => {
-    const { w, h } = sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? 0}`));
+    const { w, h } = sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? BOOT}`));
     let fx = at ? Math.round(at.x) : Math.round(layout.width / 2);
     let fy = at ? Math.round(at.y) : Math.round(layout.height / 2 + h / 2);
     const wall = WALL_ITEMS[nameOf(file)];
@@ -244,7 +244,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const turnPatch = async (s: SpriteDef, rot: number, back = hasBack(nameOf(s.file))) => {
     const art = turnArt(nameOf(s.file), rot, back);
     const file = `sprites/${art.name}.png`;
-    const nat = file === s.file ? { w: s.w, h: s.h } : sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? 0}`));
+    const nat = file === s.file ? { w: s.w, h: s.h } : sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? BOOT}`));
     const here = footOf(s);
     const there = footOf({ file, w: nat.w, h: nat.h, flipX: art.flipX });
     const x = Math.round(s.x + here.x - there.x);
@@ -265,7 +265,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     if ((r === 1 || r === 2) && !hasBack(name)) {
       const back = `sprites/${frontOf(name)}${BACK}.png`;
       try {
-        const blob = await (await fetch(`${BASE}${s.file}?v=${versions[s.file] ?? 0}`)).blob();
+        const blob = await (await fetch(`${BASE}${s.file}?v=${versions[s.file] ?? BOOT}`)).blob();
         await writePng(back, await toPngDataUrl(new File([blob], "back.png", { type: "image/png" })));
       } catch (e) {
         return window.alert(`Couldn't make a back drawing: ${e}`);
@@ -444,7 +444,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const original = cut?.assets.find((a) => a.id === selected);
   const statusText = { saved: "saved", unsaved: "unsaved changes", saving: "saving…", error: "save failed (use download)" }[status];
   const btn = "rounded border border-white/15 px-2.5 py-1 hover:bg-white/10 disabled:opacity-30";
-  const thumb = (file: string) => `${BASE}${file}?v=${versions[file] ?? 0}`;
+  const thumb = (file: string) => `${BASE}${file}?v=${versions[file] ?? BOOT}`;
 
   return (
     <div className="fixed inset-0 flex flex-col bg-[#15131c] font-['Space_Grotesk'] text-[13px] text-[#f3ecdc]">
