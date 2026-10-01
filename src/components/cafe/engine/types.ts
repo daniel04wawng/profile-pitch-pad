@@ -26,7 +26,15 @@ export type Layout = {
   grid?: { tile: number; ox: number; oy: number; cols?: number; rows?: number };
   // Optional night layer for the base (lit windows in the buildings), shown as it gets dark.
   sceneNight?: string;
+  // Assets marked as clutter: small things that sit on top of other things (a cup on a table,
+  // flowers on the counter). Unset = DEFAULT_CLUTTER. Toggled per asset in the editor.
+  clutter?: string[];
 };
+
+export const DEFAULT_CLUTTER = [
+  "coffee-cup", "flower-vase", "succulent", "tulip-pot", "laptop", "cake-stand", "espresso-station",
+];
+export const isClutter = (l: Layout, name: string) => (l.clutter ?? DEFAULT_CLUTTER).includes(frontOf(name));
 
 export const DEFAULT_GRID: NonNullable<Layout["grid"]> = { tile: 32, ox: 0, oy: 0 };
 

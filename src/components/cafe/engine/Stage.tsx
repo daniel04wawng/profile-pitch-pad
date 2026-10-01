@@ -32,6 +32,16 @@ const maskStyle = (url: string): React.CSSProperties => ({
 });
 
 // Alpha masks so clicks land on the actual drawn pixels, not the sprite's bounding box.
+// Shared with the editor (opaqueAt) so clutter can tell what it's sitting on.
+const MASKS = new Map<string, { w: number; data: Uint8ClampedArray }>();
+export function opaqueAt(s: SpriteDef, p: { x: number; y: number }, versions: Record<string, number> = {}) {
+  const rx = Math.floor(p.x - s.x);
+  const lx = s.flipX ? s.w - 1 - rx : rx;
+  const ly = Math.floor(p.y - s.y);
+  if (lx < 0 || ly < 0 || lx >= s.w || ly >= s.h) return false;
+  const m = MASKS.get(`${s.file}?v=${versions[s.file] ?? 0}`);
+  return !m || m.data[(ly * m.w + lx) * 4 + 3] > 0;
+}
 function useAlphaMasks(layout: Layout | null, versions: Record<string, number>) {
   const [masks, setMasks] = useState<Record<string, { w: number; data: Uint8ClampedArray }>>({});
   useEffect(() => {
@@ -48,6 +58,7 @@ function useAlphaMasks(layout: Layout | null, versions: Record<string, number>) 
         const ctx = c.getContext("2d")!;
         ctx.drawImage(img, 0, 0);
         const data = ctx.getImageData(0, 0, img.width, img.height).data;
+        MASKS.set(key, { w: img.width, data });
         if (alive) setMasks((m) => ({ ...m, [key]: { w: img.width, data } }));
       };
       img.src = BASE + key;

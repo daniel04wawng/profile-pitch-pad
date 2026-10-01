@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Stage, assetName, useCompanions } from "./Stage";
+import { Stage, assetName, opaqueAt, useCompanions } from "./Stage";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
 import { CafeScreen } from "./Screens";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
-import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, BACK, WALL_ITEMS, frontOf, rotOf, turnArt, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, FLAT_ASSETS, DEFAULT_GRID, DEFAULT_CLUTTER, BACK, WALL_ITEMS, frontOf, isClutter, rotOf, turnArt, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -188,18 +188,23 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     let fy = at ? Math.round(at.y) : Math.round(layout.height / 2 + h / 2);
     const wall = WALL_ITEMS[nameOf(file)];
     let flipX = false;
-    if (snap && wall) {
+    // clutter dropped onto something sits on it, right where it was dropped
+    const on = at && isClutter(layout, nameOf(file)) ? surfaceUnder({ x: fx, y: fy }, "") : null;
+    if (on) {
+      // keep the drop point
+    } else if (snap && wall) {
       const p = snapWall(fx, fy, gridOf(layout), wall.onFloor);
       ({ x: fx, y: fy } = p);
       flipX = !!wall.drawnFor && p.side !== wall.drawnFor;
     } else if (snap) ({ x: fx, y: fy } = snapIso(fx, fy, gridOf(layout)));
     const id = uniqueId(nameOf(file));
     const foot = footOf({ file, w, h, flipX });
+    const baseY = on ? on.baseY + 1 : FLAT_ASSETS.has(nameOf(file)) ? fy - Math.round(foot.y) : fy - Math.round(foot.y) + h;
     edit((l) => ({
       ...l,
       assets: [
         ...l.assets,
-        { id, file, x: fx - Math.round(foot.x), y: fy - Math.round(foot.y), w, h, ...(flipX ? { flipX } : {}), baseY: FLAT_ASSETS.has(nameOf(file)) ? fy - Math.round(foot.y) : fy - Math.round(foot.y) + h, hotspot: ASSET_DEFAULTS[nameOf(file)]?.hotspot ?? null, label: ASSET_DEFAULTS[nameOf(file)]?.label ?? null },
+        { id, file, x: fx - Math.round(foot.x), y: fy - Math.round(foot.y), w, h, ...(flipX ? { flipX } : {}), baseY, hotspot: ASSET_DEFAULTS[nameOf(file)]?.hotspot ?? null, label: ASSET_DEFAULTS[nameOf(file)]?.label ?? null },
       ],
     }));
     setSelected(id);
@@ -212,6 +217,24 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     const nid = uniqueId(s.id.replace(/-\d+$/, ""));
     edit((l) => ({ ...l, assets: [...l.assets, { ...s, id: nid, x: s.x + 6, y: s.y + 6, baseY: s.baseY + 6 }] }));
     setSelected(nid);
+  };
+
+  // ---------- clutter ----------
+
+  // The thing a clutter item at `p` would sit on: the frontmost non-clutter piece (not a rug)
+  // with a drawn pixel just above p.
+  const surfaceUnder = (p: { x: number; y: number }, except: string) =>
+    [...layout.assets]
+      .sort((a, b) => b.baseY - a.baseY)
+      .find((a) => a.id !== except && !a.hidden && !isClutter(layout, nameOf(a.file)) && !FLAT_ASSETS.has(nameOf(a.file)) && opaqueAt(a, { x: p.x, y: p.y - 1 }, versions)) ?? null;
+  const setClutter = (name: string, on: boolean) => {
+    const base = frontOf(name);
+    edit((l) => {
+      const list = new Set(l.clutter ?? DEFAULT_CLUTTER);
+      if (on) list.add(base);
+      else list.delete(base);
+      return { ...l, clutter: [...list].sort() };
+    });
   };
 
   // ---------- rotation (the same for every asset, see turnArt in types.ts) ----------
@@ -539,10 +562,28 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                     }));
                     return;
                   }
+                  // clutter dropped on something (a table, the counter, a shelf) sits right there
+                  // on top of it; anywhere else it snaps to the floor like everything else
+                  if (s && isClutter(layout, nameOf(s.file))) {
+                    const p = { x: Math.round(d.footX + dx), y: Math.round(d.footY + dy) };
+                    const under = surfaceUnder(p, s.id);
+                    if (under) {
+                      setMarker(null);
+                      const x = d.x + (p.x - d.footX);
+                      const y = d.y + (p.y - d.footY);
+                      editLive((l) => ({ ...l, assets: l.assets.map((a) => (a.id === d.id ? { ...a, x, y, baseY: under.baseY + 1 } : a)) }));
+                      return;
+                    }
+                  }
                   const foot = snapIso(d.footX + dx, d.footY + dy, gridOf(layout));
                   dx = Math.round(foot.x - d.footX);
                   dy = Math.round(foot.y - d.footY);
                   setMarker(foot);
+                  if (s && isClutter(layout, nameOf(s.file))) {
+                    // back on the floor: depth from its own bottom again
+                    editLive((l) => ({ ...l, assets: l.assets.map((a) => (a.id === d.id ? { ...a, x: d.x + dx, y: d.y + dy, baseY: d.y + dy + a.h } : a)) }));
+                    return;
+                  }
                 } else setMarker(null);
                 editLive((l) => ({
                   ...l,
@@ -687,6 +728,18 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                       onChange={(e) => patchObj(sel.id, { label: e.target.value || null })}
                       className="mt-0.5 w-full rounded bg-black/30 px-2 py-1 text-[13px]"
                     />
+                  </label>
+                  <label className="flex items-start gap-2 text-[12px] opacity-90">
+                    <input
+                      type="checkbox"
+                      checked={isClutter(layout, nameOf(sel.file))}
+                      onChange={(e) => setClutter(nameOf(sel.file), e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      clutter item
+                      <span className="block text-[11px] opacity-60">sits on top of things: drop it on a table, counter or shelf (applies to every {frontOf(nameOf(sel.file))})</span>
+                    </span>
                   </label>
                   <button onClick={() => paint(sel)} className="w-full rounded bg-[#f2c1b0] px-2 py-1.5 font-medium text-[#1a1512]">
                     Edit pixels
