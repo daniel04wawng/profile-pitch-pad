@@ -127,6 +127,29 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // If an asset's PNG changed size since the layout was saved (re-drawn, re-cleaned), resize every
+  // placed copy to match while keeping its base on the same floor spot.
+  useEffect(() => {
+    const files = [...new Set(layout.assets.map((a) => a.file))];
+    Promise.all(files.map((f) => sizeOf(`${BASE}${f}?t=${Date.now()}`).then((sz) => [f, sz] as const).catch(() => null))).then((res) => {
+      const real = new Map(res.filter(Boolean) as [string, Size][]);
+      const stale = layout.assets.some((a) => {
+        const r = real.get(a.file);
+        return r && (r.w !== a.w || r.h !== a.h);
+      });
+      if (!stale) return;
+      editLive((l) => ({
+        ...l,
+        assets: l.assets.map((a) => {
+          const r = real.get(a.file);
+          if (!r || (r.w === a.w && r.h === a.h)) return a;
+          return { ...a, x: Math.round(a.x + (a.w - r.w) / 2), y: a.y + (a.h - r.h), w: r.w, h: r.h };
+        }),
+      }));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     refreshAssets();
     fetch(BASE + "cut-manifest.json")

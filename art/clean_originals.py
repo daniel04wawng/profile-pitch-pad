@@ -1,8 +1,9 @@
 """Turn the original café pieces into clean standalone assets, keeping the original art.
 
 For each piece: cut along the object's real outline (drops floor and background bits),
-remove stray specks, fill pinholes, and add a 1px dark edge. Output is 2x so it matches
-the room's scale. Outlines are traced by hand on a zoomed grid; adjust KEEP to refine.
+remove stray specks, fill pinholes, and add a 1px dark edge. Output matches
+the room's scale at native size (1 original pixel = 1 room pixel). Outlines are traced by hand
+on a zoomed grid; adjust KEEP to refine.
 
     python3 art/clean_originals.py   # writes public/cafe/sprites/<name>.png
 """
@@ -65,7 +66,7 @@ def clean(name, poly, min_speck=6):
         for x, y, c in holes:
             px[x, y] = c
 
-    # 1px dark edge around the silhouette, then 2x to match the room
+    # 1px dark edge around the silhouette
     out = Image.new("RGBA", (w + 2, h + 2), (0, 0, 0, 0))
     out.alpha_composite(im, (1, 1))
     a = out.getchannel("A").load()
@@ -74,7 +75,6 @@ def clean(name, poly, min_speck=6):
             if not a[x, y] and any(0 <= x + dx < w + 2 and 0 <= y + dy < h + 2 and a[x + dx, y + dy] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
     for x, y in edge:
         o[x, y] = EDGE
-    out = out.resize(((w + 2) * 2, (h + 2) * 2), Image.NEAREST)
     out.save(os.path.join(OUT, f"{name}.png"))
     return out
 
