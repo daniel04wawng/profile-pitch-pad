@@ -2,7 +2,7 @@
 
 Pieces that don't cut well from the original (they overlap other things there, or turn to
 mush at native size) are drawn here instead: simple café tables and chairs, the piano and
-its stool, a wall tapestry and a globe pendant lamp.
+its stool, woven tablecloths and a globe pendant lamp.
 
     python3 art/draw_props.py [--preview]   # writes public/cafe/sprites/<name>.png
 """
@@ -172,45 +172,45 @@ def piano_stool():
 # ---------------------------------------------------------------- walls and ceiling
 
 
-def tapestry():
-    """Woven wall hanging like the original's red rug, on a brass rod. Drawn for the
-    back-left wall (top edge rises to the right); flip it for the back-right wall."""
-    c = Canvas(60, 70)
-    W, Hh = 26, 34
-    X, Y = 16, 50  # bottom-left corner of the cloth
-    for x in range(W):
-        top = Y - Hh - x // 2
-        for z in range(Hh):
-            y = top + z
-            u, v = x / (W - 1), z / (Hh - 1)
-            edge = min(x, W - 1 - x, z, Hh - 1 - z)
-            if edge == 0:
-                col = "red0"
-            elif edge == 1:
-                col = "gold1" if (x + z) % 2 else "gold0"  # woven border
-            elif edge == 2:
-                col = "red1"
-            else:
-                d = abs(u - 0.5) * 1.6 + abs(v - 0.5)  # diamond medallion
-                if d < 0.16:
-                    col = "key1"
-                elif d < 0.24:
-                    col = "navy1"
-                elif d < 0.3:
-                    col = "gold1"
-                elif d < 0.42:
-                    col = "red2" if (x + z) % 3 else "red3"
+def table_cloth(name, field, alt, trim, hem):
+    """Round café table under a woven cloth that drapes over the edge, with a fringed hem."""
+    def draw():
+        c = Canvas(60, 60)
+        cx, floor_y, top = 30, 50, 20
+        rx, ry, drop = 14, 7, 7  # cloth a little wider than the table; how far it hangs
+        disc(c, cx, floor_y - 1, 7, 3, lambda dx, dy: "iron")
+        for x in (cx - 1, cx):
+            vline(c, x, floor_y - top, floor_y - 1, "wood1" if x == cx - 1 else "wood0")
+        ty = floor_y - top
+        # the hanging skirt: below the front half of the top's rim
+        for x in range(cx - rx, cx + rx + 1):
+            dx = (x + 0.5 - cx) / rx
+            if abs(dx) > 1:
+                continue
+            rim = ty + ry * (1 - dx * dx) ** 0.5
+            for k in range(drop + 1):
+                y = int(rim) + k
+                if k >= drop - 1:
+                    col = hem if (x % 2 == 0 or k == drop - 1) else None  # fringe
+                elif k == drop - 2:
+                    col = trim
                 else:
-                    col = "red1" if (x // 3 + z // 3) % 2 else "red2"
-                    if abs(u - 0.5) * 1.6 + abs(v - 0.5) > 0.62 and (x + z) % 4 == 0:
-                        col = "navy0"
-            c.px(X + x, y, col)
-        if x % 2 == 0:  # fringe
-            for k in range(3):
-                c.px(X + x, Y - x // 2 + k, "key0" if k < 2 else "gold0")
-    for x in range(-2, W + 2):  # rod with knobs
-        c.px(X + x, Y - Hh - 1 - x // 2, "brass2" if 0 <= x < W else "brass1")
-    return save(c, "tapestry")
+                    shade = abs(dx) > 0.75 or (x % 4 == 0)  # folds
+                    col = alt if shade else field
+                if col:
+                    c.px(x, y, col)
+        # the top of the cloth, with a woven border and a diamond in the middle
+        def top_col(dx, dy):
+            r = dx * dx + dy * dy
+            if r > 0.8:
+                return trim
+            if abs(dx) * 0.9 + abs(dy) < 0.32:
+                return hem
+            return alt if (r > 0.55 or (abs(dx) * 0.9 + abs(dy) < 0.5 and r > 0.12)) else field
+        disc(c, cx, ty, rx, ry, top_col)
+        return save(c, name)
+    draw.__name__ = name.replace("-", "_")
+    return draw
 
 
 def globe_lamp():
@@ -224,10 +224,52 @@ def globe_lamp():
     return save(c, "globe-lamp")
 
 
-ALL = [cafe_table, cafe_chair, piano, piano_stool, tapestry, globe_lamp]
+def wall_lamp():
+    """Brass wall sconce: a plate on the wall, a curved arm, a glowing tulip glass shade.
+    Hand-placed pixels (too small to draw any other way)."""
+    art = [
+        "......oggggo..",
+        "......gGGwGg..",
+        "......gGwwGg..",
+        "......gGGGGg..",
+        ".......gGGg...",
+        "........hh....",
+        "........hb....",
+        ".......hb.....",
+        ".hb...hb......",
+        "Bhb..hb.......",
+        "Bhbhhb........",
+        "Bhbbb.........",
+        "Bhb...........",
+        ".b............",
+    ]
+    key = {"B": "brass0", "b": "brass1", "h": "brass2", "o": "gold1", "g": "gold2", "G": "gold3", "w": "shine"}
+    c = Canvas(20, 20)
+    for y, row in enumerate(art):
+        for x, ch in enumerate(row):
+            if ch in key:
+                c.px(x + 2, y + 2, key[ch])
+    return save(c, "wall-lamp")
+
+
+ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key1"),
+       table_cloth("cafe-table-linen", "key1", "key0", "red2", "key2"), cafe_chair, piano, piano_stool, globe_lamp, wall_lamp]
+
+GLOWS = {"wall-lamp": {"x": 10, "y": 4, "r": 60}, "globe-lamp": {"x": 7, "y": 38, "r": 80}}
+
+
+def write_glows():
+    import json
+    path = os.path.join(OUT, "_companions.json")
+    comp = json.load(open(path)) if os.path.exists(path) else {}
+    for name, g in GLOWS.items():
+        comp[name] = {**comp.get(name, {}), "glow": g}
+    json.dump(comp, open(path, "w"), indent=1)
+
 
 if __name__ == "__main__":
     imgs = [(f.__name__, f()) for f in ALL]
+    write_glows()
     for n, im in imgs:
         print(f"{n:14s} {im.size}")
     if "--preview" in sys.argv:

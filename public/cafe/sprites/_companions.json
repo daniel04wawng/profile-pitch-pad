@@ -1,26 +1,40 @@
 {
-  "iso-floor-lamp": {
-    "glow": {
-      "x": 10,
-      "y": 15,
-      "r": 90
-    }
-  },
-  "iso-window": {
-    "sky": "sprites/iso-window.sky.png",
-    "light": {
-      "file": "sprites/iso-window.light.png",
-      "dx": -6,
-      "dy": 103,
-      "w": 30,
-      "h": 18
-    }
-  },
-  "iso-wall-sconce": {
-    "glow": {
-      "x": 6,
-      "y": 9,
-      "r": 70
-    }
+ "iso-floor-lamp": {
+  "glow": {
+   "x": 10,
+   "y": 15,
+   "r": 90
   }
+ },
+ "iso-window": {
+  "sky": "sprites/iso-window.sky.png",
+  "light": {
+   "file": "sprites/iso-window.light.png",
+   "dx": -6,
+   "dy": 103,
+   "w": 30,
+   "h": 18
+  }
+ },
+ "iso-wall-sconce": {
+  "glow": {
+   "x": 6,
+   "y": 9,
+   "r": 70
+  }
+ },
+ "wall-lamp": {
+  "glow": {
+   "x": 10,
+   "y": 4,
+   "r": 60
+  }
+ },
+ "globe-lamp": {
+  "glow": {
+   "x": 7,
+   "y": 38,
+   "r": 80
+  }
+ }
 }
