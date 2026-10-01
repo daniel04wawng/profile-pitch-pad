@@ -12,6 +12,7 @@ Automatic fill is a first pass. Touch it up with "Paint background" in /cafe?edi
     python3 art/empty_room.py
 
 Overwrites public/cafe/background.png and every sprite PNG (not layout.json).
+REMOVED pieces are painted out and get no sprite (the declutter).
 """
 import os
 import random
@@ -22,7 +23,9 @@ from PIL import Image, ImageDraw
 from cut_assets import ASSETS, OUT, SCENE
 
 # Part of the building; these stay baked into the room.
-FIXED = {"pastry-counter", "till", "espresso-bar", "kitchen", "booth", "window-wall", "front-wall-right", "trees-front"}
+FIXED = {"pastry-counter", "till", "espresso-bar", "window-wall", "front-wall-right", "trees-front"}
+# Decluttered: painted out of the room and not exported as sprites at all.
+REMOVED = {"booth", "kitchen"}
 # How different (sum of RGB) a pixel must be from the empty room to count as part of an object.
 OBJECT_THRESHOLD = 60
 
@@ -127,8 +130,10 @@ def main():
     h, w, _ = scene.shape
     size = (w, h)
 
-    movable = {n: polygon_mask(size, a[0]) for n, a in ASSETS.items() if n not in FIXED}
+    movable = {n: polygon_mask(size, a[0]) for n, a in ASSETS.items() if n not in FIXED and n not in REMOVED}
     holes = {n: grow(m, 1) for n, m in movable.items()}  # a pixel of margin takes outlines/shadows too
+    for n in REMOVED:
+        holes[n] = grow(polygon_mask(size, ASSETS[n][0]), 1)
     all_holes = np.zeros((h, w), bool)
     for m in holes.values():
         all_holes |= m
@@ -155,9 +160,14 @@ def main():
     any_object = np.zeros((h, w), bool)
     for m in object_px.values():
         any_object |= m
+    # Removed pieces must not survive inside a built-in sprite's cut either.
+    for n in REMOVED:
+        any_object |= polygon_mask(size, ASSETS[n][0])
 
     rgba = np.dstack([scene, np.full((h, w), 255, np.uint8)])
     for n, (poly, *_rest) in ASSETS.items():
+        if n in REMOVED:
+            continue
         region = polygon_mask(size, poly)
         alpha = region & (object_px[n] if n in movable else ~any_object)
         sprite = rgba.copy()

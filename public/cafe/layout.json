@@ -37,17 +37,6 @@
       "label": "menu: the blog"
     },
     {
-      "id": "kitchen",
-      "file": "sprites/kitchen.png",
-      "x": 253,
-      "y": 28,
-      "w": 36,
-      "h": 59,
-      "baseY": 86,
-      "hotspot": "now",
-      "label": "the kitchen: in the oven"
-    },
-    {
       "id": "till",
       "file": "sprites/till.png",
       "x": 248,
@@ -92,17 +81,6 @@
       "label": "sit and listen"
     },
     {
-      "id": "sax-poster",
-      "file": "sprites/sax-poster.png",
-      "x": 326,
-      "y": 52,
-      "w": 29,
-      "h": 35,
-      "baseY": 86,
-      "hotspot": null,
-      "label": null
-    },
-    {
       "id": "big-table",
       "file": "sprites/big-table.png",
       "x": 156,
@@ -110,17 +88,6 @@
       "w": 90,
       "h": 71,
       "baseY": 182,
-      "hotspot": null,
-      "label": null
-    },
-    {
-      "id": "booth",
-      "file": "sprites/booth.png",
-      "x": 100,
-      "y": 68,
-      "w": 79,
-      "h": 59,
-      "baseY": 124,
       "hotspot": null,
       "label": null
     },
@@ -191,17 +158,6 @@
       "label": "special of the day"
     },
     {
-      "id": "bistro-set",
-      "file": "sprites/bistro-set.png",
-      "x": 42,
-      "y": 146,
-      "w": 53,
-      "h": 46,
-      "baseY": 190,
-      "hotspot": null,
-      "label": null
-    },
-    {
       "id": "lamp-post",
       "file": "sprites/lamp-post.png",
       "x": 15,
@@ -209,17 +165,6 @@
       "w": 15,
       "h": 91,
       "baseY": 155,
-      "hotspot": null,
-      "label": null
-    },
-    {
-      "id": "bike",
-      "file": "sprites/bike.png",
-      "x": 0,
-      "y": 115,
-      "w": 33,
-      "h": 35,
-      "baseY": 148,
       "hotspot": null,
       "label": null
     },

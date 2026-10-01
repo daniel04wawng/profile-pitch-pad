@@ -10,6 +10,8 @@ export type SpriteDef = {
   hotspot: string | null;
   label: string | null;
   hidden?: boolean;
+  // Mirror left/right. Lets one asset face either way.
+  flipX?: boolean;
 };
 
 export type Layout = {

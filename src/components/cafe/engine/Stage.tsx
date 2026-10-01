@@ -35,6 +35,8 @@ export type StageHandlers = {
   onPointerDown?: (s: SpriteDef | null, scene: { x: number; y: number }, e: ReactPointerEvent) => void;
   onPointerMove?: (scene: { x: number; y: number }, e: ReactPointerEvent) => void;
   onPointerUp?: (e: ReactPointerEvent) => void;
+  // Something dragged in (a library asset or an image file) was dropped at this scene point.
+  onDrop?: (e: React.DragEvent, scene: { x: number; y: number }) => void;
 };
 
 export function Stage({
@@ -83,7 +85,7 @@ export function Stage({
 
   const ordered = useMemo(() => [...layout.assets].sort((a, b) => a.baseY - b.baseY), [layout.assets]);
 
-  const toScene = (e: ReactPointerEvent) => {
+  const toScene = (e: { clientX: number; clientY: number }) => {
     const r = wrap.current!.getBoundingClientRect();
     return { x: (e.clientX - r.left - ox) / scale, y: (e.clientY - r.top - oy) / scale };
   };
@@ -92,7 +94,8 @@ export function Stage({
     for (let i = ordered.length - 1; i >= 0; i--) {
       const s = ordered[i];
       if (s.hidden || !interactive(s)) continue;
-      const lx = Math.floor(p.x - s.x);
+      const rx = Math.floor(p.x - s.x);
+      const lx = s.flipX ? s.w - 1 - rx : rx;
       const ly = Math.floor(p.y - s.y);
       if (lx < 0 || ly < 0 || lx >= s.w || ly >= s.h) continue;
       const m = masks[`${s.file}?v=${versions[s.file] ?? 0}`];
@@ -119,6 +122,12 @@ export function Stage({
       }}
       onPointerUp={(e) => handlers.onPointerUp?.(e)}
       onPointerLeave={() => handlers.onHover?.(null)}
+      onDragOver={(e) => handlers.onDrop && e.preventDefault()}
+      onDrop={(e) => {
+        if (!handlers.onDrop) return;
+        e.preventDefault();
+        handlers.onDrop(e, toScene(e));
+      }}
     >
       <div
         className="absolute origin-top-left [&_img]:[image-rendering:pixelated]"
@@ -145,6 +154,7 @@ export function Stage({
                 width: s.w,
                 height: s.h,
                 zIndex: s.baseY,
+                transform: s.flipX ? "scaleX(-1)" : undefined,
                 filter:
                   selected === s.id
                     ? outline("#9bbf7a")

@@ -1,22 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Eraser, Hand, PaintBucket, Pencil, Pipette, SquareDashed, WandSparkles, type LucideIcon } from "lucide-react";
 import { BASE } from "./types";
 
 // A small Aseprite-style pixel editor for touching up café sprites and the background.
 // Edits the PNG at public/cafe/<file> and saves it straight back (dev server only).
 
-type Tool = "pencil" | "eraser" | "fill" | "picker" | "select" | "hand";
+type Tool = "pencil" | "eraser" | "magic" | "fill" | "picker" | "select" | "hand";
 type Rect = { x: number; y: number; w: number; h: number };
 type Float = { data: Uint8ClampedArray; w: number; h: number; x: number; y: number };
 
 const ZOOMS = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48];
-const TOOLS: { id: Tool; key: string; label: string }[] = [
-  { id: "pencil", key: "b", label: "Pencil" },
-  { id: "eraser", key: "e", label: "Eraser" },
-  { id: "fill", key: "g", label: "Fill" },
-  { id: "picker", key: "i", label: "Eyedropper" },
-  { id: "select", key: "m", label: "Select" },
-  { id: "hand", key: "h", label: "Pan" },
+const TOOLS: { id: Tool; key: string; label: string; icon: LucideIcon; tip: string }[] = [
+  { id: "pencil", key: "b", label: "Pencil", icon: Pencil, tip: "Draw. Right-click erases." },
+  { id: "eraser", key: "e", label: "Eraser", icon: Eraser, tip: "Erase to transparent." },
+  { id: "magic", key: "w", label: "Magic erase", icon: WandSparkles, tip: "Click to erase a whole connected area of similar color." },
+  { id: "fill", key: "g", label: "Fill", icon: PaintBucket, tip: "Fill a connected area with the current color." },
+  { id: "picker", key: "i", label: "Pick color", icon: Pipette, tip: "Click a pixel to use its color." },
+  { id: "select", key: "m", label: "Select", icon: SquareDashed, tip: "Drag a box. Drag inside it to move, Delete to clear." },
+  { id: "hand", key: "h", label: "Pan", icon: Hand, tip: "Drag to move around. Or hold space." },
 ];
+const SIZES = [1, 2, 3, 4, 6, 8, 12, 16];
 
 const hex = (r: number, g: number, b: number) => "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
 const rgb = (h: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
@@ -76,6 +79,9 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
   const [color, setColor] = useState("#f2c1b0");
   const [palette, setPalette] = useState<string[]>([]);
   const [grid, setGrid] = useState(true);
+  const [brush, setBrush] = useState(1);
+  // How different a color can be and still count as "the same area" for fill and magic erase (0 = exact).
+  const [tolerance, setTolerance] = useState(12);
   const [zoomLabel, setZoomLabel] = useState(8);
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState("");
@@ -149,12 +155,15 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
 
     const h = hover.current;
     if (h && (tool === "pencil" || tool === "eraser")) {
+      const o = Math.floor((brush - 1) / 2);
       ctx.fillStyle = tool === "eraser" ? "rgba(255,255,255,0.25)" : color;
       ctx.globalAlpha = 0.6;
-      ctx.fillRect(ox + h.x * z, oy + h.y * z, z, z);
+      ctx.fillRect(ox + (h.x - o) * z, oy + (h.y - o) * z, brush * z, brush * z);
       ctx.globalAlpha = 1;
+      ctx.strokeStyle = "rgba(255,255,255,0.8)";
+      ctx.strokeRect(ox + (h.x - o) * z + 0.5, oy + (h.y - o) * z + 0.5, brush * z - 1, brush * z - 1);
     }
-  }, [grid, tool, color]);
+  }, [grid, tool, color, brush]);
 
   useEffect(() => {
     let alive = true;
@@ -208,7 +217,13 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
     im.data.set(c, (y * im.w + x) * 4);
   };
 
-  const paintColor = (): [number, number, number, number] => (tool === "eraser" ? [0, 0, 0, 0] : [...rgb(color), 255]);
+  const paintColor = (erase = tool === "eraser"): [number, number, number, number] => (erase ? [0, 0, 0, 0] : [...rgb(color), 255]);
+
+  // Square brush centered on the pixel.
+  const stamp = (x: number, y: number, c: [number, number, number, number]) => {
+    const o = Math.floor((brush - 1) / 2);
+    for (let dy = 0; dy < brush; dy++) for (let dx = 0; dx < brush; dx++) setPx(x - o + dx, y - o + dy, c);
+  };
 
   const line = (x0: number, y0: number, x1: number, y1: number, c: [number, number, number, number]) => {
     const dx = Math.abs(x1 - x0);
@@ -217,7 +232,7 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
     const sy = y0 < y1 ? 1 : -1;
     let err = dx + dy;
     for (;;) {
-      setPx(x0, y0, c);
+      stamp(x0, y0, c);
       if (x0 === x1 && y0 === y1) break;
       const e2 = 2 * err;
       if (e2 >= dy) {
@@ -231,27 +246,36 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
     }
   };
 
-  const fill = (x: number, y: number) => {
+  // Flood from (x, y) over connected pixels within `tolerance` of the clicked color, painting them `c`.
+  const flood = (x: number, y: number, c: number[]) => {
     const im = img.current!;
     if (x < 0 || y < 0 || x >= im.w || y >= im.h) return;
     const d = im.data;
     const i0 = (y * im.w + x) * 4;
     const target = [d[i0], d[i0 + 1], d[i0 + 2], d[i0 + 3]];
-    const c = [...rgb(color), 255];
     if (target.every((v, k) => v === c[k])) return;
     snapshot();
-    const same = (i: number) => d[i] === target[0] && d[i + 1] === target[1] && d[i + 2] === target[2] && d[i + 3] === target[3];
+    const limit = (tolerance / 100) * 255;
+    const near = (i: number) => {
+      // Transparent only matches transparent; otherwise compare color channels.
+      if (target[3] === 0 || d[i + 3] === 0) return target[3] === 0 && d[i + 3] === 0;
+      return Math.max(Math.abs(d[i] - target[0]), Math.abs(d[i + 1] - target[1]), Math.abs(d[i + 2] - target[2])) <= limit;
+    };
+    const seen = new Uint8Array(im.w * im.h);
     const stack = [x, y];
     while (stack.length) {
       const py = stack.pop()!;
       const px = stack.pop()!;
       if (px < 0 || py < 0 || px >= im.w || py >= im.h) continue;
-      const i = (py * im.w + px) * 4;
-      if (!same(i)) continue;
-      d.set(c, i);
+      const n = py * im.w + px;
+      if (seen[n] || !near(n * 4)) continue;
+      seen[n] = 1;
+      d.set(c, n * 4);
       stack.push(px + 1, py, px - 1, py, px, py + 1, px, py - 1);
     }
   };
+  const fill = (x: number, y: number) => flood(x, y, [...rgb(color), 255]);
+  const magicErase = (x: number, y: number) => flood(x, y, [0, 0, 0, 0]);
 
   const pick = (x: number, y: number) => {
     const im = img.current!;
@@ -370,8 +394,12 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
     }
     if (tool === "pencil" || tool === "eraser") {
       snapshot();
-      setPx(p.x, p.y, paintColor());
-      drag.current = { kind: "paint", x: p.x, y: p.y, ax: 0, ay: 0 };
+      // right-click always erases, so you can fix mistakes without switching tools
+      const erase = tool === "eraser" || e.button === 2;
+      stamp(p.x, p.y, paintColor(erase));
+      drag.current = { kind: erase ? "erase" : "paint", x: p.x, y: p.y, ax: 0, ay: 0 };
+    } else if (tool === "magic") {
+      magicErase(p.x, p.y);
     } else if (tool === "fill") {
       fill(p.x, p.y);
     } else if (tool === "picker") {
@@ -406,8 +434,8 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
     if (d?.kind === "pan") {
       view.current.x = d.ax + e.clientX - d.x;
       view.current.y = d.ay + e.clientY - d.y;
-    } else if (d?.kind === "paint") {
-      line(d.x, d.y, p.x, p.y, paintColor());
+    } else if (d?.kind === "paint" || d?.kind === "erase") {
+      line(d.x, d.y, p.x, p.y, paintColor(d.kind === "erase"));
       d.x = p.x;
       d.y = p.y;
     } else if (d?.kind === "select") {
@@ -483,6 +511,8 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
         zoomAt(-1, canvas.current!.clientWidth / 2, canvas.current!.clientHeight / 2);
       } else if (e.key === "'") {
         setGrid((g) => !g);
+      } else if ((e.key === "[" || e.key === "]") && !mod) {
+        setBrush((b) => SIZES[Math.max(0, Math.min(SIZES.length - 1, SIZES.indexOf(b) + (e.key === "]" ? 1 : -1)))]);
       } else if (!mod) {
         const t = TOOLS.find((t) => t.key === k);
         if (t) {
@@ -506,6 +536,27 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
       <header className="flex items-center gap-3 border-b border-white/10 bg-[#1d1a26] px-3 py-2">
         <span className="font-['Silkscreen'] text-xs">pixel editor</span>
         <span className="truncate opacity-60">{file}</span>
+        {(tool === "pencil" || tool === "eraser") && (
+          <div className="ml-4 flex items-center gap-1.5">
+            <span className="text-[11px] opacity-60">brush</span>
+            {SIZES.map((n) => (
+              <button
+                key={n}
+                onClick={() => setBrush(n)}
+                className={`h-7 min-w-7 rounded px-1.5 tabular-nums ${brush === n ? "bg-[#9bbf7a] text-[#1a1512]" : "border border-white/15 hover:bg-white/10"}`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        )}
+        {(tool === "fill" || tool === "magic") && (
+          <label className="ml-4 flex items-center gap-2 text-[11px]">
+            <span className="opacity-60">tolerance</span>
+            <input type="range" min={0} max={60} value={tolerance} onChange={(e) => setTolerance(Number(e.target.value))} className="w-28 accent-[#9bbf7a]" />
+            <span className="w-8 tabular-nums">{tolerance}%</span>
+          </label>
+        )}
         <div className="ml-auto flex items-center gap-2">
           <button onClick={() => zoomAt(-1, canvas.current!.clientWidth / 2, canvas.current!.clientHeight / 2)} className="h-7 w-7 rounded border border-white/15">
             −
@@ -536,22 +587,27 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <nav className="flex w-12 flex-col items-center gap-1 border-r border-white/10 bg-[#1d1a26] py-2">
-          {TOOLS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => {
-                if (t.id === "picker") setPrevTool(tool);
-                if (t.id !== "select") commitFloat();
-                setTool(t.id);
-                draw();
-              }}
-              title={`${t.label} (${t.key.toUpperCase()})`}
-              className={`h-9 w-9 rounded font-['Silkscreen'] text-[10px] ${tool === t.id ? "bg-[#9bbf7a] text-[#1a1512]" : "hover:bg-white/10"}`}
-            >
-              {t.key.toUpperCase()}
-            </button>
-          ))}
+        <nav className="flex w-[84px] flex-col gap-1 border-r border-white/10 bg-[#1d1a26] p-1.5">
+          {TOOLS.map((t) => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                onClick={() => {
+                  if (t.id === "picker") setPrevTool(tool);
+                  if (t.id !== "select") commitFloat();
+                  setTool(t.id);
+                  draw();
+                }}
+                title={`${t.label} (${t.key.toUpperCase()}): ${t.tip}`}
+                className={`flex flex-col items-center gap-0.5 rounded px-1 py-1.5 ${tool === t.id ? "bg-[#9bbf7a] text-[#1a1512]" : "hover:bg-white/10"}`}
+              >
+                <Icon size={18} strokeWidth={1.75} />
+                <span className="text-[10px] leading-tight">{t.label}</span>
+                <span className="text-[9px] leading-none opacity-50">{t.key.toUpperCase()}</span>
+              </button>
+            );
+          })}
         </nav>
 
         <canvas
@@ -612,7 +668,7 @@ export function PixelEditor({ file, paletteFrom, onClose }: { file: string; pale
           </div>
           <div className="space-y-0.5 border-t border-white/10 p-3 text-[11px] leading-relaxed opacity-55">
             <p>{cursor && img.current ? `x ${cursor.x}, y ${cursor.y}` : " "}</p>
-            <p>B pencil · E eraser · G fill · I pick · M select · H / space pan</p>
+            <p>right-click erases · [ ] brush size · space pan</p>
             <p>select + drag moves · ⌥ drag copies · ⌘C ⌘X ⌘V · ⌫ clear · ⏎ drop</p>
             <p>⌘Z undo · ⌘S save · ⌘/pinch scroll zoom · ' grid</p>
           </div>
