@@ -1,7 +1,7 @@
 {
  "frame": [
   20,
-  32
+  40
  ],
  "frames": [
   "front",
@@ -15,16 +15,15 @@
  ],
  "foot": [
   10,
-  31
+  35
  ],
  "styles": [
-  "short",
+  "messy",
   "long",
   "bun",
   "curly",
   "buzz"
  ],
- "sitLift": 5,
  "keys": {
   "skin0": "#fa0001",
   "skin1": "#fa0002",

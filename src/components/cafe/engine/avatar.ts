@@ -4,16 +4,17 @@ import { BASE } from "./types";
 // visitor's look picks a hairstyle and a palette, the layers are recoloured and outlined into
 // one sprite sheet, and the look is remembered in this browser.
 
-export const FRAME = { w: 20, h: 32 };
+export const FRAME = { w: 20, h: 40 };
 // where the avatar stands, within a frame
-export const FOOT = { x: 10, y: 31 };
+export const FOOT = { x: 10, y: 35 };
 // in the sitting frames, how far the seat of the trousers is above the foot point
-export const SIT_SEAT = 4;
+export const SIT_SEAT = 3;
 export const FRAMES = ["front", "front-a", "front-b", "back", "back-a", "back-b", "front-sit", "back-sit"] as const;
-export const STYLES = ["short", "long", "bun", "curly", "buzz"] as const;
+export const STYLES = ["messy", "long", "bun", "curly", "buzz"] as const;
 
 type Ramp = [string, string, string];
 export const SKINS: Ramp[] = [
+  ["#965c3e", "#be7e58", "#d6986e"], // Daniel
   ["#5e3a26", "#80503a", "#9c6a4c"],
   ["#8d5536", "#b0704a", "#cc8c62"],
   ["#b07a52", "#cf9a70", "#e6b88e"],
@@ -21,6 +22,7 @@ export const SKINS: Ramp[] = [
   ["#e6b896", "#f4d2b4", "#fde8d4"],
 ];
 export const HAIRS: Ramp[] = [
+  ["#2e1e16", "#543a2a", "#7a5a42"], // Daniel
   ["#1c1418", "#2e2228", "#463640"],
   ["#2e1c12", "#4a2e1c", "#6a4428"],
   ["#6a3418", "#94502a", "#bc7040"],
@@ -31,6 +33,7 @@ export const HAIRS: Ramp[] = [
   ["#7a3048", "#a84a66", "#d06c88"],
 ];
 export const SHIRTS: Ramp[] = [
+  ["#28282c", "#3a3a40", "#4e4e56"], // Daniel: charcoal tee
   ["#46522c", "#647538", "#8a9a4e"],
   ["#6e2c1a", "#94402a", "#b85a3a"],
   ["#2c3463", "#46508a", "#6a74b0"],
@@ -41,23 +44,29 @@ export const SHIRTS: Ramp[] = [
   ["#3a2a22", "#54402e", "#74583e"],
 ];
 export const PANTS: [string, string][] = [
+  ["#1e1618", "#2e2224"], // Daniel: black
   ["#2a2632", "#423c4c"],
   ["#2c3a52", "#405274"],
   ["#4a3626", "#6a4c34"],
   ["#5a5446", "#7a7260"],
 ];
-const SHOE = "#2a1a12";
+const SHOE = "#b0acb2"; // grey sneakers (soles are drawn white)
 const APRON: Ramp = ["#28463a", "#3a604e", "#527e68"];
 const OUTLINE: [number, number, number] = [36, 20, 13];
 
 export type Look = { style: number; skin: number; hair: number; shirt: number; pants: number };
 
+// The barista is Daniel, and always looks like him: messy brown hair, tan skin, charcoal tee,
+// black trousers, grey sneakers (index 0 of each palette is his).
+export const DANIEL: Look = { style: 0, skin: 0, hair: 0, shirt: 0, pants: 0 };
+
 const pick = (n: number) => Math.floor(Math.random() * n);
+const pickNotDaniel = (n: number) => 1 + pick(n - 1); // index 0 is Daniel's
 export const randomLook = (): Look => ({
   style: pick(STYLES.length),
   skin: pick(SKINS.length),
-  hair: pick(HAIRS.length),
-  shirt: pick(SHIRTS.length),
+  hair: pickNotDaniel(HAIRS.length),
+  shirt: pickNotDaniel(SHIRTS.length),
   pants: pick(PANTS.length),
 });
 

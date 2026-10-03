@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FOOT, FRAME, SIT_SEAT, avatarSheet, isBarista, saveLook, savedLook, type Look } from "./avatar";
+import { DANIEL, FOOT, FRAME, SIT_SEAT, avatarSheet, isBarista, saveLook, savedLook, type Look } from "./avatar";
 import { makeWalk, seatOf, type Cell, type Pt } from "./walk";
 import { BASE, BOOT, frontOf, type Layout, type SpriteDef } from "./types";
 import { measureSprite, type Measure } from "./measure";
@@ -43,11 +43,12 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const barista = useMemo(isBarista, []);
-  const [look, setLook] = useState<Look>(savedLook);
+  // the barista is always Daniel; everyone else keeps their own look
+  const [look, setLook] = useState<Look>(() => (barista ? DANIEL : savedLook()));
   const [sheet, setSheet] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    avatarSheet(look, barista).then((s) => alive && setSheet(s));
+    avatarSheet(look).then((s) => alive && setSheet(s));
     return () => {
       alive = false;
     };
@@ -268,6 +269,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
       : null;
 
   const changeLook = (l: Look) => {
+    if (barista) return; // Daniel stays Daniel
     setLook(l);
     saveLook(l);
   };

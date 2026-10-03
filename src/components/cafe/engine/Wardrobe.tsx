@@ -32,7 +32,7 @@ export function Wardrobe({ look, barista, onChange, onClose }: { look: Look; bar
   const [sheet, setSheet] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    avatarSheet(look, barista).then((s) => alive && setSheet(s));
+    avatarSheet(look).then((s) => alive && setSheet(s));
     return () => {
       alive = false;
     };
@@ -82,7 +82,7 @@ export function Wardrobe({ look, barista, onChange, onClose }: { look: Look; bar
               done
             </PixelButton>
           </div>
-          {barista && <p className="mt-3 text-[18px] opacity-70">You're the barista, so you keep the apron.</p>}
+          {barista && <p className="mt-3 text-[18px] opacity-70">You're the barista, so you always look like you. Visitors can change here.</p>}
         </div>
       </div>
     </Frame>
