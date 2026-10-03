@@ -14,14 +14,16 @@ const nameOf = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/
 
 type Seated = { x: number; y: number; lift: number; back: boolean; flip: boolean; z: number; seat: SpriteDef };
 
-// arrow keys / WASD walk along the floor: up = up-right, down = down-left, left = up-left,
-// right = down-right (the room's two axes)
+// arrow keys / WASD move the way they point on screen: up is straight up the screen (one
+// cell back along both floor axes), right is straight right, and so on; two keys together
+// walk diagonally, which on this floor is along one of its axes
 const KEYS: Record<string, Cell> = {
-  ArrowUp: { i: 0, j: -1 }, w: { i: 0, j: -1 },
-  ArrowDown: { i: 0, j: 1 }, s: { i: 0, j: 1 },
-  ArrowLeft: { i: -1, j: 0 }, a: { i: -1, j: 0 },
-  ArrowRight: { i: 1, j: 0 }, d: { i: 1, j: 0 },
+  ArrowUp: { i: -1, j: -1 }, w: { i: -1, j: -1 },
+  ArrowDown: { i: 1, j: 1 }, s: { i: 1, j: 1 },
+  ArrowLeft: { i: -1, j: 1 }, a: { i: -1, j: 1 },
+  ArrowRight: { i: 1, j: -1 }, d: { i: 1, j: -1 },
 };
+const keyName = (e: KeyboardEvent) => (e.key.length === 1 ? e.key.toLowerCase() : e.key);
 
 export function useMe(layout: Layout, companions: Record<string, Companion>, enabled = true) {
   // footprints for pieces without a size, read from their pixels
@@ -39,7 +41,21 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   const walk = useMemo(() => makeWalk(layout, companions, measures), [layout, companions, measures]);
   const walkRef = useRef(walk);
   walkRef.current = walk;
-  const held = useRef<Cell | null>(null);
+  const heldKeys = useRef(new Set<string>());
+  // the step the held keys add up to (each part kept to -1..1)
+  const held = {
+    get current(): Cell | null {
+      let i = 0;
+      let j = 0;
+      for (const k of heldKeys.current) {
+        i += KEYS[k].i;
+        j += KEYS[k].j;
+      }
+      i = Math.max(-1, Math.min(1, i));
+      j = Math.max(-1, Math.min(1, j));
+      return i || j ? { i, j } : null;
+    },
+  };
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const barista = useMemo(isBarista, []);
@@ -105,8 +121,12 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
       if (!s.path.length && held.current && !s.seated) {
         // keep walking cell by cell while an arrow is held; stop at anything in the way
         const here = w.cellAt(s.pos);
-        const next = { i: here.i + held.current.i, j: here.j + held.current.j };
-        if (w.free(next)) {
+        const d = held.current;
+        const next = { i: here.i + d.i, j: here.j + d.j };
+        // a diagonal step (straight up/down/left/right on screen) mustn't squeeze between two
+        // things touching at a corner
+        const corners = !d.i || !d.j || (w.free({ i: here.i + d.i, j: here.j }) && w.free({ i: here.i, j: here.j + d.j }));
+        if (w.free(next) && corners) {
           s.path = [w.cellCentre(next)];
           net.current.walk?.({ ...s.pos }, [...s.path]);
         } else {
@@ -174,18 +194,17 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      const d = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
-      if (!d || !enabledRef.current || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return;
+      const k = keyName(e);
+      if (!KEYS[k] || !enabledRef.current || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return;
       e.preventDefault();
-      if (!held.current) standUp();
-      held.current = d;
+      if (!heldKeys.current.size) standUp();
+      heldKeys.current.add(k);
       st.current.arrive = null;
     };
     const up = (e: KeyboardEvent) => {
-      const d = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
-      if (d && held.current && d.i === held.current.i && d.j === held.current.j) held.current = null;
+      heldKeys.current.delete(keyName(e));
     };
-    const blur = () => (held.current = null);
+    const blur = () => heldKeys.current.clear();
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     window.addEventListener("blur", blur);
