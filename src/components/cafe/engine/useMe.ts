@@ -65,6 +65,8 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     placed: false,
   });
   if (import.meta.env.DEV) (window as unknown as { __me?: unknown }).__me = { walk, st };
+  // multiplayer hooks (usePresence fills these): a walk starting, and coming to rest
+  const net = useRef<{ walk?: (from: Pt, path: Pt[]) => void; settle?: () => void }>({});
   const [frame, setFrame] = useState(0);
   const [, tick] = useState(0);
 
@@ -104,10 +106,15 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
         // keep walking cell by cell while an arrow is held; stop at anything in the way
         const here = w.cellAt(s.pos);
         const next = { i: here.i + held.current.i, j: here.j + held.current.j };
-        if (w.free(next)) s.path = [w.cellCentre(next)];
-        else {
+        if (w.free(next)) {
+          s.path = [w.cellCentre(next)];
+          net.current.walk?.({ ...s.pos }, [...s.path]);
+        } else {
           const c = w.cellCentre(here);
-          if (Math.hypot(c.x - s.pos.x, c.y - s.pos.y) > 0.5) s.path = [c];
+          if (Math.hypot(c.x - s.pos.x, c.y - s.pos.y) > 0.5) {
+            s.path = [c];
+            net.current.walk?.({ ...s.pos }, [...s.path]);
+          }
           else {
             // blocked: just turn to face that way
             const t = w.cellCentre(next);
@@ -133,10 +140,13 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
             s.pos = { ...to };
             s.path.shift();
             left -= dist;
-            if (!s.path.length && s.arrive) {
-              const f = s.arrive;
-              s.arrive = null;
-              f();
+            if (!s.path.length) {
+              if (s.arrive) {
+                const f = s.arrive;
+                s.arrive = null;
+                f();
+              }
+              if (!held.current) net.current.settle?.(); // came to rest (or sat down)
             }
           } else {
             s.pos = { x: s.pos.x + (dx / dist) * left, y: s.pos.y + (dy / dist) * left };
@@ -206,6 +216,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     // first glide to the middle of the cell you're in, so steps stay on the grid
     s.path.unshift(walk.cellCentre(cells[0]));
     s.arrive = arrive ?? null;
+    net.current.walk?.({ ...s.pos }, [...s.path]);
     return true;
   };
 
@@ -272,7 +283,18 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     if (barista) return; // Daniel stays Daniel
     setLook(l);
     saveLook(l);
+    window.setTimeout(() => net.current.settle?.(), 0); // tell the room about the new look
+  };
+  // where you are right now, for the room
+  const snapshot = () => {
+    const s = st.current;
+    return {
+      at: { x: Math.round(s.pos.x), y: Math.round(s.pos.y) },
+      seat: s.seated ? { x: s.seated.x, y: s.seated.y, lift: s.seated.lift, back: s.seated.back, flip: s.seated.flip, z: s.seated.z } : null,
+      back: s.back,
+      flip: s.flip,
+    };
   };
 
-  return { actor, look, setLook: changeLook, barista, walkTo, visit, standUp };
+  return { actor, look, setLook: changeLook, barista, walkTo, visit, standUp, net, snapshot, walk, placed: s.placed };
 }

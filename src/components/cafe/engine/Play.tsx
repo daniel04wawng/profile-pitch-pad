@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Stage, useCompanions } from "./Stage";
 import { useMe } from "./useMe";
+import { usePresence } from "./usePresence";
 import { CafeScreen } from "./Screens";
 import { WARDROBE, type Layout, type SpriteDef } from "./types";
 import { Wardrobe } from "./Wardrobe";
@@ -41,6 +42,7 @@ export function Play({
   const player = useRef<LofiPlayer | null>(null);
   const companions = useCompanions();
   const me = useMe(layout, companions, !focus);
+  const room = usePresence(me, { w: layout.width, h: layout.height });
   const timer = useRef<number>();
 
   const close = () => {
@@ -93,7 +95,7 @@ export function Play({
             else me.walkTo(p);
           },
         }}
-        actors={me.actor ? [me.actor] : []}
+        actors={[...room.actors, ...(me.actor ? [me.actor] : [])]}
       />
 
       {hovered?.label && !focus && (
@@ -113,6 +115,7 @@ export function Play({
         className={`pointer-events-none absolute right-4 top-4 bg-[#f7efe1]/12 px-3 py-1 font-['Silkscreen'] text-[11px] text-[#f7efe1] backdrop-blur transition-opacity duration-500 sm:right-6 sm:top-6 ${focus ? "opacity-0" : ""}`}
       >
         {formatHour(hour)} in SF · {phaseName(hour)}
+        {room.online && <span className="opacity-80"> · {room.count + (room.full ? 0 : 1)} here{room.full ? " (café's full: watching)" : ""}</span>}
       </div>
 
       {/* the room blurs and dims behind the object's screen */}
