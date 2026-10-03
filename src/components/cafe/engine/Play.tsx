@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Stage, useCompanions } from "./Stage";
 import { useMe } from "./useMe";
 import { CafeScreen } from "./Screens";
-import { type Layout, type SpriteDef } from "./types";
+import { WARDROBE, type Layout, type SpriteDef } from "./types";
+import { Wardrobe } from "./Wardrobe";
 import type { Screens } from "./screenData";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { LofiPlayer } from "../lofi";
@@ -79,7 +80,7 @@ export function Play({
       <Stage
         layout={layout}
         versions={versions}
-        interactive={(s) => !!s.hotspot && !!screens[s.hotspot] && !focus}
+        interactive={(s) => !!s.hotspot && (!!screens[s.hotspot] || s.hotspot === WARDROBE) && !focus}
         hovered={focus ? null : hovered?.id ?? null}
         camera={focus ? { x: focus.x, y: focus.y, w: focus.w, h: focus.h } : null}
         light={lightAt(hour)}
@@ -122,8 +123,11 @@ export function Play({
         }`}
       >
         <div className={`transition-all duration-500 ${screenOpen ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0"}`}>
-          {focus?.hotspot && screens[focus.hotspot] && (
-            <CafeScreen screen={screens[focus.hotspot]} playing={playing} onMusic={setMusic} onClose={close} />
+          {focus?.hotspot === WARDROBE ? (
+            <Wardrobe look={me.look} barista={me.barista} onChange={me.setLook} onClose={close} />
+          ) : (
+            focus?.hotspot &&
+            screens[focus.hotspot] && <CafeScreen screen={screens[focus.hotspot]} playing={playing} onMusic={setMusic} onClose={close} />
           )}
         </div>
       </div>

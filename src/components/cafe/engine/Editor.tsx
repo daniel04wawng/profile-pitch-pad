@@ -6,7 +6,7 @@ import { CafeScreen } from "./Screens";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { ScreenEditor } from "./ScreenEditor";
 import { blankScreen, type ScreenDef, type Screens } from "./screenData";
-import { ASSET_DEFAULTS, BASE, BOOT, FLAT_ASSETS, DEFAULT_GRID, DEFAULT_CLUTTER, SECTION_ORDER, sectionOf, BACK, WALL_ITEMS, frontOf, isClutter, rotOf, turnArt, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
+import { ASSET_DEFAULTS, BASE, BOOT, FLAT_ASSETS, DEFAULT_GRID, DEFAULT_CLUTTER, WARDROBE, SECTION_ORDER, sectionOf, BACK, WALL_ITEMS, frontOf, isClutter, rotOf, turnArt, snapIso, snapWall, type Layout, type SpriteDef } from "./types";
 
 // The café's level editor. Open /cafe?edit while running `npm run dev`.
 //  - Assets tab: every sprite PNG. Drag one onto the scene (or click) to place it; drop image files in to import.
@@ -704,7 +704,8 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                             {def.name}
                           </option>
                         ))}
-                        {sel.hotspot && !screens[sel.hotspot] && <option value={sel.hotspot}>{sel.hotspot} (missing)</option>}
+                        <option value={WARDROBE}>Changing room (change your avatar)</option>
+                        {sel.hotspot && sel.hotspot !== WARDROBE && !screens[sel.hotspot] && <option value={sel.hotspot}>{sel.hotspot} (missing)</option>}
                         <option value="__new">+ new screen…</option>
                       </select>
                     </label>

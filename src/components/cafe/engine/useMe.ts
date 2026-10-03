@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FOOT, FRAME, avatarSheet, isBarista, savedLook, type Look } from "./avatar";
+import { FOOT, FRAME, avatarSheet, isBarista, saveLook, savedLook, type Look } from "./avatar";
 import { makeWalk, seatOf, type Cell, type Pt } from "./walk";
 import { BASE, BOOT, frontOf, type Layout, type SpriteDef } from "./types";
 import { measureSprite, type Measure } from "./measure";
@@ -267,5 +267,10 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
         : { id: "me", sheet, frame, w: FRAME.w, h: FRAME.h, footX: FOOT.x, footY: FOOT.y, x: s.pos.x, y: s.pos.y, flip: s.flip, z: walk.depthAt(s.pos, { x0: s.pos.x - FOOT.x, y0: s.pos.y - FOOT.y, x1: s.pos.x + FRAME.w - FOOT.x, y1: s.pos.y }) }
       : null;
 
-  return { actor, look, setLook, barista, walkTo, visit, standUp };
+  const changeLook = (l: Look) => {
+    setLook(l);
+    saveLook(l);
+  };
+
+  return { actor, look, setLook: changeLook, barista, walkTo, visit, standUp };
 }

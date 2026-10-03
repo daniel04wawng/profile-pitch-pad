@@ -36,7 +36,7 @@ const TONES: Record<Tone, { fill: string; ink: string; soft: string; accent: str
   wood: { fill: "#3a2219", ink: "#f3e6c9", soft: "rgba(243,230,201,0.22)", accent: "#e8b45c", edge: "#8f5b3e" },
 };
 
-function PixelButton({ onClick, children, fill = "#86a86b", ink = INK, title }: { onClick: () => void; children: ReactNode; fill?: string; ink?: string; title?: string }) {
+export function PixelButton({ onClick, children, fill = "#86a86b", ink = INK, title }: { onClick: () => void; children: ReactNode; fill?: string; ink?: string; title?: string }) {
   return (
     <button
       onClick={onClick}
@@ -49,7 +49,7 @@ function PixelButton({ onClick, children, fill = "#86a86b", ink = INK, title }: 
   );
 }
 
-function Frame({ screen, title, kicker, onBack, onClose, children }: { screen: ScreenDef; title?: string; kicker?: string; onBack?: () => void; onClose: () => void; children: ReactNode }) {
+export function Frame({ screen, title, kicker, onBack, onClose, children }: { screen: ScreenDef; title?: string; kicker?: string; onBack?: () => void; onClose: () => void; children: ReactNode }) {
   const t = TONES[screen.tone] ?? TONES.cream;
   return (
     <div

@@ -466,5 +466,11 @@
    "b": 4,
    "from": "front"
   }
+ },
+ "changing-room": {
+  "foot": {
+   "x": 2,
+   "y": 62
+  }
  }
 }

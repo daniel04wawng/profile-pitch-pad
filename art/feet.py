@@ -29,7 +29,7 @@ def back_corner(name):
     return {"x": round(lx + rx - fx), "y": round(fy - A - B)}, {"a": round(A), "b": round(B), "from": "back"}
 
 
-WALL_FEET = ["kitchen-doorway"]  # things on a wall that stand on the floor
+WALL_FEET = ["kitchen-doorway", "changing-room"]  # things on a wall that stand on the floor
 
 
 def wall_foot(name):
