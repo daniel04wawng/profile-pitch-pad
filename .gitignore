@@ -25,3 +25,5 @@ dist-ssr
 
 # café art pipeline
 art/__pycache__/
+.vercel
+.env*
