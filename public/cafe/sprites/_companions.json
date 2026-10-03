@@ -60,48 +60,88 @@
   "foot": {
    "x": 9,
    "y": 67
+  },
+  "size": {
+   "a": 4,
+   "b": 4,
+   "from": "centre"
   }
  },
  "cafe-table": {
   "foot": {
    "x": 14,
    "y": 27
+  },
+  "size": {
+   "a": 8,
+   "b": 8,
+   "from": "centre"
   }
  },
  "cafe-table-cloth": {
   "foot": {
    "x": 15,
    "y": 28
+  },
+  "size": {
+   "a": 8,
+   "b": 8,
+   "from": "centre"
   }
  },
  "cafe-table-linen": {
   "foot": {
    "x": 15,
    "y": 28
+  },
+  "size": {
+   "a": 8,
+   "b": 8,
+   "from": "centre"
   }
  },
  "cafe-chair": {
   "foot": {
    "x": 11,
    "y": 34
+  },
+  "size": {
+   "a": 5,
+   "b": 5,
+   "from": "centre"
   }
  },
  "piano": {
   "foot": {
    "x": 41,
    "y": 93
+  },
+  "size": {
+   "a": 20,
+   "b": 8,
+   "from": "front"
   }
  },
  "piano-stool": {
   "foot": {
    "x": 7,
    "y": 14
+  },
+  "size": {
+   "a": 4,
+   "b": 4,
+   "from": "centre"
   }
  },
  "bookshelf": {
   "foot": {
    "x": 25,
    "y": 83
+  },
+  "size": {
+   "a": 12,
+   "b": 4,
+   "from": "front"
   }
  },
  "hanging-plant": {},
@@ -109,6 +149,11 @@
   "foot": {
    "x": 12,
    "y": 42
+  },
+  "size": {
+   "a": 4,
+   "b": 4,
+   "from": "centre"
   }
  },
  "flower-vase": {},
@@ -116,18 +161,33 @@
   "foot": {
    "x": 64,
    "y": 58
+  },
+  "size": {
+   "a": 32,
+   "b": 24,
+   "from": "front"
   }
  },
  "booth": {
   "foot": {
    "x": 33,
    "y": 55
+  },
+  "size": {
+   "a": 16,
+   "b": 8,
+   "from": "front"
   }
  },
  "armchair": {
   "foot": {
    "x": 17,
    "y": 45
+  },
+  "size": {
+   "a": 8,
+   "b": 8,
+   "from": "front"
   }
  },
  "special-board": {
@@ -143,12 +203,22 @@
   "foot": {
    "x": 25,
    "y": 47
+  },
+  "size": {
+   "a": 12,
+   "b": 4,
+   "from": "front"
   }
  },
  "pastry-counter": {
   "foot": {
    "x": 22,
    "y": 32
+  },
+  "size": {
+   "a": 35,
+   "b": 11,
+   "from": "back"
   }
  },
  "back-bar-shelves": {
@@ -161,12 +231,22 @@
   "foot": {
    "x": 18,
    "y": 27
+  },
+  "size": {
+   "a": 8,
+   "b": 4,
+   "from": "front"
   }
  },
  "bar-counter": {
   "foot": {
    "x": 49,
    "y": 57
+  },
+  "size": {
+   "a": 24,
+   "b": 8,
+   "from": "front"
   }
  },
  "kitchen-doorway": {
@@ -179,48 +259,88 @@
   "foot": {
    "x": 11,
    "y": 30
+  },
+  "size": {
+   "a": 5,
+   "b": 5,
+   "from": "centre"
   }
  },
  "piano-back": {
   "foot": {
    "x": 41,
    "y": 92
+  },
+  "size": {
+   "a": 20,
+   "b": 8,
+   "from": "front"
   }
  },
  "bookshelf-back": {
   "foot": {
    "x": 25,
    "y": 83
+  },
+  "size": {
+   "a": 12,
+   "b": 4,
+   "from": "front"
   }
  },
  "armchair-back": {
   "foot": {
    "x": 17,
    "y": 39
+  },
+  "size": {
+   "a": 8,
+   "b": 8,
+   "from": "front"
   }
  },
  "booth-back": {
   "foot": {
    "x": 33,
    "y": 49
+  },
+  "size": {
+   "a": 16,
+   "b": 8,
+   "from": "front"
   }
  },
  "bar-counter-back": {
   "foot": {
    "x": 49,
    "y": 57
+  },
+  "size": {
+   "a": 24,
+   "b": 8,
+   "from": "front"
   }
  },
  "record-cabinet-back": {
   "foot": {
    "x": 25,
    "y": 51
+  },
+  "size": {
+   "a": 12,
+   "b": 4,
+   "from": "front"
   }
  },
  "espresso-station-back": {
   "foot": {
    "x": 21,
    "y": 28
+  },
+  "size": {
+   "a": 8,
+   "b": 4,
+   "from": "front"
   }
  },
  "laptop-back": {},
@@ -228,18 +348,33 @@
   "foot": {
    "x": 12,
    "y": 79
+  },
+  "size": {
+   "a": 4,
+   "b": 4,
+   "from": "centre"
   }
  },
  "snake-plant": {
   "foot": {
    "x": 7,
    "y": 37
+  },
+  "size": {
+   "a": 4,
+   "b": 4,
+   "from": "centre"
   }
  },
  "fern-stand": {
   "foot": {
    "x": 13,
    "y": 29
+  },
+  "size": {
+   "a": 4,
+   "b": 4,
+   "from": "centre"
   }
  },
  "succulent": {},
@@ -247,6 +382,11 @@
   "foot": {
    "x": 7,
    "y": 30
+  },
+  "size": {
+   "a": 4,
+   "b": 4,
+   "from": "centre"
   }
  },
  "window-box": {
@@ -259,12 +399,22 @@
   "foot": {
    "x": 33,
    "y": 51
+  },
+  "size": {
+   "a": 16,
+   "b": 8,
+   "from": "front"
   }
  },
  "couch-back": {
   "foot": {
    "x": 33,
    "y": 45
+  },
+  "size": {
+   "a": 16,
+   "b": 8,
+   "from": "front"
   }
  },
  "menu-board": {
@@ -277,24 +427,44 @@
   "foot": {
    "x": 33,
    "y": 34
+  },
+  "size": {
+   "a": 16,
+   "b": 8,
+   "from": "front"
   }
  },
  "sofa-large": {
   "foot": {
    "x": 49,
    "y": 59
+  },
+  "size": {
+   "a": 24,
+   "b": 8,
+   "from": "front"
   }
  },
  "sofa-large-back": {
   "foot": {
    "x": 49,
    "y": 53
+  },
+  "size": {
+   "a": 24,
+   "b": 8,
+   "from": "front"
   }
  },
  "booth-table": {
   "foot": {
    "x": 33,
    "y": 41
+  },
+  "size": {
+   "a": 16,
+   "b": 4,
+   "from": "front"
   }
  }
 }

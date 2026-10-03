@@ -26,7 +26,7 @@ def back_corner(name):
     fx = sum(front) / len(front)
     lx, rx = cols[0], cols[-1]
     A, B = (fx - lx) / 2, (rx - fx) / 2  # units along the two floor axes
-    return {"x": round(lx + rx - fx), "y": round(fy - A - B)}
+    return {"x": round(lx + rx - fx), "y": round(fy - A - B)}, {"a": round(A), "b": round(B), "from": "back"}
 
 
 WALL_FEET = ["kitchen-doorway"]  # things on a wall that stand on the floor
@@ -44,8 +44,9 @@ if __name__ == "__main__":
     path = os.path.join(SPRITES, "_companions.json")
     comp = json.load(open(path))
     for n in PIECES:
-        comp[n] = {**comp.get(n, {}), "foot": back_corner(n)}
-        print(n, comp[n]["foot"])
+        foot, size = back_corner(n)
+        comp[n] = {**comp.get(n, {}), "foot": foot, "size": size}
+        print(n, foot, size)
     for n in WALL_FEET:
         comp[n] = {**comp.get(n, {}), "foot": wall_foot(n)}
         print(n, comp[n]["foot"])

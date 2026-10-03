@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { Stage } from "./Stage";
+import { Stage, useCompanions } from "./Stage";
+import { useMe } from "./useMe";
 import { CafeScreen } from "./Screens";
 import { type Layout, type SpriteDef } from "./types";
 import type { Screens } from "./screenData";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { LofiPlayer } from "../lofi";
 
-// What visitors see. Clicking an object walks the camera up to it, the room softly blurs,
-// and that object's own screen opens (browse the pastry case, read the menu...).
+// What visitors see. You're a little avatar in the café: click the floor to walk there, click
+// an object and you walk up to it, then the camera moves in, the room softly blurs and that
+// object's own screen opens (browse the pastry case, read the menu...). Seats: you sit down.
 // The editor also runs this in place (P) to try a scene before saving it.
 export function Play({
   layout,
@@ -36,6 +38,8 @@ export function Play({
   const [screenOpen, setScreenOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
   const player = useRef<LofiPlayer | null>(null);
+  const companions = useCompanions();
+  const me = useMe(layout, companions, !focus);
   const timer = useRef<number>();
 
   const close = () => {
@@ -82,8 +86,13 @@ export function Play({
         handlers={{
           onHover: (s) => !focus && setHovered(s),
           onPointerMove: (_, e) => setMouse({ x: e.clientX, y: e.clientY }),
-          onPointerDown: (s) => s?.hotspot && !focus && visit(s),
+          onPointerDown: (s, p) => {
+            if (focus) return;
+            if (s?.hotspot) me.visit(s, () => visit(s));
+            else me.walkTo(p);
+          },
         }}
+        actors={me.actor ? [me.actor] : []}
       />
 
       {hovered?.label && !focus && (

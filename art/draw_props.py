@@ -40,7 +40,7 @@ for i, v in enumerate(WOOD):
 EXTRA = {}  # name -> companion info (sky mask, sun patch) for _companions.json
 
 
-def save(c, name, anchor=None, sky=None, light=None, foot=None):
+def save(c, name, anchor=None, sky=None, light=None, foot=None, size=None, centre=False):
     """Outline, crop and write a sprite. `anchor` (x, y) is where a wall item meets the floor:
     an almost invisible pixel goes there so the editor sets it on the wall line. `sky` is a
     Canvas masking window glass; `light` a Canvas with the sun patch it throws on the floor."""
@@ -55,6 +55,8 @@ def save(c, name, anchor=None, sky=None, light=None, foot=None):
         info["foot"] = {"x": round(foot[0]) - bbox[0], "y": round(foot[1]) - bbox[1]}
     elif anchor is not None:
         info["foot"] = {"x": round(anchor[0]) - bbox[0], "y": round(anchor[1]) - bbox[1]}
+    if size is not None:  # floor the piece covers, in grid units (8 per tile), from its foot
+        info["size"] = {"a": size[0], "b": size[1], "from": "centre" if centre else "front"}
     if sky is not None:
         sky.im.crop(bbox).save(os.path.join(OUT, f"{name}.sky.png"))
         info["sky"] = f"sprites/{name}.sky.png"
@@ -106,7 +108,7 @@ def cafe_table():
     disc(c, cx, ty, 13, 6.5, lambda dx, dy: "wood5" if (dx + dy < -1.0) else ("wood4" if dx + dy < 0.6 else "wood3"))
     c.px(cx - 6, ty - 2, "gold3")  # a glint of lamplight
     c.px(cx - 5, ty - 2, "gold2")
-    return save(c, "cafe-table", foot=(cx, floor_y))
+    return save(c, "cafe-table", foot=(cx, floor_y), size=(8, 8), centre=True)
 
 
 def cafe_chair():
@@ -142,7 +144,7 @@ def cafe_chair():
             x, y = X0 + 2 * a_ - 2 * b_, Y0 + a_ + b_ - 4
             c.px(x, y, "wood1")
     cx, cy = X0 + N - N, Y0 + N  # the seat's centre on the floor
-    return save(c, "cafe-chair", foot=(X0, Y0 + N))
+    return save(c, "cafe-chair", foot=(X0, Y0 + N), size=(N, N), centre=True)
 
 def piano():
     """Upright piano after the original's: near-black mahogany, glossy lamp-lit lid, framed
@@ -236,7 +238,7 @@ def piano():
         c.px(px_ + dx, py_ - 3 + (1 if abs(dx) == 3 else 0), "navy0")  # handset
     c.px(px_ - 1, py_ - 1, "key0")
     c.px(px_, py_ - 1, "navy1")
-    return save(c, "piano", foot=(X0 + 2 * L - 2 * (D + KD), Y0 + L + D + KD))
+    return save(c, "piano", foot=(X0 + 2 * L - 2 * (D + KD), Y0 + L + D + KD), size=(L, D + KD))
 
 
 def piano_stool():
@@ -249,7 +251,7 @@ def piano_stool():
             c.px(round(x0 + (x1 - x0) * t), y, col)
     disc(c, cx, sy + 1.5, 6, 3, lambda dx, dy: "wood1")
     disc(c, cx, sy, 6, 3, lambda dx, dy: "mah5" if dx + dy < -0.8 else ("mah4" if dx + dy < 0.4 else "mah3"))  # brown leather top, like the original
-    return save(c, "piano-stool", foot=(cx, floor_y))
+    return save(c, "piano-stool", foot=(cx, floor_y), size=(4, 4), centre=True)
 
 
 # ---------------------------------------------------------------- walls and ceiling
@@ -291,7 +293,7 @@ def table_cloth(name, field, alt, trim, hem):
                 return hem
             return alt if (r > 0.55 or (abs(dx) * 0.9 + abs(dy) < 0.5 and r > 0.12)) else field
         disc(c, cx, ty, rx, ry, top_col)
-        return save(c, name, foot=(cx, floor_y))
+        return save(c, name, foot=(cx, floor_y), size=(8, 8), centre=True)
     draw.__name__ = name.replace("-", "_")
     return draw
 
@@ -384,7 +386,7 @@ def bookshelf():
         c.px(px_ + dx, py_, "terra1"); c.px(px_ + dx, py_ - 1, "terra2")
     for (dx, dy, col) in ((-3, -3, "sage1"), (-2, -4, "sage2"), (-1, -5, "leaf3"), (0, -4, "sage1"), (1, -6, "sage2"), (2, -4, "sage0"), (3, -3, "sage1"), (0, -2, "sage0"), (-1, -3, "sage0"), (1, -3, "sage2"), (2, -5, "sage1")):
         c.px(px_ + dx, py_ + dy, col)
-    return save(c, "bookshelf", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "bookshelf", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def window():
@@ -504,7 +506,7 @@ def potted_plant():
         r = rng.uniform(0, 1) ** 0.6
         import math
         leaf_cluster(c, round(cx + math.cos(a) * r * 11), round(floor_y - 32 + math.sin(a) * r * 9), rng, big=True)
-    return save(c, "potted-plant", foot=(cx, floor_y))
+    return save(c, "potted-plant", foot=(cx, floor_y), size=(4, 4), centre=True)
 
 
 def flower_vase():
@@ -565,7 +567,7 @@ def rug():
         for a in (-0.6, A + 0.1):
             x, y = X0 + 2 * a - b2, Y0 + a + b2 / 2
             c.px(x, y, "key1"); c.px(x + 1, y, "key0")
-    return save(c, "rug", foot=(X0 + 2 * A - 2 * B, Y0 + A + B))
+    return save(c, "rug", foot=(X0 + 2 * A - 2 * B, Y0 + A + B), size=(A, B))
 
 
 def booth():
@@ -583,7 +585,7 @@ def booth():
     # seat cushion: rounded front edge
     face_left(c, X0, Y0, 0, L, D, SEAT - 3, SEAT, lambda t, z: "lea1" if t % 4 < 0.3 else ("lea3" if z >= 2 else "lea2"))
     face_top(c, X0, Y0, 0, L, 2.5, D, SEAT, lambda a, b: "lea1" if a % 4 < 0.3 else ("lea4" if b > D - 1 else "lea3"))
-    return save(c, "booth", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "booth", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def armchair():
@@ -613,7 +615,7 @@ def armchair():
     face_left(c, X0, Y0, AW, L - AW, D, SEAT, SEAT + 3, lambda t, z: "olive2" if z < 2 else "olive3")
     face_top(c, X0, Y0, AW, L - AW, BK, D, SEAT + 3, lambda a_, b_: "olive3" if b_ > D - 1 else "olive2")
     arm(L - AW)
-    return save(c, "armchair", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "armchair", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 def floor_lamp():
     """Brass floor lamp with a cream pleated shade, warm light inside."""
@@ -633,7 +635,7 @@ def floor_lamp():
             c.px(x, y, col)
     for x in range(cx - 7, cx + 8):  # light spilling from under the shade
         c.px(x, top + 14, "gold3" if abs(x - cx) < 6 else "gold2")
-    return save(c, "floor-lamp", foot=(cx, floor_y))
+    return save(c, "floor-lamp", foot=(cx, floor_y), size=(4, 4), centre=True)
 
 
 def special_board():
@@ -752,7 +754,7 @@ def record_cabinet():
         c.px(vx, y, "glass1"); c.px(vx + 1, y, "glass0")
     for dx, dy, col in ((-2, -6, "gold2"), (0, -7, "pink1"), (2, -6, "gold2"), (-1, -8, "gold3"), (1, -8, "pink2"), (-2, -5, "sage1"), (2, -5, "sage1"), (0, -5, "sage0")):
         c.px(vx + dx, vy + dy, col)
-    return save(c, "record-cabinet", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "record-cabinet", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def back_bar_shelves():
@@ -868,7 +870,7 @@ def bar_counter():
     face_left(c, X0, Y0, 0, L, D, H - 3, H, lambda t, z: "wood4" if z >= 2 else "wood3")
     face_right(c, X0, Y0, L, 0, D, H - 3, H, lambda s_, z: "wood2")
     face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if (b > D - 0.6 or a > L - 0.6) else ("wood5" if abs(a - b * 1.4 - 3) < 0.6 else "wood4"))
-    return save(c, "bar-counter", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "bar-counter", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def espresso_station():
@@ -916,7 +918,7 @@ def espresso_station():
         c.px(gx - half - 1, yy, "glass2")
     for xx in range(gx - 3, gx + 3):
         c.px(xx, gy - 16, "iron")
-    return save(c, "espresso-station", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "espresso-station", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def cafe_chair_back():
@@ -949,7 +951,7 @@ def cafe_chair_back():
             return "wood3" if (z >= BACK - SEAT - 1 or t < 0.35) else ("wood2" if post or rail else "wood1")
         return None  # you see the seat through the gaps
     face_left(c, X0, Y0, 0.2, N - 0.5, N - 0.5, SEAT, BACK, back)
-    return save(c, "cafe-chair-back", foot=(X0, Y0 + N))
+    return save(c, "cafe-chair-back", foot=(X0, Y0 + N), size=(N, N), centre=True)
 
 
 # ---------------------------------------------------------------- back views (for Rotate)
@@ -996,7 +998,7 @@ def piano_back():
     for dx in range(-6, 7):
         y = ly - 12 + (dx + 6) // 3
         c.px(lx + dx, y - 1, "brass2"); c.px(lx + dx, y, "brass1")
-    return save(c, "piano-back", foot=(X0 + 2 * L - 2 * (D + KD), Y0 + L + D + KD))
+    return save(c, "piano-back", foot=(X0 + 2 * L - 2 * (D + KD), Y0 + L + D + KD), size=(L, D + KD))
 
 
 def bookshelf_back():
@@ -1011,7 +1013,7 @@ def bookshelf_back():
         c.px(px_ + dx, py_, "terra1"); c.px(px_ + dx, py_ - 1, "terra2")
     for (dx, dy, col) in ((-3, -3, "sage1"), (-2, -4, "sage2"), (-1, -5, "leaf3"), (0, -4, "sage1"), (1, -6, "sage2"), (2, -4, "sage0"), (3, -3, "sage1"), (0, -2, "sage0")):
         c.px(px_ + dx, py_ + dy, col)
-    return save(c, "bookshelf-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "bookshelf-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def armchair_back():
@@ -1031,7 +1033,7 @@ def armchair_back():
     face_left(c, X0, Y0, 0, L, D, BASE, BACK, lambda t, z: "olive3" if z >= BACK - BASE - 2 else ("olive1" if (t < 0.4 or t > L - 0.4 or z < 2) else "olive2"))
     face_right(c, X0, Y0, L, D - BK, D, BASE, BACK, lambda s_, z: "olive1" if z >= BACK - BASE - 1 else "olive0")
     face_top(c, X0, Y0, 0, L, D - BK, D, BACK, lambda a_, b_: "olive3")
-    return save(c, "armchair-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "armchair-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def booth_back():
@@ -1043,7 +1045,7 @@ def booth_back():
     face_left(c, X0, Y0, 0, L, D, 0, BACK, lambda t, z: "wood0" if z < 2 else ("wood3" if z >= BACK - 2 else wood_back(t, z, 4)))
     face_right(c, X0, Y0, L, D - 2.5, D, 0, BACK, lambda s_, z: "wood1" if z < BACK - 1 else "wood2")
     face_top(c, X0, Y0, 0, L, D - 2.5, D, BACK, lambda a, b: "lea3" if b < D - 1.5 else "wood4")
-    return save(c, "booth-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "booth-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def bar_counter_back():
@@ -1081,7 +1083,7 @@ def bar_counter_back():
     face_left(c, X0, Y0, 0, L, D, H - 3, H, lambda t, z: "wood4" if z >= 2 else "wood3")
     face_right(c, X0, Y0, L, 0, D, H - 3, H, lambda s_, z: "wood2")
     face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if (b > D - 0.6 or a > L - 0.6) else ("wood5" if abs(a - b * 1.4 - 3) < 0.6 else "wood4"))
-    return save(c, "bar-counter-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "bar-counter-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def record_cabinet_back():
@@ -1100,7 +1102,7 @@ def record_cabinet_back():
         c.px(vx, y, "glass1"); c.px(vx + 1, y, "glass0")
     for dx, dy, col in ((-2, -6, "gold2"), (0, -7, "pink1"), (2, -6, "gold2"), (-1, -8, "gold3"), (1, -8, "pink2"), (-2, -5, "sage1"), (2, -5, "sage1")):
         c.px(vx + dx, vy + dy, col)
-    return save(c, "record-cabinet-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "record-cabinet-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def espresso_station_back():
@@ -1123,7 +1125,7 @@ def espresso_station_back():
         x, y = round(X0 + 2 * cx - 2 * 2), round(Y0 + cx + 2 - H)
         for yy in range(y - 2, y + 1):
             c.px(x, yy, "key2"); c.px(x + 1, yy, "key1")
-    return save(c, "espresso-station-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "espresso-station-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def laptop_back():
@@ -1171,7 +1173,7 @@ def fiddle_leaf_fig():
         x = cx + side * rng.randint(2, 8)
         disc(c, x, y, 3.2, 2.4, lambda dx, dy: "leaf3" if dx + dy < -0.9 else ("sage2" if dx + dy < 0 else ("sage1" if dx + dy < 0.9 else "sage0")))
         c.px(x, y, "leaf0")
-    return save(c, "fiddle-leaf-fig", foot=(cx, floor_y))
+    return save(c, "fiddle-leaf-fig", foot=(cx, floor_y), size=(4, 4), centre=True)
 
 
 def snake_plant():
@@ -1191,7 +1193,7 @@ def snake_plant():
                 col = "leaf3"
             c.px(x, yy, col)
             c.px(x + 1, yy, "olive2" if y < h - 2 else col)
-    return save(c, "snake-plant", foot=(cx, floor_y))
+    return save(c, "snake-plant", foot=(cx, floor_y), size=(4, 4), centre=True)
 
 
 def fern_stand():
@@ -1213,7 +1215,7 @@ def fern_stand():
         y = round(floor_y - 30 - math.sin(a) * r * 0.6 + (r * 0.45 if abs(math.cos(a)) > 0.6 else 0))
         c.px(x, y, rng.choice(["sage2", "sage1", "leaf3", "sage1"]))
         c.px(x + 1, y, rng.choice(["sage1", "sage0"]))
-    return save(c, "fern-stand", foot=(cx, floor_y))
+    return save(c, "fern-stand", foot=(cx, floor_y), size=(4, 4), centre=True)
 
 
 def succulent():
@@ -1240,7 +1242,7 @@ def tulip_pot():
         for yy, ww in ((top - 3, 1), (top - 2, 1), (top - 1, 1)):
             c.px(x - 1, yy, col); c.px(x, yy, col); c.px(x + 1, yy, "pink0" if col.startswith("pink") else "gold1")
         c.px(x - 2, top + 4, "sage2"); c.px(x + 2, top + 6, "sage1")
-    return save(c, "tulip-pot", foot=(cx, floor_y))
+    return save(c, "tulip-pot", foot=(cx, floor_y), size=(4, 4), centre=True)
 
 
 def window_box():
@@ -1301,7 +1303,7 @@ def couch(back=False, name="couch", L=16, seats=3, R=("rust0", "rust1", "rust2",
         face_left(c, X0, Y0, 0, L, D, BASE, BACK, lambda t, z: R[3] if z >= BACK - BASE - 2 else (R[1] if (t < 0.4 or t > L - 0.4 or z < 2) else R[2]))
         face_right(c, X0, Y0, L, D - BK, D, BASE, BACK, lambda s_, z: R[1] if z >= BACK - BASE - 1 else R[0])
         face_top(c, X0, Y0, 0, L, D - BK, D, BACK, lambda a_, b_: R[3])
-    return save(c, name + "-back" if back else name, foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, name + "-back" if back else name, foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def coffee_table():
@@ -1320,7 +1322,7 @@ def coffee_table():
     face_left(c, X0, Y0, 0, L, D, H - 2, H, lambda t, z: "wood4" if z >= 1 else "wood3")
     face_right(c, X0, Y0, L, 0, D, H - 2, H, lambda s_, z: "wood2")
     face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if (b > D - 0.6 or a > L - 0.6) else ("wood5" if abs(a - b * 1.4 - 3) < 0.5 else "wood4"))
-    return save(c, "coffee-table", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "coffee-table", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def booth_table():
@@ -1343,7 +1345,7 @@ def booth_table():
     face_left(c, X0, Y0, 0, L, D, H - 3, H, lambda t, z: "wood4" if z >= 2 else "wood2")
     face_right(c, X0, Y0, L, 0, D, H - 3, H, lambda s_, z: "wood2" if z >= 2 else "wood1")
     face_top(c, X0, Y0, 0, L, 0, D, H, lambda a, b: "wood5" if (b > D - 0.6 or a > L - 0.6) else ("wood5" if abs(a - b * 2.5 - 4) < 0.5 else "wood4"))
-    return save(c, "booth-table", foot=(X0 + 2 * L - 2 * D, Y0 + L + D))
+    return save(c, "booth-table", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
 def menu_board():

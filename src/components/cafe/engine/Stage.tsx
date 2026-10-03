@@ -8,9 +8,24 @@ import type { Light } from "./lighting";
 // corner, a round piece's centre), so the editor can snap it exactly.
 export type Companion = {
   foot?: { x: number; y: number };
+  // floor the piece covers, in grid units, measured from its foot (front corner, back corner or centre)
+  size?: { a: number; b: number; from: "front" | "back" | "centre" };
   sky?: string;
   light?: { file: string; dx: number; dy: number; w: number; h: number };
   glow?: { x: number; y: number; r: number };
+};
+export type Actor = {
+  id: string;
+  sheet: string; // sprite sheet (data URL), frames side by side
+  frame: number;
+  w: number;
+  h: number;
+  footX: number; // where it stands, within a frame
+  footY: number;
+  x: number; // where it stands, in the scene
+  y: number;
+  flip: boolean;
+  z: number; // drawn above sprites whose floor point is lower than this
 };
 let companionsCache: Promise<Record<string, Companion>> | null = null;
 export function useCompanions() {
@@ -93,6 +108,7 @@ export function Stage({
   camera = null,
   light = null,
   handlers,
+  actors = [],
   children,
 }: {
   layout: Layout;
@@ -112,6 +128,8 @@ export function Stage({
   // Time-of-day lighting; null draws the room flat (no sky, sun or lamps).
   light?: Light | null;
   handlers: StageHandlers;
+  // People in the room (avatars), drawn among the furniture by where they stand.
+  actors?: Actor[];
   children?: React.ReactNode;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -281,6 +299,23 @@ export function Stage({
             </Fragment>
           );
         })}
+        {actors.map((a) => (
+          <div
+            key={a.id}
+            className="pointer-events-none absolute [image-rendering:pixelated]"
+            style={{
+              // whole pixels only, so the pixel art never lands between pixels
+              left: Math.round(a.x) - (a.flip ? a.w - a.footX : a.footX),
+              top: Math.round(a.y) - a.footY,
+              width: a.w,
+              height: a.h,
+              zIndex: a.z,
+              backgroundImage: `url(${a.sheet})`,
+              backgroundPosition: `${-a.frame * a.w}px 0`,
+              transform: a.flip ? "scaleX(-1)" : undefined,
+            }}
+          />
+        ))}
         {light && (
           <>
             {/* the room's color cast for the time of day, kept to the room itself */}
