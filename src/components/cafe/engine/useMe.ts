@@ -86,29 +86,16 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   const [frame, setFrame] = useState(0);
   const [, tick] = useState(0);
 
-  // arrive: the barista comes out of the kitchen doorway, visitors walk in off the street
+  // arrive: everyone (the barista too) walks in across the open front of the café
   useEffect(() => {
     const s = st.current;
     if (s.placed || !Object.keys(companions).length) return;
     s.placed = true;
-    const door = barista ? layout.assets.find((a) => frontOf(nameOf(a.file)) === "kitchen-doorway" && !a.hidden) : undefined;
-    if (door) {
-      const f = companions["kitchen-doorway"]?.foot ?? { x: door.w / 2, y: door.h };
-      const at = { x: door.x + (door.flipX ? door.w - f.x : f.x) + (door.flipX ? -6 : 6), y: door.y + f.y - 2 };
-      s.pos = at;
-      const route = walk.walkTo(walk.cellAt(at), walk.free);
-      const start = route?.[route.length - 1];
-      if (start) {
-        const inward = walk.walkTo(start, (c) => walk.free(c) && Math.abs(c.i - start.i) + Math.abs(c.j - start.j) >= 3);
-        s.path = (inward ?? [start]).map(walk.cellCentre);
-      }
-    } else {
-      const e = walk.entrance();
-      s.pos = e.from;
-      s.path = [walk.cellCentre(e.to)];
-    }
+    const e = walk.entrance();
+    s.pos = e.from;
+    s.path = e.path;
     tick((n) => n + 1);
-  }, [companions, walk, barista, layout.assets]);
+  }, [companions, walk]);
 
   // movement
   useEffect(() => {

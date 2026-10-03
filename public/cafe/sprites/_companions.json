@@ -472,5 +472,19 @@
    "x": 2,
    "y": 62
   }
+ },
+ "front-door": {
+  "sky": "sprites/front-door.sky.png",
+  "foot": {
+   "x": 2,
+   "y": 62
+  }
+ },
+ "front-door-open": {
+  "sky": "sprites/front-door-open.sky.png",
+  "foot": {
+   "x": 2,
+   "y": 62
+  }
  }
 }

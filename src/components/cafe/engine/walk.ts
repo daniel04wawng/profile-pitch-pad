@@ -168,13 +168,20 @@ export function makeWalk(layout: Layout, companions: Record<string, Companion>, 
     return { x: p.x, y: p.y, lift: seat.h, back: r === 1 || r === 2, flip: r === 1 || r === 3 };
   };
 
-  // a spot to arrive at: the free cell nearest the front edge's middle (visitors come in off
-  // the street there, later through the landing page's door)
-  const entrance = (): { from: Pt; to: Cell } => {
-    const to = walkTo({ i: I - 1, j: Math.floor(J / 2) }, free) ?? [{ i: I - 1, j: Math.floor(J / 2) }];
-    const cell = to[to.length - 1];
-    const c = cellCentre(cell);
-    return { from: { x: c.x + 2 * 3 * C, y: c.y + 3 * C }, to: cell };
+  // Where people arrive. The café's front walls are cut away, so they walk in across the open
+  // front edge of the floor: from just outside it, onto the floor, a few steps in. The spot is
+  // the layout's entrance (set in the editor), or near the front corner.
+  const entrance = (): { from: Pt; path: Pt[] } => {
+    const want = layout.entrance ? cellAt(layout.entrance) : { i: I - 1, j: J - 5 };
+    const c = { i: Math.max(0, Math.min(I - 1, want.i)), j: Math.max(0, Math.min(J - 1, want.j)) };
+    // the nearer of the two open edges: down-right (i = I-1) or down-left (j = J-1)
+    const alongA = I - 1 - c.i <= J - 1 - c.j;
+    const edge = alongA ? { i: I - 1, j: c.j } : { i: c.i, j: J - 1 };
+    const out = alongA ? { i: 1, j: 0 } : { i: 0, j: 1 };
+    const onFloor = walkTo(edge, free)?.slice(-1)[0] ?? edge;
+    const steps = walkTo(onFloor, (q) => free(q) && (alongA ? onFloor.i - q.i : onFloor.j - q.j) >= 3) ?? [onFloor];
+    const from = cellCentre({ i: onFloor.i + out.i * 3, j: onFloor.j + out.j * 3 });
+    return { from, path: steps.map(cellCentre) };
   };
 
   return { cellAt, cellCentre, inside, free, walkTo, besideOf, seatSpot, footprint, entrance, key, toScreen, toUnits, depthAt };

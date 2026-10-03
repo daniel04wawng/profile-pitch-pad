@@ -80,6 +80,8 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const [grid, setGrid] = useState(true);
   const [snap, setSnap] = useState(true);
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
+  // "entrance" mode: the next click on the floor sets where visitors walk in
+  const [placingEntrance, setPlacingEntrance] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [status, setStatus] = useState<"saved" | "unsaved" | "saving" | "error">("saved");
   const [painting, setPainting] = useState<string | null>(null);
@@ -466,6 +468,13 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
         <button onClick={() => setPainting(layout.scene)} className={btn}>
           Paint background
         </button>
+        <button
+          onClick={() => setPlacingEntrance((v) => !v)}
+          className={`${btn} ${placingEntrance ? "bg-[#9bbf7a] text-[#1a1512]" : ""}`}
+          title="Where visitors walk in: click this, then click the floor near its open front edge"
+        >
+          {placingEntrance ? "click the floor…" : "entrance"}
+        </button>
         <span className="mx-1 h-5 w-px bg-white/10" />
         {(
           [
@@ -533,6 +542,12 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
             handlers={{
               onHover: (s) => !drag.current && setHovered(s?.id ?? null),
               onPointerDown: (s, p, e) => {
+                if (placingEntrance) {
+                  const at = snapIso(p.x, p.y, gridOf(layout));
+                  edit((l) => ({ ...l, entrance: { x: at.x, y: at.y } }));
+                  setPlacingEntrance(false);
+                  return;
+                }
                 setSelected(s?.id ?? null);
                 if (!s) return;
                 (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -608,7 +623,18 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                 else if (e.dataTransfer.files.length) importFiles(e.dataTransfer.files, p);
               },
             }}
-          />
+          >
+            {/* where visitors walk in */}
+            {layout.entrance && (
+              <div
+                className="pointer-events-none absolute -translate-x-1/2 -translate-y-full whitespace-nowrap font-['Silkscreen'] text-[6px] leading-none text-[#1a1512]"
+                style={{ left: layout.entrance.x, top: layout.entrance.y, zIndex: 950 }}
+              >
+                <div className="rounded-sm bg-[#9bbf7a] px-1 py-0.5">entrance</div>
+                <div className="mx-auto h-0 w-0 border-x-[3px] border-t-[4px] border-x-transparent border-t-[#9bbf7a]" />
+              </div>
+            )}
+          </Stage>
           {tab === "screens" && screenSel && screens[screenSel] && (
             <>
               <div

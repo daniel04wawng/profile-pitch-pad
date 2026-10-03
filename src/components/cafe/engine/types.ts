@@ -29,6 +29,9 @@ export type Layout = {
   // Assets marked as clutter: small things that sit on top of other things (a cup on a table,
   // flowers on the counter). Unset = DEFAULT_CLUTTER. Toggled per asset in the editor.
   clutter?: string[];
+  // Where visitors walk in (a point on the floor near its open front edge). Unset = near the
+  // front corner. Set it in the editor with "entrance".
+  entrance?: { x: number; y: number };
 };
 
 // How the asset library is grouped. Clutter-marked assets go under Clutter; anything not
