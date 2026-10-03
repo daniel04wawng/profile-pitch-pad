@@ -127,7 +127,7 @@ export function Play({
       >
         <div className={`transition-all duration-500 ${screenOpen ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0"}`}>
           {focus?.hotspot === WARDROBE ? (
-            <Wardrobe look={me.look} barista={me.barista} onChange={me.setLook} onClose={close} />
+            <Wardrobe people={me.people} look={me.look} barista={me.barista} onChange={me.setLook} onClose={close} />
           ) : (
             focus?.hotspot &&
             screens[focus.hotspot] && <CafeScreen screen={screens[focus.hotspot]} playing={playing} onMusic={setMusic} onClose={close} />

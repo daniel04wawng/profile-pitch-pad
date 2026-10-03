@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
-import { FOOT, FRAME, HAIRS, PANTS, SHIRTS, SKINS, SIT_SEAT, STYLES, avatarSheet, type Look } from "./avatar";
+import { poseActor, sitPose, walkPose, type Look, type People } from "./avatar";
 import type { Pt, Walk } from "./walk";
 import type { Actor } from "./Stage";
 
@@ -14,7 +14,6 @@ const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 const ROOM = "cafe";
 const CAPACITY = 40; // more than this and newcomers watch without an avatar
 const SPEED = 42; // px/s, same as your own avatar
-const STEP_MS = 140;
 const MAX_PATH = 120;
 
 const client = URL && KEY ? createClient(URL, KEY, { realtime: { params: { eventsPerSecond: 8 } } }) : null;
@@ -23,7 +22,8 @@ type Seat = { x: number; y: number; lift: number; back: boolean; flip: boolean; 
 type Rest = { at: Pt; seat: Seat | null; back: boolean; flip: boolean };
 type Wire = Rest & { look: Look; barista: boolean };
 type Me = {
-  look: Look;
+  look: Look | null;
+  people: People | null;
   barista: boolean;
   placed: boolean;
   net: React.MutableRefObject<{ walk?: (from: Pt, path: Pt[]) => void; settle?: () => void }>;
@@ -41,22 +41,21 @@ const pt = (v: unknown, w: number, h: number): Pt | null => {
   const y = num(o?.y, 0, h);
   return x === null || y === null ? null : { x, y };
 };
-function cleanWire(v: unknown, w: number, h: number): Wire | null {
+function cleanWire(v: unknown, w: number, h: number, characters: string[]): Wire | null {
   const o = v as Partial<Wire> | null;
   const at = pt(o?.at, w, h);
   if (!o || !at) return null;
-  const l = (o.look ?? {}) as Partial<Look>;
-  const look: Look = { style: idx(l.style, STYLES.length), skin: idx(l.skin, SKINS.length), hair: idx(l.hair, HAIRS.length), shirt: idx(l.shirt, SHIRTS.length), pants: idx(l.pants, PANTS.length) };
+  const c = (o.look as Partial<Look> | undefined)?.character;
+  if (typeof c !== "string" || !characters.includes(c)) return null; // only real characters
   const s = o.seat as Partial<Seat> | null | undefined;
   const sp = s ? pt(s, w, h) : null;
   const seat = s && sp ? { ...sp, lift: num(s.lift, 0, 40) ?? 0, back: !!s.back, flip: !!s.flip, z: num(s.z, 0, 2000) ?? 1 } : null;
-  return { at, seat, look, barista: !!o.barista, back: !!o.back, flip: !!o.flip };
+  return { at, seat, look: { character: c }, barista: !!o.barista, back: !!o.back, flip: !!o.flip };
 }
 
 export function usePresence(me: Me, size: { w: number; h: number }) {
   const [others, setOthers] = useState<Record<string, Other>>({});
   const [full, setFull] = useState(false);
-  const [sheets, setSheets] = useState<Record<string, string>>({});
   const [, tick] = useState(0);
   const chan = useRef<RealtimeChannel | null>(null);
   const meRef = useRef(me);
@@ -75,7 +74,7 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
         const next: Record<string, Other> = {};
         for (const [key, metas] of Object.entries(state)) {
           if (key === id.current) continue;
-          const wire = cleanWire(metas[metas.length - 1], size.w, size.h);
+          const wire = cleanWire(metas[metas.length - 1], size.w, size.h, Object.keys(meRef.current.people?.characters ?? {}));
           if (!wire) continue;
           const was = prev[key];
           // a fresh resting spot ends any walk we were playing for them
@@ -123,6 +122,7 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
     const ch = chan.current;
     if (!ch || !joined.current) return;
     const m = meRef.current;
+    if (!m.look) return;
     await ch.track({ ...m.snapshot(), look: m.look, barista: m.barista } satisfies Wire);
   };
 
@@ -145,16 +145,8 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me.net]);
 
-  // sprite sheets for everyone's looks
-  useEffect(() => {
-    for (const o of Object.values(others)) {
-      const k = JSON.stringify(o.look);
-      if (!sheets[k]) avatarSheet(o.look).then((s) => setSheets((all) => ({ ...all, [k]: s })));
-    }
-  }, [others, sheets]);
-
   // play back walks
-  const anyMoving = Object.values(others).some((o) => o.moving);
+  const anyMoving = Object.values(others).some((o) => o.moving || o.seat);
   useEffect(() => {
     if (!anyMoving) return;
     let raf = 0;
@@ -168,10 +160,15 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
 
   const now = performance.now();
   const actors: Actor[] = [];
+  const people = me.people;
   for (const o of Object.values(others)) {
-    const sheet = sheets[JSON.stringify(o.look)];
-    if (!sheet) continue;
-    const base = { id: o.id, sheet, w: FRAME.w, h: FRAME.h, footX: FOOT.x, footY: FOOT.y };
+    if (!people) break;
+    const m = people.characters[o.look.character];
+    if (!m) continue;
+    const [fw, fh] = m.frame;
+    const seed = o.id.charCodeAt(0) + o.id.charCodeAt(1);
+    const depth = (p: Pt) => me.walk.depthAt(p, { x0: p.x - fw / 2, y0: p.y - fh, x1: p.x + fw / 2, y1: p.y });
+    let a: Actor | null = null;
     if (o.moving) {
       // where along their path they'd be by now
       let left = ((now - o.moving.started) / 1000) * SPEED;
@@ -196,16 +193,14 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
         done = false;
         break;
       }
-      const cycle = Math.floor((now - o.moving.started) / STEP_MS) % 4;
-      const frame = (back ? 3 : 0) + (done ? 0 : [1, 0, 2, 0][cycle]);
-      const rect = { x0: pos.x - FOOT.x, y0: pos.y - FOOT.y, x1: pos.x + FRAME.w - FOOT.x, y1: pos.y };
-      actors.push({ ...base, frame, x: pos.x, y: pos.y, flip, z: me.walk.depthAt(pos, rect) });
+      const pose = done ? (back ? "stand-back" : "stand-front") : walkPose(back, now - o.moving.started);
+      a = poseActor(people, o.id, o.look.character, pose, pos.x, pos.y, flip, depth(pos));
     } else if (o.seat) {
-      actors.push({ ...base, frame: o.seat.back ? 7 : 6, x: o.seat.x, y: o.seat.y - o.seat.lift + SIT_SEAT, flip: o.seat.flip, z: o.seat.z });
+      a = poseActor(people, o.id, o.look.character, sitPose(o.seat.back, now, seed), o.seat.x, o.seat.y - o.seat.lift, o.seat.flip, o.seat.z);
     } else {
-      const rect = { x0: o.at.x - FOOT.x, y0: o.at.y - FOOT.y, x1: o.at.x + FRAME.w - FOOT.x, y1: o.at.y };
-      actors.push({ ...base, frame: o.back ? 3 : 0, x: o.at.x, y: o.at.y, flip: o.flip, z: me.walk.depthAt(o.at, rect) });
+      a = poseActor(people, o.id, o.look.character, o.back ? "stand-back" : "stand-front", o.at.x, o.at.y, o.flip, depth(o.at));
     }
+    if (a) actors.push(a);
   }
 
   return { actors, count: Object.keys(others).length, full, online: !!client };

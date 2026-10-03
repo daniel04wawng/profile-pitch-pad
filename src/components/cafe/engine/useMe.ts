@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { DANIEL, FOOT, FRAME, SIT_SEAT, avatarSheet, isBarista, saveLook, savedLook, type Look } from "./avatar";
+import { BARISTA_CHARACTER, isBarista, poseActor, saveLook, savedLook, sitPose, usePeople, walkPose, type Look, type Pose } from "./avatar";
 import { makeWalk, seatOf, type Cell, type Pt } from "./walk";
 import { BASE, BOOT, frontOf, type Layout, type SpriteDef } from "./types";
 import { measureSprite, type Measure } from "./measure";
@@ -9,7 +9,6 @@ import type { Actor, Companion } from "./Stage";
 // up to things before their screen opens, and sits in seats.
 
 const SPEED = 42; // px per second across the screen
-const STEP_MS = 140; // walk-cycle frame time
 const nameOf = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/, "");
 
 type Seated = { x: number; y: number; lift: number; back: boolean; flip: boolean; z: number; seat: SpriteDef };
@@ -59,16 +58,12 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const barista = useMemo(isBarista, []);
-  // the barista is always Daniel; everyone else keeps their own look
-  const [look, setLook] = useState<Look>(() => (barista ? DANIEL : savedLook()));
-  const [sheet, setSheet] = useState<string | null>(null);
+  const people = usePeople();
+  // the barista is always Daniel; everyone else keeps their own look (a character)
+  const [look, setLook] = useState<Look | null>(null);
   useEffect(() => {
-    let alive = true;
-    avatarSheet(look).then((s) => alive && setSheet(s));
-    return () => {
-      alive = false;
-    };
-  }, [look, barista]);
+    if (people && !look) setLook(barista ? { character: BARISTA_CHARACTER } : savedLook(people));
+  }, [people, look, barista]);
 
   const st = useRef({
     pos: { x: 0, y: 0 } as Pt,
@@ -83,7 +78,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   if (import.meta.env.DEV) (window as unknown as { __me?: unknown }).__me = { walk, st };
   // multiplayer hooks (usePresence fills these): a walk starting, and coming to rest
   const net = useRef<{ walk?: (from: Pt, path: Pt[]) => void; settle?: () => void }>({});
-  const [frame, setFrame] = useState(0);
+  const [frame, setFrame] = useState<Pose>("stand-front");
   const [, tick] = useState(0);
 
   // arrive: everyone (the barista too) walks in across the open front of the café
@@ -127,7 +122,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
             const t = w.cellCentre(next);
             s.back = t.y < s.pos.y;
             s.flip = t.x > s.pos.x ? !s.back : s.back;
-            setFrame(s.back ? 3 : 0);
+            setFrame(s.back ? "stand-back" : "stand-front");
           }
         }
       }
@@ -161,9 +156,8 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
           }
         }
         s.t += dt * 1000;
-        const cycle = Math.floor(s.t / STEP_MS) % 4; // step, stand, other step, stand
-        const base = s.back ? 3 : 0;
-        setFrame(s.path.length ? base + [1, 0, 2, 0][cycle] : base);
+        // keep striding between cells while an arrow is held, stand when you stop
+        setFrame(s.path.length || held.current ? walkPose(s.back, s.t) : s.back ? "stand-back" : "stand-front");
         tick((n) => (n + 1) % 1e6);
       }
     };
@@ -256,7 +250,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
         const mid = c ? walk.toScreen((c.a0 + c.a1) / 2, (c.b0 + c.b1) / 2) : { x: thing.x + thing.w / 2, y: thing.y + thing.h };
         s.back = mid.y < s.pos.y;
         s.flip = mid.x > s.pos.x ? !s.back : s.back;
-        setFrame(s.back ? 3 : 0);
+        setFrame(s.back ? "stand-back" : "stand-front");
       }
       tick((n) => n + 1);
       then();
@@ -265,25 +259,24 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   };
 
   const s = st.current;
-  const actor: Actor | null =
-    sheet && s.placed
-      ? s.seated
-        ? {
-            id: "me",
-            sheet,
-            frame: s.seated.back ? 7 : 6,
-            w: FRAME.w,
-            h: FRAME.h,
-            footX: FOOT.x,
-            footY: FOOT.y,
-            x: s.seated.x,
-            // the seat's surface is `lift` above the floor; the sitting frame's seat is SIT_SEAT up
-            y: s.seated.y - s.seated.lift + SIT_SEAT,
-            flip: s.seated.flip,
-            z: s.seated.z,
-          }
-        : { id: "me", sheet, frame, w: FRAME.w, h: FRAME.h, footX: FOOT.x, footY: FOOT.y, x: s.pos.x, y: s.pos.y, flip: s.flip, z: walk.depthAt(s.pos, { x0: s.pos.x - FOOT.x, y0: s.pos.y - FOOT.y, x1: s.pos.x + FRAME.w - FOOT.x, y1: s.pos.y }) }
-      : null;
+  // seated: keep a clock running so the sip comes round
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (!s.seated) return;
+    const t = window.setInterval(() => setNow(performance.now()), 200);
+    return () => window.clearInterval(t);
+  });
+  let actor: Actor | null = null;
+  if (people && look && s.placed) {
+    const m = people.characters[look.character];
+    const h = m ? m.frame[1] : 80;
+    const w = m ? m.frame[0] : 30;
+    actor = s.seated
+      ? // a seated frame meets the seat at its anchor: the seat's surface is `lift` above the floor
+        poseActor(people, "me", look.character, sitPose(s.seated.back, now), s.seated.x, s.seated.y - s.seated.lift, s.seated.flip, s.seated.z)
+      : poseActor(people, "me", look.character, frame, s.pos.x, s.pos.y, s.flip,
+          walk.depthAt(s.pos, { x0: s.pos.x - w / 2, y0: s.pos.y - h, x1: s.pos.x + w / 2, y1: s.pos.y }));
+  }
 
   const changeLook = (l: Look) => {
     if (barista) return; // Daniel stays Daniel
@@ -302,5 +295,5 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     };
   };
 
-  return { actor, look, setLook: changeLook, barista, walkTo, visit, standUp, net, snapshot, walk, placed: s.placed };
+  return { actor, look, setLook: changeLook, barista, walkTo, visit, standUp, net, snapshot, walk, placed: s.placed && !!look, people };
 }
