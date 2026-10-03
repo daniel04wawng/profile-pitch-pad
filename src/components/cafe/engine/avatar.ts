@@ -4,9 +4,11 @@ import { BASE } from "./types";
 // visitor's look picks a hairstyle and a palette, the layers are recoloured and outlined into
 // one sprite sheet, and the look is remembered in this browser.
 
-export const FRAME = { w: 16, h: 28 };
+export const FRAME = { w: 20, h: 32 };
 // where the avatar stands, within a frame
-export const FOOT = { x: 8, y: 27 };
+export const FOOT = { x: 10, y: 31 };
+// in the sitting frames, how far the seat of the trousers is above the foot point
+export const SIT_SEAT = 4;
 export const FRAMES = ["front", "front-a", "front-b", "back", "back-a", "back-b", "front-sit", "back-sit"] as const;
 export const STYLES = ["short", "long", "bun", "curly", "buzz"] as const;
 

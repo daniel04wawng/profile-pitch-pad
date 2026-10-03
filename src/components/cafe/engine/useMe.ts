@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FOOT, FRAME, avatarSheet, isBarista, saveLook, savedLook, type Look } from "./avatar";
+import { FOOT, FRAME, SIT_SEAT, avatarSheet, isBarista, saveLook, savedLook, type Look } from "./avatar";
 import { makeWalk, seatOf, type Cell, type Pt } from "./walk";
 import { BASE, BOOT, frontOf, type Layout, type SpriteDef } from "./types";
 import { measureSprite, type Measure } from "./measure";
@@ -259,8 +259,8 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
             footX: FOOT.x,
             footY: FOOT.y,
             x: s.seated.x,
-            // the seat's surface is `lift` above the floor; the sitting frame's seat is 6px up
-            y: s.seated.y - s.seated.lift + 6,
+            // the seat's surface is `lift` above the floor; the sitting frame's seat is SIT_SEAT up
+            y: s.seated.y - s.seated.lift + SIT_SEAT,
             flip: s.seated.flip,
             z: s.seated.z,
           }

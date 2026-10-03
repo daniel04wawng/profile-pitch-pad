@@ -25,9 +25,9 @@ from PIL import Image
 
 ART = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(ART), "public", "cafe", "avatar")
-FW, FH = 16, 28
+FW, FH = 20, 32
 FRAMES = ["front", "front-a", "front-b", "back", "back-a", "back-b", "front-sit", "back-sit"]
-FOOT = (8, 26)  # where the avatar stands on the floor, in a frame (shoes on row 25)
+FOOT = (10, 30)  # where the avatar stands on the floor, in a frame (shoes end on row 30)
 
 KEYS = {
     "skin0": (250, 0, 1), "skin1": (250, 0, 2), "skin2": (250, 0, 3),
@@ -38,7 +38,9 @@ KEYS = {
     "apron0": (250, 250, 1), "apron1": (250, 250, 2), "apron2": (250, 250, 3),
 }
 EYE = (36, 20, 13)
-BLUSH = (232, 140, 130)
+WHITE = (255, 250, 240)
+MOUTH = (120, 50, 40)
+BLUSH = (240, 150, 140)
 STYLES = ["short", "long", "bun", "curly", "buzz"]
 
 
@@ -53,144 +55,139 @@ class Frame:
             self.im.putpixel((x, y), col + (255,))
 
 
-HEAD_C = (8.0, 6.6)  # centre of the (big, chibi) head
-HEAD_R = (5.4, 5.6)
+HEAD_C = (10.0, 8.6)  # a big round head (chibi: about half the height)
+HEAD_R = (7.3, 6.9)
+SIT_DY = 4  # how far the whole figure sinks when sitting
+SIT_LIFT = 5  # px from the seat of the sitting frame to its foot point
 
 
 def head_cells(dy=0):
-    """Pixels of the head: a big soft circle, wider than the body."""
     cells = []
-    for y in range(0, 13):
-        for x in range(1, 15):
+    for y in range(0, 17):
+        for x in range(1, 19):
             if ((x + 0.5 - HEAD_C[0]) / HEAD_R[0]) ** 2 + ((y + 0.5 - HEAD_C[1]) / HEAD_R[1]) ** 2 <= 1:
                 cells.append((x, y + dy))
     return cells
 
 
 def body(f, kind, step, dy):
-    """Narrow body under a big head, turned three-quarters toward the viewer's left (front) or
-    away to the right (back). Lit from the top-left like the room."""
+    """A tiny body under a big round head, turned three-quarters toward the viewer's left
+    (front) or away to the right (back). Lit from the top-left like the room."""
     front = kind == "front"
     sit = step == "sit"
-    # ---- legs and shoes
+    # ---- legs and shoes (short and stubby)
     if sit:
-        if front:  # thighs forward (toward the viewer's left), shins hanging down
-            for x in range(4, 10):
-                f.px(x, 19 + dy, "pants1"); f.px(x, 20 + dy, "pants0")
-            for x0 in (4, 7):
-                for y in range(21, 23):
-                    f.px(x0, y + dy, "pants1"); f.px(x0 + 1, y + dy, "pants0")
-                f.px(x0 - 1, 23 + dy, "shoe"); f.px(x0, 23 + dy, "shoe"); f.px(x0 + 1, 23 + dy, "shoe")
+        if front:  # little legs stick forward off the seat
+            for x in range(6, 12):
+                f.px(x, 23 + dy, "pants1"); f.px(x, 24 + dy, "pants0")
+            for x0 in (6, 9):
+                f.px(x0, 25 + dy, "pants1"); f.px(x0 + 1, 25 + dy, "pants0")
+                for k in (-1, 0, 1):
+                    f.px(x0 + k, 26 + dy, "shoe")
         else:
-            for x in range(6, 11):
-                f.px(x, 19 + dy, "pants0")
+            for x in range(8, 13):
+                f.px(x, 23 + dy, "pants0")
     else:
-        # step "a": near leg forward, far leg lifted; "b": the other way round
         fwd = {"": (0, 0), "a": (1, 0), "b": (0, 1)}[step]
         toe = -1 if front else 1
-        for leg, x0 in enumerate((5, 9)):
-            reach = fwd[leg]
-            lift = fwd[1 - leg]
-            shift = toe * reach  # a forward leg reaches toward where you're facing
-            for y in range(19, 25 - lift):
+        for leg, x0 in enumerate((8, 11)):
+            reach, lift = fwd[leg], fwd[1 - leg]
+            shift = toe * reach
+            for y in range(23, 28 - lift):
                 f.px(x0 + shift, y + dy, "pants1" if leg == 0 else "pants0")
                 f.px(x0 + 1 + shift, y + dy, "pants0")
-            sy = 25 - lift + dy
-            for k in (0, 1):
-                f.px(x0 + k + shift, sy, "shoe")
-            f.px(x0 + shift + (2 if toe > 0 else -1), sy, "shoe")  # toe points the way you face
-    # ---- torso: narrow, a little wider at the shoulders, lit on the left
-    for y in range(13, 19):
-        x0, x1 = (5, 10) if y > 13 else (6, 9)
+            for row in (28 - lift, 29 - lift):  # round little shoes, toe the way you face
+                for k in (0, 1):
+                    f.px(x0 + k + shift, row + dy, "shoe")
+                f.px(x0 + shift + (2 if toe > 0 else -1), 29 - lift + dy, "shoe")
+    # ---- torso: small and round-bottomed
+    for y in range(16, 23):
+        x0, x1 = (7, 12) if 17 <= y <= 21 else (8, 11)
         for x in range(x0, x1 + 1):
-            key = "shirt2" if (x <= x0 + 1 and y < 16) else ("shirt0" if x == x1 else "shirt1")
+            key = "shirt2" if (x <= x0 + 1 and y < 19) else ("shirt0" if x == x1 or y == 22 else "shirt1")
             f.px(x, y + dy, key)
-    # ---- arms: thin, separate from the body, swinging when walking
+    # ---- arms: little nubs with round hands, swinging when walking
     swing = {"": 0, "a": 1, "b": -1, "sit": 0}[step]
-    for side, x in ((-1, 4), (1, 11)):
+    for side, x in ((-1, 6), (1, 13)):
         off = swing * side
-        for y in range(14, 17):
-            f.px(x, y + dy + (off if y > 14 else 0), "shirt1" if side < 0 else "shirt0")
-        f.px(x, 17 + dy + off, "skin1" if side < 0 else "skin0")  # hand
-    # ---- neck and head
-    f.px(7, 12 + dy, "skin0"); f.px(8, 12 + dy, "skin0")
+        for y in (17, 18, 19):
+            f.px(x, y + dy + (off if y > 17 else 0), "shirt1" if side < 0 else "shirt0")
+        f.px(x, 20 + dy + off, "skin1" if side < 0 else "skin0")
+    # ---- head
     for (x, y) in head_cells(dy):
         u = (x + 0.5 - HEAD_C[0]) / HEAD_R[0]
         v = (y - dy + 0.5 - HEAD_C[1]) / HEAD_R[1]
         light = -u * 0.8 - v * 0.6
-        f.px(x, y, "skin2" if light > 0.55 else ("skin0" if (u > 0.72 or v > 0.82) else "skin1"))
+        f.px(x, y, "skin2" if light > 0.5 else ("skin0" if (u > 0.78 or v > 0.86) else "skin1"))
     if front:
-        # three-quarter face, looking to the viewer's left: features shifted left, an ear right
-        for ex in (5, 8):
-            f.px(ex, 7 + dy, EYE); f.px(ex, 8 + dy, EYE)
-        f.px(4, 9 + dy, BLUSH); f.px(9, 9 + dy, BLUSH)
-        f.px(6, 10 + dy, "skin0")  # mouth
-        f.px(12, 8 + dy, "skin0"); f.px(12, 7 + dy, "skin1")  # ear
-    else:
-        f.px(3, 8 + dy, "skin0")  # ear on the other side, seen from behind
+        # big eyes with a highlight, looking a little to the viewer's left
+        for ex in (6, 11):
+            for yy in (9, 10, 11):
+                f.px(ex, yy + dy, EYE); f.px(ex + 1, yy + dy, EYE)
+            f.px(ex, 9 + dy, WHITE)  # sparkle
+        for bx in (4, 5, 13, 14):
+            f.px(bx, 12 + dy, BLUSH)
+        f.px(9, 13 + dy, MOUTH); f.px(10, 13 + dy, MOUTH)
 
 
 def hair(f, style, kind, dy):
-    """Hairstyles drawn over the head. Front: a fringe with a ragged edge, the back and the far
-    side of the head covered. Back: the whole head."""
+    """Hair with volume: it puffs a pixel out past the head. Front: a soft fringe with a
+    ragged edge and the far side covered; back: the whole head."""
     front = kind == "front"
     cx, cy = HEAD_C
-    lit = lambda x, y: (x + 0.5 - cx) * 0.8 + (y + 0.5 - cy) * 0.6  # lower = more lit
-    tone = lambda x, y: "hair2" if lit(x, y) < -2.6 else ("hair0" if lit(x, y) > 2.4 else "hair1")
-    head = set(head_cells(dy))
-    for (x, y) in head:
-        yy = y - dy
-        if front:
-            fringe = 4 + ((x * 7) % 3 == 0)  # ragged lower edge of the fringe
-            cover = yy <= fringe or x >= 12 or (x <= 3 and yy <= 8) or (x >= 11 and yy <= 9)
-            if style == "buzz":
-                cover = yy <= 3 or (x >= 12 and yy <= 6)
-            if style == "long":
-                cover = cover or x <= 3
-        else:
-            cover = yy <= (10 if style != "buzz" else 8) or (style == "long")
-        if cover:
-            f.px(x, y, tone(x, yy))
-    if style == "short" and front:  # a couple of loose strands over the forehead
-        f.px(6, 6 + dy, "hair1"); f.px(9, 5 + dy, "hair0")
-    if style == "long":  # falls past the shoulders, behind the arms
-        cols = (2, 3, 12, 13) if front else range(4, 13)
-        for x in cols:
-            for y in range(9, 16 if front else 13):
-                f.px(x, y + dy, "hair0" if x in (2, 13) or y > 14 else "hair1")
+    rx, ry = HEAD_R[0] + 1.0, HEAD_R[1] + 0.8  # a little bigger than the head
+    tone = lambda x, y: ("hair2" if (x + 0.5 - cx) * 0.8 + (y + 0.5 - cy) * 0.6 < -3.2 else
+                         ("hair0" if (x + 0.5 - cx) * 0.8 + (y + 0.5 - cy) * 0.6 > 3.0 else "hair1"))
+    for y in range(-1, 17):
+        for x in range(0, 20):
+            u = (x + 0.5 - cx) / rx
+            v = (y + 0.5 - cy) / ry
+            if u * u + v * v > 1:
+                continue
+            if front:
+                fringe = 6 + (1 if x % 3 == 1 else 0) - (1 if x in (9, 10) else 0)  # soft, a little parted
+                cover = y <= fringe or (x >= 15 and y <= 11) or (x <= 3 and y <= 9)
+                if style == "buzz":
+                    cover = y <= 4 or (x >= 16 and y <= 9)
+                if style == "long":
+                    cover = cover or x <= 3 or x >= 16
+            else:
+                cover = y <= (14 if style != "buzz" else 11)
+            if cover:
+                f.px(x, y + dy, tone(x, y))
+    if style == "long":  # falls to the shoulders, behind the arms
+        for x in ((2, 3, 16, 17) if front else range(4, 16)):
+            for y in range(12, 21 if front else 18):
+                f.px(x, y + dy, "hair0" if x in (2, 17) or y > 19 else "hair1")
     if style == "bun":
-        bx, by = (11, 0) if front else (8, 0)
-        for y in range(-2, 3):
-            for x in range(-2, 3):
-                if x * x + y * y <= 5:
-                    f.px(bx + x, by + y + dy, "hair2" if x + y < -1 else ("hair0" if x + y > 1 else "hair1"))
-    if style == "curly":  # a full mop: round bumps all over the top and sides
+        bx, by = (14, 0) if front else (10, -1)
+        for y in range(-3, 3):
+            for x in range(-3, 3):
+                if x * x + y * y <= 7:
+                    f.px(bx + x, by + y + dy, "hair2" if x + y < -2 else ("hair0" if x + y > 1 else "hair1"))
+    if style == "curly":  # a halo of round curls
         import math
-        for a in range(0, 360, 30):
+        for a in range(0, 360, 24):
             ang = math.radians(a)
-            bx = cx + math.cos(ang) * HEAD_R[0] * 0.95 - 0.5
-            by = cy + math.sin(ang) * HEAD_R[1] * 0.95 - 0.5
-            if front and not (by < cy - 1 or bx > cx + 2.5):
-                continue  # keep the face clear
-            if not front and by > cy + 4:
+            px_, py_ = cx + math.cos(ang) * rx - 0.5, cy + math.sin(ang) * ry - 0.5
+            if front and not (py_ < cy - 1.5 or px_ > cx + 3):
+                continue
+            if not front and py_ > cy + 5:
                 continue
             for ox, oy in ((0, 0), (1, 0), (0, 1), (-1, 0), (0, -1)):
-                x, y = round(bx) + ox, round(by) + oy
-                f.px(x, y + dy, "hair2" if (ox, oy) == (-1, 0) or (ox, oy) == (0, -1) else ("hair0" if oy > 0 else "hair1"))
+                f.px(round(px_) + ox, round(py_) + oy + dy, "hair2" if (ox, oy) in ((-1, 0), (0, -1)) else ("hair0" if oy > 0 else "hair1"))
 
 
 def apron(f, kind, step, dy):
     if kind == "front":
-        for y in range(14, 22 if step != "sit" else 19):
-            for x in range(5, 11):
-                f.px(x, y + dy, "apron2" if x == 5 else ("apron0" if x == 10 else "apron1"))
-        for x in (6, 9):
-            f.px(x, 13 + dy, "apron1")  # straps
-        f.px(7, 17 + dy, "apron0"); f.px(8, 17 + dy, "apron0")  # pocket
-    else:  # ties at the back of the waist
-        for x in range(5, 11):
-            f.px(x, 18 + dy, "apron1")
-        f.px(7, 19 + dy, "apron0"); f.px(8, 19 + dy, "apron0"); f.px(6, 20 + dy, "apron1"); f.px(9, 20 + dy, "apron1")
+        for y in range(17, 25 if step != "sit" else 23):
+            for x in range(8, 12):
+                f.px(x, y + dy, "apron2" if x == 8 else ("apron0" if x == 11 else "apron1"))
+        for x in (8, 11):
+            f.px(x, 16 + dy, "apron1")
+    else:
+        for x in range(7, 13):
+            f.px(x, 22 + dy, "apron1")
 
 
 def sheet(draw):
@@ -198,10 +195,10 @@ def sheet(draw):
     for i, name in enumerate(FRAMES):
         kind = "front" if name.startswith("front") else "back"
         step = "sit" if name.endswith("sit") else (name[-1] if name[-2:] in ("-a", "-b") else "")
-        dy = 3 if step == "sit" else (-1 if step in ("a", "b") else 0)  # bob up mid-stride, sink when seated
+        dy = SIT_DY if step == "sit" else (-1 if step in ("a", "b") else 0)  # bob up mid-stride, sink when seated
         f = Frame()
         draw(f, kind, step, dy)
-        out.alpha_composite(f.im, (i * FW, 1))
+        out.alpha_composite(f.im, (i * FW, 1))  # one row of headroom for hair
     return out
 
 
@@ -211,7 +208,7 @@ def main():
     for st in STYLES:
         sheet(lambda f, k, s, dy, st=st: hair(f, st, k, dy)).save(os.path.join(OUT, f"hair-{st}.png"))
     sheet(apron).save(os.path.join(OUT, "apron.png"))
-    json.dump({"frame": [FW, FH], "frames": FRAMES, "foot": [FOOT[0], FOOT[1] + 1], "styles": STYLES,
+    json.dump({"frame": [FW, FH], "frames": FRAMES, "foot": [FOOT[0], FOOT[1] + 1], "styles": STYLES, "sitLift": SIT_LIFT,
                "keys": {k: "#%02x%02x%02x" % v for k, v in KEYS.items()}},
               open(os.path.join(OUT, "meta.json"), "w"), indent=1)
     print("avatar sheets ->", OUT)
