@@ -103,41 +103,18 @@ export function saveLook(l: Look) {
   }
 }
 
-// The café recognises its barista (Daniel) on a device once he's opened his private link,
-// /cafe?barista=<code>. The code is checked by the database (only its hash is stored there),
-// then kept on this device: it's what lets him take notes off the board. In the dev server
-// he's always the barista (for looks; taking notes down still needs the code).
+// The café recognises its barista (Daniel) on this browser once he's opened the private link
+// (/cafe?barista=<code>); in the dev server it's always him. It only changes how his avatar
+// looks and where his outfits come from, so a client-side flag is enough.
 const BARISTA_KEY = "cafe-barista";
-const CODE_KEY = "cafe-barista-code";
 export function isBarista(): boolean {
   if (import.meta.env.DEV) return true;
   try {
+    const code = new URLSearchParams(location.search).get("barista");
+    const want = import.meta.env.VITE_BARISTA_CODE as string | undefined;
+    if (code && want && code === want) localStorage.setItem(BARISTA_KEY, "1");
     return localStorage.getItem(BARISTA_KEY) === "1";
   } catch {
     return false;
   }
-}
-export function baristaCode(): string | null {
-  try {
-    return localStorage.getItem(CODE_KEY);
-  } catch {
-    return null;
-  }
-}
-// Called once on load: a ?barista=<code> in the address is checked, remembered if right, and
-// removed from the address bar either way.
-export async function claimBarista(check: (code: string) => Promise<boolean>) {
-  const url = new URL(location.href);
-  const code = url.searchParams.get("barista");
-  if (!code) return;
-  url.searchParams.delete("barista");
-  history.replaceState(null, "", url.pathname + url.search + url.hash);
-  if (!(await check(code))) return;
-  try {
-    localStorage.setItem(BARISTA_KEY, "1");
-    localStorage.setItem(CODE_KEY, code);
-  } catch {
-    return;
-  }
-  location.reload(); // come back in as the barista
 }

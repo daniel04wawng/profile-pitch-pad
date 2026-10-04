@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Frame, PixelButton } from "./Screens";
 import type { ScreenDef } from "./screenData";
-import { DOODLE, MAX_BODY, MAX_NAME, NOTE_COLOURS, PEN, pinNote, problem, takeDown, useNotes, type Note } from "./notes";
+import { DOODLE, MAX_BODY, MAX_NAME, NOTE_COLOURS, PEN, pinNote, problem, useNotes, type Note } from "./notes";
 
 // The community board: everyone's sticky notes on cork, and a little composer to pin your
 // own: a colour, a line of text, a doodle, a name if you like.
@@ -33,29 +33,30 @@ const ago = (iso: string) => {
   return `${Math.round(m / 1440)}d ago`;
 };
 
-function Sticky({ note, barista, onRemoved }: { note: Note; barista: boolean; onRemoved: () => void }) {
-  const tilt = ((note.id.charCodeAt(0) + note.id.charCodeAt(5)) % 7) - 3; // a slightly crooked pin
+const NOTE_W = 150; // px, a sticky note on the board
+
+// A sticky note, pinned (centred) at its spot on the board, a little crooked.
+function Sticky({ note, ghost }: { note: Pick<Note, "id" | "body" | "name" | "color" | "doodle" | "x" | "y"> & { created_at?: string }; ghost?: boolean }) {
+  const tilt = ((note.id.charCodeAt(0) + note.id.charCodeAt(note.id.length - 1)) % 7) - 3;
   const img = useMemo(() => doodleUrl(note.doodle), [note.doodle]);
   return (
     <div
-      className="relative flex min-h-[120px] flex-col p-3 text-[#2b1d1a] shadow-[3px_4px_0_rgba(0,0,0,0.35)]"
-      style={{ background: NOTE_COLOURS[note.color] ?? NOTE_COLOURS[0], transform: `rotate(${tilt * 0.8}deg)` }}
+      className={`absolute flex min-h-[110px] flex-col p-2.5 text-[#2b1d1a] shadow-[3px_4px_0_rgba(0,0,0,0.35)] ${ghost ? "pointer-events-none opacity-80" : ""}`}
+      style={{
+        width: NOTE_W,
+        left: `${note.x / 10}%`,
+        top: `${note.y / 10}%`,
+        transform: `translate(-50%, -50%) rotate(${tilt * 0.9}deg)`,
+        background: NOTE_COLOURS[note.color] ?? NOTE_COLOURS[0],
+      }}
     >
       <span className="absolute left-1/2 top-[-5px] h-3 w-3 -translate-x-1/2 rounded-full bg-[#c83c32] shadow-[inset_-2px_-2px_0_rgba(0,0,0,0.25)]" />
-      {img && <img src={img} alt="a doodle" className="mx-auto mb-1 h-24 w-24 [image-rendering:pixelated]" />}
-      {note.body && <p className="whitespace-pre-wrap break-words text-[19px] leading-tight">{note.body}</p>}
-      <p className="mt-auto pt-2 text-[15px] opacity-60">
-        {note.name ? `— ${note.name}` : "— someone"} · {ago(note.created_at)}
+      {img && <img src={img} alt="a doodle" className="mx-auto mb-1 h-20 w-20 [image-rendering:pixelated]" />}
+      {note.body && <p className="whitespace-pre-wrap break-words text-[17px] leading-tight">{note.body}</p>}
+      <p className="mt-auto pt-1.5 text-[14px] opacity-60">
+        {note.name ? `— ${note.name}` : "— someone"}
+        {note.created_at ? ` · ${ago(note.created_at)}` : ""}
       </p>
-      {barista && (
-        <button
-          onClick={async () => (await takeDown(note.id)) && onRemoved()}
-          title="Take this note down"
-          className="absolute right-1 top-1 px-1 font-['Silkscreen'] text-[10px] opacity-50 hover:opacity-100"
-        >
-          take down
-        </button>
-      )}
     </div>
   );
 }
@@ -105,8 +106,8 @@ function DoodlePad({ value, onChange, pen }: { value: string; onChange: (v: stri
   );
 }
 
-export function NotesBoard({ barista, onClose }: { barista: boolean; onClose: () => void }) {
-  const { notes, error, remove } = useNotes(true);
+export function NotesBoard({ onClose }: { onClose: () => void }) {
+  const { notes, error } = useNotes(true);
   const [writing, setWriting] = useState(false);
   const [body, setBody] = useState("");
   const [name, setName] = useState("");
@@ -115,15 +116,33 @@ export function NotesBoard({ barista, onClose }: { barista: boolean; onClose: ()
   const [pen, setPen] = useState(1);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // after writing: choosing where on the board to pin it (the note follows the pointer)
+  const [placing, setPlacing] = useState(false);
+  const [spot, setSpot] = useState({ x: 500, y: 500 });
+  const boardRef = useRef<HTMLDivElement>(null);
+  const spotAt = (e: React.PointerEvent) => {
+    const r = boardRef.current!.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * 1000, y: ((e.clientY - r.top) / r.height) * 1000 };
+  };
 
-  const pin = async () => {
+  const choose = () => {
+    const why = problem(body, name, doodle);
+    if (why) return setStatus(why);
+    setStatus(null);
+    setWriting(false);
+    setPlacing(true);
+  };
+  const pin = async (at: { x: number; y: number }) => {
     setBusy(true);
-    const err = await pinNote({ body, name, color, doodle });
+    const err = await pinNote({ body, name, color, doodle, ...at });
     setBusy(false);
-    if (err) return setStatus(err);
+    setPlacing(false);
+    if (err) {
+      setWriting(true);
+      return setStatus(err);
+    }
     setBody("");
     setDoodle(blank());
-    setWriting(false);
     setStatus("Pinned! Thanks for leaving a note.");
   };
 
@@ -170,8 +189,8 @@ export function NotesBoard({ barista, onClose }: { barista: boolean; onClose: ()
             />
             {status && <p className="mt-2 text-[18px] text-[#f6d58a]">{status}</p>}
             <div className="mt-3 flex gap-3">
-              <PixelButton onClick={() => !busy && pin()} fill="#e8b45c">
-                {busy ? "pinning…" : "pin it"}
+              <PixelButton onClick={choose} fill="#e8b45c">
+                choose a spot →
               </PixelButton>
               <PixelButton onClick={() => (setWriting(false), setStatus(null))} fill="#3a2219" ink="#f3e6c9">
                 back
@@ -182,19 +201,39 @@ export function NotesBoard({ barista, onClose }: { barista: boolean; onClose: ()
         </div>
       ) : (
         <>
-          <div className="mb-4 flex items-center gap-3">
-            <PixelButton onClick={() => (setWriting(true), setStatus(null))} fill="#e8b45c">
-              + pin a note
-            </PixelButton>
-            {status && <p className="text-[18px] text-[#f6d58a]">{status}</p>}
+          <div className="mb-3 flex items-center gap-3">
+            {placing ? (
+              <>
+                <p className="text-[19px]">{busy ? "Pinning…" : "Click anywhere on the board to pin your note."}</p>
+                <PixelButton onClick={() => (setPlacing(false), setWriting(true))} fill="#3a2219" ink="#f3e6c9">
+                  back
+                </PixelButton>
+              </>
+            ) : (
+              <>
+                <PixelButton onClick={() => (setWriting(true), setStatus(null))} fill="#e8b45c">
+                  + pin a note
+                </PixelButton>
+                {status && <p className="text-[18px] text-[#f6d58a]">{status}</p>}
+              </>
+            )}
           </div>
-          <div className="p-3" style={{ background: "#c49460", boxShadow: "inset 0 0 0 4px #6e4024" }}>
-            {error && <p className="text-[19px] text-[#2b1d1a]">{error}</p>}
-            {!notes && !error && <p className="text-[19px] text-[#2b1d1a]">Loading the board…</p>}
-            {notes && !notes.length && <p className="text-[19px] text-[#2b1d1a]">No notes yet. Be the first!</p>}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {notes?.map((n) => <Sticky key={n.id} note={n} barista={barista} onRemoved={() => remove(n.id)} />)}
-            </div>
+          {/* the cork: notes sit where people pinned them; newer ones on top */}
+          <div
+            ref={boardRef}
+            className={`relative aspect-[16/10] w-full overflow-hidden ${placing ? "cursor-crosshair" : ""}`}
+            style={{
+              background: "#c49460 radial-gradient(rgba(110,64,36,0.35) 1px, transparent 1.4px) 0 0 / 7px 7px",
+              boxShadow: "inset 0 0 0 5px #6e4024, inset 0 0 0 7px #8f5b3e",
+            }}
+            onPointerMove={(e) => placing && setSpot(spotAt(e))}
+            onPointerDown={(e) => placing && !busy && pin(spotAt(e))}
+          >
+            {error && <p className="p-4 text-[19px] text-[#2b1d1a]">{error}</p>}
+            {!notes && !error && <p className="p-4 text-[19px] text-[#2b1d1a]">Loading the board…</p>}
+            {notes && !notes.length && !placing && <p className="p-4 text-[19px] text-[#2b1d1a]">No notes yet. Be the first!</p>}
+            {notes?.map((n) => <Sticky key={n.id} note={n} />)}
+            {placing && <Sticky ghost note={{ id: "you", body, name, color, doodle, ...spot }} />}
           </div>
         </>
       )}

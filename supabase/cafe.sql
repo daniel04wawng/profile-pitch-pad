@@ -1,6 +1,6 @@
 -- Daniel's café: everything the site needs in its Supabase project. Run once in the SQL
--- Editor (it's safe to run again). Nothing secret is in here: the barista's code is only
--- stored as a SHA-256 hash.
+-- Editor (it's safe to run again). Nothing secret is in here. To take a note down, delete
+-- its row (or tick `hidden`) in the Table Editor.
 
 -- ---------------------------------------------------------------- keep the project awake
 -- The GitHub Actions job reads this row twice a week (free projects pause after a week idle).
@@ -11,20 +11,8 @@ drop policy if exists "anyone can read keepalive" on public.keepalive;
 create policy "anyone can read keepalive" on public.keepalive for select using (true);
 grant select on public.keepalive to anon;
 
--- ---------------------------------------------------------------- the barista
-create extension if not exists pgcrypto with schema extensions;
-create table if not exists public.barista (code_hash text primary key);
-alter table public.barista enable row level security; -- no policies: visitors can't see it
-insert into public.barista values ('a589e7c37adfcdfae68555c73a6d851559480d1ebc041524f67f1ead4b464548') on conflict do nothing;
-
-create or replace function public.is_barista(code text) returns boolean
-language sql security definer set search_path = public, extensions as $$
-  select exists (select 1 from public.barista where code_hash = encode(extensions.digest(code, 'sha256'), 'hex'));
-$$;
-revoke all on function public.is_barista(text) from public;
-grant execute on function public.is_barista(text) to anon;
-
 -- ---------------------------------------------------------------- the community board
+create extension if not exists pgcrypto with schema extensions;
 create table if not exists public.notes (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -33,11 +21,16 @@ create table if not exists public.notes (
   color smallint not null default 0 check (color between 0 and 5),
   -- a 32x32 doodle, one character per pixel: 0 = paper, 1-7 = pen colours
   doodle text not null default '' check (char_length(doodle) in (0, 1024) and doodle ~ '^[0-7]*$'),
+  -- where it's pinned on the board, 0-1000 across and down
+  x smallint not null default 500 check (x between 0 and 1000),
+  y smallint not null default 500 check (y between 0 and 1000),
   hidden boolean not null default false,
   check (char_length(trim(body)) > 0 or doodle ~ '[1-7]'), -- something on it
   check (body !~* '(https?://|www\.|[a-z0-9-]+\.(com|net|org|io|xyz|ru|gg|ly|co)\b)'), -- no links
   check (name !~* '(https?://|www\.)')
 );
+alter table public.notes add column if not exists x smallint not null default 500 check (x between 0 and 1000);
+alter table public.notes add column if not exists y smallint not null default 500 check (y between 0 and 1000);
 alter table public.notes enable row level security;
 drop policy if exists "read the board" on public.notes;
 create policy "read the board" on public.notes for select to anon using (not hidden);
@@ -56,18 +49,6 @@ begin
 end $$;
 drop trigger if exists notes_flood_guard on public.notes;
 create trigger notes_flood_guard before insert on public.notes for each row execute function public.notes_flood_guard();
-
--- the barista takes a note down
-create or replace function public.hide_note(note uuid, code text) returns void
-language plpgsql security definer set search_path = public, extensions as $$
-begin
-  if not public.is_barista(code) then
-    raise exception 'only the barista can take notes down';
-  end if;
-  update public.notes set hidden = true where id = note;
-end $$;
-revoke all on function public.hide_note(uuid, text) from public;
-grant execute on function public.hide_note(uuid, text) to anon;
 
 -- new notes appear live on the board
 do $$ begin

@@ -6,8 +6,6 @@ import { usePresence } from "./usePresence";
 import { CafeScreen } from "./Screens";
 import { NOTES, WARDROBE, type Layout, type SpriteDef } from "./types";
 import { NotesBoard } from "./NotesBoard";
-import { checkBarista } from "./notes";
-import { claimBarista } from "./avatar";
 import { Wardrobe } from "./Wardrobe";
 import type { Screens } from "./screenData";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
@@ -45,10 +43,6 @@ export function Play({
   const [playing, setPlaying] = useState(false);
   const player = useRef<LofiPlayer | null>(null);
   const companions = useCompanions();
-  // the barista's private link (?barista=<code>) is checked by the database, once
-  useEffect(() => {
-    claimBarista(checkBarista);
-  }, []);
   const me = useMe(layout, companions, !focus);
   const room = usePresence(me, { w: layout.width, h: layout.height });
   const timer = useRef<number>();
@@ -138,7 +132,7 @@ export function Play({
       >
         <div className={`transition-all duration-500 ${screenOpen ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0"}`}>
           {focus?.hotspot === NOTES ? (
-            <NotesBoard barista={me.barista} onClose={close} />
+            <NotesBoard onClose={close} />
           ) : focus?.hotspot === WARDROBE ? (
             <Wardrobe people={me.people} look={me.look} barista={me.barista} onChange={me.setLook} onClose={close} />
           ) : (
