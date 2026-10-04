@@ -52,7 +52,8 @@ function cleanWire(v: unknown, w: number, h: number, people: People | null): Wir
   return { at, seat, look: { person: l.person, outfit: l.outfit }, barista: !!o.barista, back: !!o.back, flip: !!o.flip };
 }
 
-export function usePresence(me: Me, size: { w: number; h: number }) {
+// off (solo) in your own café and in the editor: nobody else is there
+export function usePresence(me: Me, size: { w: number; h: number }, on = true) {
   const [others, setOthers] = useState<Record<string, Other>>({});
   const [full, setFull] = useState(false);
   const [, tick] = useState(0);
@@ -64,7 +65,7 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
 
   // join the room once your avatar has arrived
   useEffect(() => {
-    if (!client || !me.placed || chan.current) return;
+    if (!client || !on || !me.placed || chan.current) return;
     const ch = client.channel(ROOM, { config: { presence: { key: id.current }, broadcast: { self: false } } });
     chan.current = ch;
     const sync = () => {
@@ -118,7 +119,7 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
       joined.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me.placed]);
+  }, [me.placed, on]);
 
   const track = async () => {
     const ch = chan.current;
@@ -207,5 +208,5 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
     }
   }
 
-  return { actors, count: Object.keys(others).length, full, online: !!client };
+  return { actors, count: Object.keys(others).length, full, online: !!client && on };
 }

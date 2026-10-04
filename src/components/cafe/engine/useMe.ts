@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fileUrl } from "./store";
 import { BARISTA_PERSON, isBarista, keyOf, poseActor, roomSize, saveLook, savedLook, sitPose, usePeople, walkPose, type Look, type Pose } from "./avatar";
 import { makeWalk, seatOf, type Cell, type Pt } from "./walk";
 import { BASE, BOOT, frontOf, type Layout, type SpriteDef } from "./types";
@@ -32,7 +33,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   useEffect(() => {
     let alive = true;
     const files = [...new Set(layout.assets.map((a) => a.file))];
-    Promise.all(files.map((f) => measureSprite(`${BASE}${f}?v=${BOOT}`).then((m) => [f, m] as const))).then(
+    Promise.all(files.map((f) => measureSprite(fileUrl(f)).then((m) => [f, m] as const))).then(
       (all) => alive && setMeasures(Object.fromEntries(all)),
     );
     return () => {

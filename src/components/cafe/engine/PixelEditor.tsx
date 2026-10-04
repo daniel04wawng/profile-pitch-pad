@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { fileUrl, writePng } from "./store";
 import { Eraser, Hand, PaintBucket, Pencil, Pipette, SquareDashed, WandSparkles, type LucideIcon } from "lucide-react";
 import { BASE } from "./types";
 
@@ -184,7 +185,7 @@ export function PixelEditor({
 
   useEffect(() => {
     let alive = true;
-    Promise.all([loadPixels(`${BASE}${file}?t=${Date.now()}`), loadPixels(`${BASE}${paletteFrom}?t=${Date.now()}`)]).then(([im, pal]) => {
+    Promise.all([loadPixels(fileUrl(file, Date.now())), loadPixels(fileUrl(paletteFrom, Date.now()))]).then(([im, pal]) => {
       if (!alive) return;
       img.current = im;
       off.current.width = im.w;
@@ -415,8 +416,7 @@ export function PixelEditor({
     c.getContext("2d")!.putImageData(new ImageData(im.data, im.w, im.h), 0, 0);
     setStatus("saving…");
     try {
-      const r = await fetch("/__cafe/image", { method: "POST", body: JSON.stringify({ file, data: c.toDataURL("image/png") }) });
-      if (!r.ok) throw new Error(await r.text());
+      await writePng(file, c.toDataURL("image/png"));
       setDirty(false);
       setStatus("saved");
       savedShift.current = { ...shift.current };

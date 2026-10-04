@@ -21,6 +21,8 @@ export function Play({
   versions,
   onExit,
   hour: forcedHour,
+  solo = false,
+  title = "Daniel's café",
 }: {
   layout: Layout;
   screens: Screens;
@@ -28,6 +30,9 @@ export function Play({
   onExit?: () => void;
   // the editor passes its preview time; visitors get the live time in San Francisco
   hour?: number | null;
+  // a café of your own (or the editor's preview): no one else, no shared board
+  solo?: boolean;
+  title?: string;
 }) {
   const [liveHour, setLiveHour] = useState(pacificHour);
   useEffect(() => {
@@ -44,7 +49,7 @@ export function Play({
   const player = useRef<LofiPlayer | null>(null);
   const companions = useCompanions();
   const me = useMe(layout, companions, !focus);
-  const room = usePresence(me, { w: layout.width, h: layout.height });
+  const room = usePresence(me, { w: layout.width, h: layout.height }, !solo);
   const timer = useRef<number>();
 
   const close = () => {
@@ -113,7 +118,7 @@ export function Play({
       )}
 
       <div className={`pointer-events-none absolute left-0 top-0 p-4 text-[#f7efe1] transition-opacity duration-500 sm:p-6 ${focus ? "opacity-0" : ""}`}>
-        <h1 className="font-['Instrument_Serif'] text-3xl italic leading-none sm:text-4xl">Daniel's café</h1>
+        <h1 className="font-['Instrument_Serif'] text-3xl italic leading-none sm:text-4xl">{title}</h1>
         <p className="mt-1 font-['Silkscreen'] text-[10px] uppercase tracking-wider opacity-70">coffee · pastries · records</p>
       </div>
       <div
@@ -153,11 +158,29 @@ export function Play({
           ◼ back to editor (P)
         </button>
       ) : (
-        import.meta.env.DEV && (
-          <a href="/cafe?edit" className="absolute bottom-4 right-4 z-30 rounded bg-[#9bbf7a] px-3 py-2 font-['Silkscreen'] text-[11px] text-[#1a1512]">
-            edit café
-          </a>
-        )
+        <div className="absolute bottom-4 right-4 z-30 flex gap-2 font-['Silkscreen'] text-[11px]">
+          {solo ? (
+            <>
+              <a href="/cafe" className="rounded bg-[#f7efe1]/15 px-3 py-2 text-[#f7efe1] backdrop-blur">
+                Daniel's café
+              </a>
+              <a href="/cafe?build" className="rounded bg-[#9bbf7a] px-3 py-2 text-[#1a1512]">
+                edit your café
+              </a>
+            </>
+          ) : (
+            <>
+              {import.meta.env.DEV && (
+                <a href="/cafe?edit" className="rounded bg-[#e8b45c] px-3 py-2 text-[#1a1512]">
+                  edit café
+                </a>
+              )}
+              <a href="/cafe?build" className="rounded bg-[#9bbf7a] px-3 py-2 text-[#1a1512]">
+                build your own café
+              </a>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { exportCafe, fileUrl, importCafe, listAssets, resetCafe, saveCafe, storage, writePng } from "./store";
 import { Stage, assetName, opaqueAt, useCompanions } from "./Stage";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
@@ -45,10 +46,6 @@ async function toPngDataUrl(file: File) {
   return c.toDataURL("image/png");
 }
 
-async function writePng(file: string, data: string) {
-  const r = await fetch("/__cafe/image", { method: "POST", body: JSON.stringify({ file, data }) });
-  if (!r.ok) throw new Error(await r.text());
-}
 
 export function Editor({ initial, initialScreens }: { initial: Layout; initialScreens: Screens }) {
   const [screens, setScreens] = useState(initialScreens);
@@ -134,7 +131,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
 
   const refreshAssets = useCallback(async () => {
     try {
-      const files: string[] = await (await fetch("/__cafe/assets")).json();
+      const files = await listAssets();
       setAllFiles(files);
       // back drawings belong to their asset (Rotate shows them), so the library hides them
       setAssets(files.filter((f) => !(nameOf(f).endsWith(BACK) && files.includes(`sprites/${frontOf(nameOf(f))}.png`))));
@@ -148,7 +145,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   // placed copy to match while keeping its base on the same floor spot.
   useEffect(() => {
     const files = [...new Set(layout.assets.map((a) => a.file))];
-    Promise.all(files.map((f) => sizeOf(`${BASE}${f}?t=${Date.now()}`).then((sz) => [f, sz] as const).catch(() => null))).then((res) => {
+    Promise.all(files.map((f) => sizeOf(fileUrl(f, Date.now())).then((sz) => [f, sz] as const).catch(() => null))).then((res) => {
       const real = new Map(res.filter(Boolean) as [string, Size][]);
       const stale = layout.assets.some((a) => {
         const r = real.get(a.file);
@@ -185,7 +182,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
 
   // Place an asset with its feet at `at` (scene pixels); defaults to the middle of the scene.
   const place = async (file: string, at?: { x: number; y: number }) => {
-    const { w, h } = sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? BOOT}`));
+    const { w, h } = sizes[file] ?? (await sizeOf(fileUrl(file, versions[file] ?? BOOT)));
     let fx = at ? Math.round(at.x) : Math.round(layout.width / 2);
     let fy = at ? Math.round(at.y) : Math.round(layout.height / 2 + h / 2);
     const wall = WALL_ITEMS[nameOf(file)];
@@ -246,7 +243,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const turnPatch = async (s: SpriteDef, rot: number, back = hasBack(nameOf(s.file))) => {
     const art = turnArt(nameOf(s.file), rot, back);
     const file = `sprites/${art.name}.png`;
-    const nat = file === s.file ? { w: s.w, h: s.h } : sizes[file] ?? (await sizeOf(`${BASE}${file}?v=${versions[file] ?? BOOT}`));
+    const nat = file === s.file ? { w: s.w, h: s.h } : sizes[file] ?? (await sizeOf(fileUrl(file, versions[file] ?? BOOT)));
     const here = footOf(s);
     const there = footOf({ file, w: nat.w, h: nat.h, flipX: art.flipX });
     const x = Math.round(s.x + here.x - there.x);
@@ -267,7 +264,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     if ((r === 1 || r === 2) && !hasBack(name)) {
       const back = `sprites/${frontOf(name)}${BACK}.png`;
       try {
-        const blob = await (await fetch(`${BASE}${s.file}?v=${versions[s.file] ?? BOOT}`)).blob();
+        const blob = await (await fetch(fileUrl(s.file, versions[s.file] ?? BOOT))).blob();
         await writePng(back, await toPngDataUrl(new File([blob], "back.png", { type: "image/png" })));
       } catch (e) {
         return window.alert(`Couldn't make a back drawing: ${e}`);
@@ -363,14 +360,42 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const save = async () => {
     setStatus("saving");
     try {
-      const [r1, r2] = await Promise.all([
-        fetch("/__cafe/layout", { method: "POST", body: JSON.stringify(layout) }),
-        fetch("/__cafe/screens", { method: "POST", body: JSON.stringify({ screens }) }),
-      ]);
-      setStatus(r1.ok && r2.ok ? "saved" : "error");
+      setStatus((await saveCafe(layout, screens)) ? "saved" : "error");
     } catch {
       setStatus("error");
     }
+  };
+
+  // your own café (kept in this browser) saves itself
+  const mine = storage() === "browser";
+  useEffect(() => {
+    if (!mine || status !== "unsaved") return;
+    const t = window.setTimeout(save, 600);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mine, status, layout, screens]);
+  const exportMine = async () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(await exportCafe(layout, screens));
+    a.download = "my-cafe.json";
+    a.click();
+  };
+  const importMine = async (f: File) => {
+    try {
+      const c = await importCafe(f);
+      setLayoutRaw(c.layout);
+      setScreens(c.screens);
+      past.current = [];
+      future.current = [];
+      await refreshAssets();
+    } catch (e) {
+      window.alert(String(e instanceof Error ? e.message : e));
+    }
+  };
+  const startOver = async () => {
+    if (!window.confirm("Start over from Daniel's café? Your layout and screens go (your drawings stay in the library).")) return;
+    await resetCafe();
+    window.location.reload();
   };
 
   const download = () => {
@@ -441,17 +466,19 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
 
   // ---------- render ----------
 
-  if (playing) return <Play layout={layout} screens={screens} versions={versions} hour={previewHour} onExit={() => setPlaying(false)} />;
+  if (playing) return <Play solo title={mine ? "Your café" : undefined} layout={layout} screens={screens} versions={versions} hour={previewHour} onExit={() => setPlaying(false)} />;
 
   const original = cut?.assets.find((a) => a.id === selected);
-  const statusText = { saved: "saved", unsaved: "unsaved changes", saving: "saving…", error: "save failed (use download)" }[status];
+  const statusText = mine
+    ? { saved: "saved in this browser", unsaved: "saving…", saving: "saving…", error: "couldn't save (use Export)" }[status]
+    : { saved: "saved", unsaved: "unsaved changes", saving: "saving…", error: "save failed (use download)" }[status];
   const btn = "rounded border border-white/15 px-2.5 py-1 hover:bg-white/10 disabled:opacity-30";
-  const thumb = (file: string) => `${BASE}${file}?v=${versions[file] ?? BOOT}`;
+  const thumb = (file: string) => fileUrl(file, versions[file] ?? BOOT);
 
   return (
     <div className="fixed inset-0 flex flex-col bg-[#15131c] font-['Space_Grotesk'] text-[13px] text-[#f3ecdc]">
       <header className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-[#1d1a26] px-3 py-2">
-        <span className="mr-2 font-['Silkscreen'] text-xs">café editor</span>
+        <span className="mr-2 font-['Silkscreen'] text-xs">{mine ? "your café" : "café editor"}</span>
         <button onClick={save} className="rounded bg-[#9bbf7a] px-3 py-1 font-medium text-[#1a1512]" title="⌘S">
           Save
         </button>
@@ -517,9 +544,27 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
           </div>
         )}
         <div className="ml-auto flex items-center gap-2">
-          <button onClick={download} className={btn}>
-            Download layout
-          </button>
+          {mine ? (
+            <>
+              <a href="/cafe" className={btn} title="Back to Daniel's café">
+                Daniel's café
+              </a>
+              <button onClick={startOver} className={btn}>
+                Start over
+              </button>
+              <label className={`${btn} cursor-pointer`} title="Open a café file">
+                Import
+                <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => e.target.files?.[0] && importMine(e.target.files[0])} />
+              </label>
+              <button onClick={exportMine} className={btn} title="Save your café as a file, to keep or share">
+                Export
+              </button>
+            </>
+          ) : (
+            <button onClick={download} className={btn}>
+              Download layout
+            </button>
+          )}
           <button onClick={() => setPlaying(true)} className="rounded bg-[#f2c1b0] px-3 py-1 font-medium text-[#1a1512]" title="P">
             ▶ Play
           </button>
@@ -940,7 +985,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
             setVersions((v) => ({ ...v, [file]: (v[file] ?? 0) + 1 }));
             // A resized canvas keeps every placed copy's size in sync with the PNG, and growing it
             // on the top/left moves the copies so the art itself stays put in the café.
-            const { w, h } = await sizeOf(`${BASE}${file}?t=${Date.now()}`);
+            const { w, h } = await sizeOf(fileUrl(file, Date.now()));
             setSizes((s) => ({ ...s, [file]: { w, h } }));
             if (layout.assets.some((a) => a.file === file && (a.w !== w || a.h !== h || shift.x || shift.y)))
               editLive((l) => ({

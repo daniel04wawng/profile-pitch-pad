@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { fileUrl } from "./store";
 import { Fragment } from "react";
 import { BASE, BOOT, DEFAULT_GRID, type Layout, type SpriteDef } from "./types";
 import type { Light } from "./lighting";
@@ -78,7 +79,7 @@ function useAlphaMasks(layout: Layout | null, versions: Record<string, number>) 
         MASKS.set(key, { w: img.width, data });
         if (alive) setMasks((m) => ({ ...m, [key]: { w: img.width, data } }));
       };
-      img.src = BASE + key;
+      img.src = fileUrl(s.file, versions[s.file] ?? BOOT);
     });
     return () => {
       alive = false;
@@ -138,7 +139,7 @@ export function Stage({
   const [box, setBox] = useState({ w: window.innerWidth, h: window.innerHeight });
   const masks = useAlphaMasks(layout, versions);
   const companions = useCompanions();
-  const src = (file: string) => `${BASE}${file}?v=${versions[file] ?? BOOT}`;
+  const src = (file: string) => fileUrl(file, versions[file] ?? BOOT);
 
   useEffect(() => {
     const el = wrap.current;

@@ -87,13 +87,31 @@ function cafeEditorSaver(): Plugin {
   };
 }
 
+// Production builds list every sprite in cafe/assets.json: the library for visitors building
+// their own café (the dev server answers /__cafe/assets instead).
+function cafeAssetIndex(): Plugin {
+  return {
+    name: "cafe-asset-index",
+    apply: "build",
+    generateBundle() {
+      const dir = path.resolve(__dirname, "public/cafe/sprites");
+      const files = fs
+        .readdirSync(dir)
+        .filter((f) => f.endsWith(".png") && !/\.(sky|light)\.png$/.test(f) && f !== "new-asset.png")
+        .sort()
+        .map((f) => `sprites/${f}`);
+      this.emitFile({ type: "asset", fileName: "cafe/assets.json", source: JSON.stringify(files) });
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
     host: "::",
     port: 8080,
   },
-  plugins: [react(), cafeEditorSaver()],
+  plugins: [react(), cafeEditorSaver(), cafeAssetIndex()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
