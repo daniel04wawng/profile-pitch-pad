@@ -9,6 +9,8 @@ import type { Actor, Companion } from "./Stage";
 // up to things before their screen opens, and sits in seats.
 
 const SPEED = 64; // px per second across the screen
+const ARRIVE_DELAY = 700; // ms after the page settles before you walk in
+const FADE_MS = 650; // fading in as you step in from the street
 const nameOf = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/, "");
 
 type Seated = { x: number; y: number; lift: number; back: boolean; flip: boolean; z: number; seat: SpriteDef };
@@ -74,6 +76,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     arrive: null as null | (() => void),
     t: 0,
     placed: false,
+    arrivedAt: 0, // when the walk in started (for the fade in)
   });
   if (import.meta.env.DEV) (window as unknown as { __me?: unknown }).__me = { walk, st };
   // multiplayer hooks (usePresence fills these): a walk starting, and coming to rest
@@ -88,7 +91,12 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     s.placed = true;
     const e = walk.entrance();
     s.pos = e.from;
-    s.path = e.path;
+    // a moment after the page settles, walk in from the street, fading in at the threshold
+    s.arrivedAt = performance.now() + ARRIVE_DELAY;
+    window.setTimeout(() => {
+      s.path = e.path;
+      net.current.walk?.({ ...s.pos }, [...s.path]);
+    }, ARRIVE_DELAY);
     tick((n) => n + 1);
   }, [companions, walk]);
 
@@ -276,6 +284,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
         poseActor(people, "me", look, sitPose(s.seated.back, now), s.seated.x, s.seated.y - s.seated.lift, s.seated.flip, s.seated.z)
       : poseActor(people, "me", look, frame, s.pos.x, s.pos.y, s.flip,
           walk.depthAt(s.pos, { x0: s.pos.x - w / 2, y0: s.pos.y - h, x1: s.pos.x + w / 2, y1: s.pos.y }));
+    if (actor) actor.opacity = Math.max(0, Math.min(1, (performance.now() - s.arrivedAt) / FADE_MS));
   }
 
   const changeLook = (l: Look) => {
@@ -283,6 +292,11 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     setLook(l);
     saveLook(l);
     window.setTimeout(() => net.current.settle?.(), 0); // tell the room about the new look
+  };
+  // a walk still under way (e.g. walking in when you join the room)
+  const inFlight = () => {
+    const s = st.current;
+    return s.path.length ? { from: { ...s.pos }, path: [...s.path] } : null;
   };
   // where you are right now, for the room
   const snapshot = () => {
@@ -295,5 +309,5 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     };
   };
 
-  return { actor, look, setLook: changeLook, barista, walkTo, visit, standUp, net, snapshot, walk, placed: s.placed && !!look, people };
+  return { actor, look, setLook: changeLook, barista, walkTo, visit, standUp, net, snapshot, walk, placed: s.placed && !!look, people, inFlight };
 }

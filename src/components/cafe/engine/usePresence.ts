@@ -28,9 +28,10 @@ type Me = {
   placed: boolean;
   net: React.MutableRefObject<{ walk?: (from: Pt, path: Pt[]) => void; settle?: () => void }>;
   snapshot: () => Rest;
+  inFlight: () => { from: Pt; path: Pt[] } | null;
   walk: Walk;
 };
-type Other = Wire & { id: string; moving: { from: Pt; path: Pt[]; started: number } | null };
+type Other = Wire & { id: string; moving: { from: Pt; path: Pt[]; started: number } | null; seen: number };
 
 // ---- never trust what comes off the wire
 const num = (v: unknown, lo: number, hi: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : null);
@@ -79,7 +80,7 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
           const was = prev[key];
           // a fresh resting spot ends any walk we were playing for them
           const moving = was?.moving && (was.at.x !== wire.at.x || was.at.y !== wire.at.y || !!wire.seat !== !!was.seat) ? null : was?.moving ?? null;
-          next[key] = { ...wire, id: key, moving };
+          next[key] = { ...wire, id: key, moving, seen: was?.seen ?? performance.now() };
         }
         return next;
       });
@@ -102,6 +103,9 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
         }
         joined.current = true;
         await track();
+        // already walking (in from the street)? let everyone see it
+        const w = meRef.current.inFlight();
+        if (w) ch.send({ type: "broadcast", event: "walk", payload: { id: id.current, from: w.from, path: w.path.slice(0, MAX_PATH) } });
       });
 
     const leave = () => {
@@ -146,7 +150,7 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
   }, [me.net]);
 
   // play back walks
-  const anyMoving = Object.values(others).some((o) => o.moving || o.seat);
+  const anyMoving = Object.values(others).some((o) => o.moving || o.seat || performance.now() - o.seen < 700);
   useEffect(() => {
     if (!anyMoving) return;
     let raf = 0;
@@ -200,7 +204,10 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
     } else {
       a = poseActor(people, o.id, o.look, o.back ? "stand-back" : "stand-front", o.at.x, o.at.y, o.flip, depth(o.at));
     }
-    if (a) actors.push(a);
+    if (a) {
+      a.opacity = Math.min(1, (now - o.seen) / 650); // newcomers fade in
+      actors.push(a);
+    }
   }
 
   return { actors, count: Object.keys(others).length, full, online: !!client };

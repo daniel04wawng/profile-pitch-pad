@@ -486,5 +486,27 @@
    "x": 2,
    "y": 62
   }
+ },
+ "wardrobe": {
+  "foot": {
+   "x": 26,
+   "y": 84
+  },
+  "size": {
+   "a": 12,
+   "b": 6,
+   "from": "front"
+  }
+ },
+ "wardrobe-back": {
+  "foot": {
+   "x": 26,
+   "y": 84
+  },
+  "size": {
+   "a": 12,
+   "b": 6,
+   "from": "front"
+  }
  }
 }

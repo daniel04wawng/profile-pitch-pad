@@ -26,6 +26,7 @@ export type Actor = {
   y: number;
   flip: boolean;
   z: number; // drawn above sprites whose floor point is lower than this
+  opacity?: number; // fading in as they arrive
 };
 let companionsCache: Promise<Record<string, Companion>> | null = null;
 export function useCompanions() {
@@ -313,6 +314,7 @@ export function Stage({
               backgroundImage: `url(${a.sheet})`,
               backgroundPosition: `${-a.frame * a.w}px 0`,
               transform: a.flip ? "scaleX(-1)" : undefined,
+              opacity: a.opacity ?? 1,
             }}
           />
         ))}

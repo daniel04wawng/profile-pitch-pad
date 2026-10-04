@@ -1393,6 +1393,71 @@ def menu_board():
     return save(c, "menu-board", foot=(X0, Y0 - Z0 + 1))
 
 
+def wardrobe(back=False):
+    """A tall wooden armoire where visitors change their look: crown on top, two drawers at the
+    bottom; the left door shut with an oval mirror, the right door swung open toward you
+    showing a rail of jackets in the café people's colours. Faces down-left.
+    back=True draws it from behind (for Rotate)."""
+    c = Canvas(90, 130)
+    X0, Y0 = 22, 92
+    L, D, H = 12, 6, 64
+    DR = 14  # drawer section height
+    jackets = [(110, 104, 66), (150, 66, 40), (40, 96, 96), (84, 110, 150), (176, 136, 56), (90, 44, 66), (112, 40, 40)]
+    if back:
+        face_left(c, X0, Y0, 0, L, D, 0, H, lambda t, z: "wood3" if z >= H - 3 else ("wood1" if z < 2 else wood_back(t, z, 3)))
+        face_right(c, X0, Y0, L, 0, D, 0, H, lambda s_, z: "wood1" if z < H - 1 else "wood2")
+        face_top(c, X0, Y0, -0.4, L + 0.4, -0.4, D + 0.4, H, lambda a, b: "wood5" if b > D - 0.2 else "wood4")
+        return save(c, "wardrobe-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
+
+    half = L / 2
+
+    def front(t, z):
+        if z < 2:
+            return "wood0"  # plinth shadow
+        if z >= H - 4:
+            return "wood4" if z >= H - 2 else "wood3"  # crown
+        if z < DR:  # two drawers with brass pulls
+            if z in (2, DR - 1) or t < 0.5 or t > L - 0.5 or abs(t - half) < 0.25:
+                return "wood1"
+            if z == DR // 2 + 1 and (abs(t - half / 2) < 0.6 or abs(t - half * 1.5) < 0.6):
+                return "brass2"
+            return "wood3" if z == DR - 2 else "wood2"
+        if t >= half:  # the open side: inside of the cabinet with a rail of jackets
+            if t > L - 0.5 or z >= H - 5:
+                return "wood1"
+            if z == H - 8:
+                return "brass1"  # the rail
+            k = int((t - half - 0.3) / 0.85)
+            if 0 <= k < len(jackets) and DR + 6 <= z < H - 8:
+                if z == H - 9 and (t - half - 0.3) % 0.85 < 0.3:
+                    return "brass0"  # hanger hook
+                base = jackets[k]
+                lit = (t - half - 0.3) % 0.85 < 0.28
+                return tuple(min(255, int(v * (1.25 if lit else 1.0))) for v in base) + (255,)
+            return "wood0"
+        # the shut left door: framed, with an oval mirror
+        if t < 0.5 or abs(t - half) < 0.4 or z in (DR, DR + 1):
+            return "wood3" if t < 0.3 else "wood2"
+        u = (t - half / 2) / (half / 2 - 0.9)
+        v = (z - (DR + H - 4) / 2) / ((H - 4 - DR) / 2 - 3)
+        if u * u + v * v <= 1:
+            if u * u + v * v > 0.8:
+                return "brass1"  # mirror frame
+            g = (u + v * 0.6)
+            return "shine" if abs(g + 0.4) < 0.12 else ("glass2" if g < 0 else "glass1")
+        if abs(t - (half - 0.8)) < 0.25 and abs(z - (DR + 22)) < 2:
+            return "brass2"  # handle
+        return "wood2"
+
+    face_left(c, X0, Y0, 0, L, D, 0, H, front)
+    face_right(c, X0, Y0, L, 0, D, 0, H, lambda s_, z: "wood1" if z < H - 2 else "wood2")
+    face_top(c, X0, Y0, -0.4, L + 0.4, -0.4, D + 0.4, H, lambda a, b: "wood5" if b > D - 0.2 else "wood4")
+    # the open right door, folded right back against the cabinet's side so the jackets show
+    face_right(c, X0, Y0, L + 0.4, D - half + 0.6, D, DR + 1, H - 4,
+               lambda s_, z: "wood1" if (s_ < 0.4 or s_ > half - 1.1 or z < 1 or z > H - DR - 7) else ("wood3" if s_ > half - 1.8 else "wood2"))
+    return save(c, "wardrobe", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
+
+
 ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key1"),
        table_cloth("cafe-table-linen", "key1", "key0", "red2", "key2"), cafe_chair, piano, piano_stool, globe_lamp, wall_lamp,
        bookshelf, window, hanging_plant, potted_plant, flower_vase,
@@ -1400,7 +1465,7 @@ ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key
        piano_back, bookshelf_back, armchair_back, booth_back, bar_counter_back, record_cabinet_back,
        espresso_station_back, laptop_back,
        fiddle_leaf_fig, snake_plant, fern_stand, succulent, tulip_pot, window_box,
-       couch, lambda: couch(back=True), menu_board, coffee_table, booth_table,
+       couch, lambda: couch(back=True), menu_board, wardrobe, lambda: wardrobe(back=True), coffee_table, booth_table,
        lambda: couch(name="sofa-large", L=24, seats=4, R=("olive0", "olive1", "olive2", "olive3", "leaf3")),
        lambda: couch(back=True, name="sofa-large", L=24, seats=4, R=("olive0", "olive1", "olive2", "olive3", "leaf3"))]
 
