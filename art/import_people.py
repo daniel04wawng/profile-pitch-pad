@@ -155,13 +155,24 @@ def outline(im):
 
 
 def make_gait(frames, fw, anchor):
-    """The generated walk frames are all one stride with small wobbles, so walking looked like
-    gliding. Build a real alternating cycle per direction from the widest stride:
-      1 stride (as generated)  2 passing (feet together, 1px up)  3 the other stride (legs
-      mirrored about the body's centre)  4 passing."""
+    """The generated walk frames are all one frozen stride, and cutting/mirroring their legs
+    looked wrong (toes pointing backwards, legs jumping about). So each walk frame keeps the
+    generated upper body and gets legs redrawn in the person's own trouser and shoe colours
+    (sampled from their standing pose), in a real alternating cycle: one leg forward, passing
+    (the swinging foot lifted, the body bobbing up), the other leg forward, passing. The far
+    leg is in shade, the trailing knee bends, toes always point the way you walk."""
+    import math
     arr = np.asarray(frames).copy()
     ax, ay = anchor
+    fh = arr.shape[0]
     get = lambda n: arr[:, ORDER.index(n) * fw : (ORDER.index(n) + 1) * fw].copy()
+    lum = lambda c: 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
+
+    def ramp(px, fallback):
+        if not px:
+            return fallback
+        px = sorted(px, key=lum)
+        return [tuple(int(v) for v in px[int(len(px) * q)][:3]) + (255,) for q in (0.15, 0.5, 0.85)]
 
     def spread(f):
         low = (f[..., 3] > 0)[ay - 4 : ay]
@@ -169,27 +180,73 @@ def make_gait(frames, fw, anchor):
         return xs.max() - xs.min() if len(xs) else 0
 
     for d in ("front", "back"):
-        A = max((get(f"walk-{d}-{i}") for i in range(1, 5)), key=spread)
-        solid = A[..., 3] > 0
-        ys = np.nonzero(solid.any(1))[0]
-        top = ys[0]
-        hip = top + int((ay - top) * 0.62)  # below this: the legs
-        cx = int(np.median(np.nonzero(solid[top + int((ay - top) * 0.3) : top + int((ay - top) * 0.55)])[1]))
-        B = A.copy()
-        B[hip:] = 0
-        for x in range(fw):
-            mx = 2 * cx - x
-            if 0 <= mx < fw:
-                col = A[hip:, x]
-                B[hip:, mx] = np.where(col[:, 3:4] > 0, col, B[hip:, mx])
         S = get(f"stand-{d}")
-        passing = np.zeros_like(A)
-        passing[:hip] = A[:hip]
-        passing[hip:] = np.where(S[hip:, :, 3:4] > 0, S[hip:], 0)
-        passing = np.roll(passing, -1, axis=0)  # a little bob
-        for i, f in enumerate((A, passing, B, passing), start=1):
-            k = ORDER.index(f"walk-{d}-{i}")
-            arr[:, k * fw : (k + 1) * fw] = f
+        a = S[..., 3] > 0
+        top = np.nonzero(a.any(1))[0][0]
+        H = ay - top
+        hip = top + int(H * 0.6)
+        pants = ramp([tuple(S[y, x]) for y in range(hip + 3, ay - 6) for x in range(fw) if a[y, x] and lum(S[y, x]) > 40], [(40, 36, 44, 255), (58, 52, 62, 255), (80, 74, 86, 255)])
+        shoes = ramp([tuple(S[y, x]) for y in range(ay - 4, ay) for x in range(fw) if a[y, x] and lum(S[y, x]) > 120], [(200, 196, 188, 255), (230, 226, 218, 255), (250, 248, 244, 255)])
+        A = max((get(f"walk-{d}-{i}") for i in range(1, 5)), key=spread)
+        sa = A[..., 3] > 0
+        cx = int(np.median(np.nonzero(sa[top + int(H * 0.3) : top + int(H * 0.55)])[1]))
+        fwd = (-1.0, 0.35) if d == "front" else (1.0, -0.3)  # the walking direction, in the sprite
+        for k in range(4):
+            s = math.cos(2 * math.pi * k / 4)  # +1 one leg forward, -1 the other
+            bob = -1 if abs(s) < 0.5 else 0
+            img = Image.new("RGBA", (fw, fh), (0, 0, 0, 0))
+            px = img.load()
+
+            def put(x, y, c):
+                x, y = int(round(x)), int(round(y))
+                if 0 <= x < fw and 0 <= y < fh:
+                    px[x, y] = c
+
+            def leg(hx, swing, near):
+                fx, fy = hx + fwd[0] * swing * 6.0, ay - 3 + fwd[1] * swing * 6.0
+                fy -= 2 if (abs(swing) < 0.3 and near) else 0  # the swinging foot clears the floor
+                hy = hip + bob
+                L = max(1, int(fy - hy))
+                knee = 1.4 if swing < -0.3 else 0.5  # the trailing leg bends at the knee
+                for i in range(L + 1):
+                    u = i / L
+                    x = hx + (fx - hx) * u + fwd[0] * knee * math.sin(u * math.pi)
+                    y = hy + (fy - hy) * u
+                    w = 3.1 - 0.7 * u  # baggy at the hip, narrower at the hem
+                    for dx in np.arange(-w, w + 0.01, 0.5):
+                        lit, shade = dx < -w + 1.1, dx > w - 1.3
+                        c = pants[2] if lit else (pants[0] if shade else pants[1])
+                        if not near:
+                            c = pants[1] if lit else pants[0]  # the far leg is in shade
+                        put(x + dx, y, c)
+                tx = 1 if fwd[0] > 0 else -1
+                for i in range(-2, 6):  # a chunky sneaker, toe forward, white sole
+                    for j in range(4):
+                        if j == 0 and i > 3:
+                            continue
+                        c = shoes[2] if j == 3 else (shoes[1] if (i < 4 or j > 0) else shoes[0])
+                        if not near and j < 3:
+                            c = shoes[0]
+                        put(fx + tx * i * 0.75 - tx * 0.5, fy - 1 + j + fwd[1] * i * 0.4, c)
+
+            far, near = (cx + 3.5, cx - 3.0) if d == "front" else (cx - 3.5, cx + 3.0)
+            leg(far, -s if d == "front" else s, False)
+            leg(near, s if d == "front" else -s, True)
+            F = np.asarray(img).copy()
+            U = A.copy()
+            U[hip + 1 :] = 0
+            U = np.roll(U, bob, axis=0)
+            m = U[..., 3] > 0
+            F[m] = U[m]
+            out = Image.fromarray(F)
+            al = out.getchannel("A").load()
+            o = out.copy()
+            for y in range(fh):
+                for x in range(fw):
+                    if not al[x, y] and any(0 <= x + dx < fw and 0 <= y + dy < fh and al[x + dx, y + dy] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                        o.putpixel((x, y), OUTLINE)
+            j = ORDER.index(f"walk-{d}-{k + 1}")
+            arr[:, j * fw : (j + 1) * fw] = np.asarray(o)
     return Image.fromarray(arr)
 
 
