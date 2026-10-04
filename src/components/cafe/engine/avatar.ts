@@ -10,7 +10,8 @@ import type { Actor } from "./Stage";
 
 export type CharacterMeta = { frame: [number, number]; anchor: [number, number]; frames: string[] };
 // people: person -> their outfits; characters: "person/outfit" -> that sheet's frames
-export type People = { standHeight: number; people: Record<string, string[]>; characters: Record<string, CharacterMeta> };
+// density: sprite pixels per room pixel (people are drawn finer than the room, for faces)
+export type People = { standHeight: number; density?: number; people: Record<string, string[]>; characters: Record<string, CharacterMeta> };
 export type Pose =
   | "walk-front-1" | "walk-front-2" | "walk-front-3" | "walk-front-4"
   | "walk-back-1" | "walk-back-2" | "walk-back-3" | "walk-back-4"
@@ -61,8 +62,20 @@ export function poseActor(p: People, id: string, look: Look, pose: Pose, x: numb
   const m = p.characters[key];
   if (!m) return null;
   const i = m.frames.indexOf(pose);
-  return { id, sheet: sheetOf(key), frame: Math.max(0, i), w: m.frame[0], h: m.frame[1], footX: m.anchor[0], footY: m.anchor[1], x, y, flip, z };
+  const d = p.density ?? 1; // everything below in room pixels
+  return {
+    id, sheet: sheetOf(key), frame: Math.max(0, i),
+    w: m.frame[0] / d, h: m.frame[1] / d, footX: m.anchor[0] / d, footY: m.anchor[1] / d,
+    sheetW: (m.frame[0] * m.frames.length) / d,
+    x, y, flip, z,
+  };
 }
+// a character's frame size in room pixels
+export const roomSize = (p: People, key: string): [number, number] => {
+  const m = p.characters[key];
+  const d = p.density ?? 1;
+  return m ? [m.frame[0] / d, m.frame[1] / d] : [30, 60];
+};
 
 const LOOK_KEY = "cafe-look";
 // Your look as last chosen in this browser (the barista: Daniel, in his last outfit).

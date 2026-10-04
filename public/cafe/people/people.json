@@ -1,5 +1,6 @@
 {
  "standHeight": 58,
+ "density": 2,
  "people": {
   "denim": [
    "original"
@@ -29,12 +30,12 @@
  "characters": {
   "denim/original": {
    "frame": [
-    35,
-    81
+    68,
+    160
    ],
    "anchor": [
-    19,
-    59
+    37,
+    117
    ],
    "frames": [
     "walk-front-1",
@@ -54,12 +55,12 @@
   },
   "maroon/original": {
    "frame": [
-    35,
-    83
+    68,
+    162
    ],
    "anchor": [
-    19,
-    59
+    37,
+    117
    ],
    "frames": [
     "walk-front-1",
@@ -79,12 +80,12 @@
   },
   "mustard/original": {
    "frame": [
-    32,
-    81
+    64,
+    160
    ],
    "anchor": [
-    17,
-    59
+    35,
+    117
    ],
    "frames": [
     "walk-front-1",
@@ -104,12 +105,12 @@
   },
   "olive/original": {
    "frame": [
-    34,
-    83
+    67,
+    162
    ],
    "anchor": [
-    19,
-    59
+    38,
+    117
    ],
    "frames": [
     "walk-front-1",
@@ -129,12 +130,12 @@
   },
   "plum/original": {
    "frame": [
-    41,
-    83
+    79,
+    163
    ],
    "anchor": [
-    25,
-    59
+    49,
+    117
    ],
    "frames": [
     "walk-front-1",
@@ -154,12 +155,12 @@
   },
   "rust/original": {
    "frame": [
-    34,
-    83
+    66,
+    163
    ],
    "anchor": [
-    19,
-    59
+    37,
+    117
    ],
    "frames": [
     "walk-front-1",
@@ -179,12 +180,12 @@
   },
   "sage/original": {
    "frame": [
-    38,
-    83
+    73,
+    163
    ],
    "anchor": [
-    21,
-    59
+    41,
+    117
    ],
    "frames": [
     "walk-front-1",
@@ -204,12 +205,12 @@
   },
   "teal/original": {
    "frame": [
-    37,
-    83
+    71,
+    163
    ],
    "anchor": [
-    20,
-    59
+    40,
+    117
    ],
    "frames": [
     "walk-front-1",

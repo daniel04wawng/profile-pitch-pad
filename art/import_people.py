@@ -27,7 +27,8 @@ ORDER = ["walk-front-1", "walk-front-2", "walk-front-3", "walk-front-4",
          "stand-front", "stand-back", "sit-front", "sit-sip", "sit-back"]
 # the generated sheets face screen-right for front views and seated-from-behind faces left
 MIRROR = {"walk-front-1", "walk-front-2", "walk-front-3", "walk-front-4", "stand-front", "sit-front", "sit-sip", "sit-back"}
-STAND_H = 58  # px, standing height in game
+STAND_H = 58  # standing height in the room, in room pixels
+DENSITY = 2  # sprite pixels per room pixel: people are drawn finer than the room (faces, folds)
 OUTLINE = (30, 18, 14, 255)
 COLOURS = 40
 
@@ -99,6 +100,7 @@ def clean_crop(sheet, box):
     pad = 6
     crop = sheet.crop((max(0, x0 - pad), max(0, y0 - pad), min(sheet.width, x1 + pad), min(sheet.height, y1 + pad)))
     arr = np.asarray(crop).copy()
+    arr[..., 3] = np.where(arr[..., 3] < 215, 0, arr[..., 3])  # drop the generator's soft glow/shadow fringe
     solid = arr[..., 3] > 160
     blobs = components(solid, 1)
     if blobs:
@@ -126,7 +128,7 @@ def shrink(im, k):
     rgb = np.stack(chans[:3], axis=2) / np.maximum(A[..., None] / 255.0, 1e-6)
     out = np.zeros((h, w, 4), np.uint8)
     out[..., :3] = np.clip(rgb, 0, 255)
-    out[..., 3] = np.where(A > 120, 255, 0)
+    out[..., 3] = np.where(A > 150, 255, 0)
     return Image.fromarray(out)
 
 
@@ -144,14 +146,89 @@ def anchor(im, seated):
     return cx, bot + 1
 
 
-def outline(im):
-    a = im.getchannel("A").load()
+def outline(im, width=1):
+    """A dark edge `width` sprite pixels thick (the art already has its own outline, so 1 is enough)."""
     out = im.copy()
-    for y in range(im.height):
-        for x in range(im.width):
-            if not a[x, y] and any(0 <= x + dx < im.width and 0 <= y + dy < im.height and a[x + dx, y + dy] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
-                out.putpixel((x, y), OUTLINE)
+    for _ in range(width):
+        a = out.getchannel("A").load()
+        nxt = out.copy()
+        for y in range(out.height):
+            for x in range(out.width):
+                if not a[x, y] and any(0 <= x + dx < out.width and 0 <= y + dy < out.height and a[x + dx, y + dy] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                    nxt.putpixel((x, y), OUTLINE)
+        out = nxt
     return out
+
+
+FACE_POSES = {"walk-front-1", "walk-front-2", "walk-front-3", "walk-front-4", "stand-front", "sit-front", "sit-sip"}
+EYE = (34, 22, 18, 255)
+
+
+def find_eyes(c):
+    """Eye centres in a full-size, front-facing pose: dark compact spots on the face (warm skin
+    in the head) in its eye band, not at the back edge (the ear) or low down (the mouth)."""
+    a = np.asarray(c).astype(float)
+    al = a[..., 3] > 160
+    ys = np.nonzero(al.any(1))[0]
+    top, fh = ys[0], ys[-1] - ys[0]
+    head = a[top : top + int(fh * 0.22)]
+    hal = al[top : top + int(fh * 0.22)]
+    rgb = head[..., :3]
+    L = rgb @ np.array([0.299, 0.587, 0.114])
+    skin = (rgb[..., 0] > rgb[..., 2] + 18) & (L > 70) & hal
+    if skin.sum() < 50:
+        return []
+    sy, sx = np.nonzero(skin)
+    fy0, fy1, fx0, fx1 = sy.min(), sy.max(), sx.min(), sx.max()
+    dark = (L < np.median(L[skin]) * 0.55) & hal
+    dark[: fy0 + int((fy1 - fy0) * 0.25)] = False  # above the eye band: hair
+    dark[fy0 + int((fy1 - fy0) * 0.62) :] = False  # below it: nose, mouth
+    dark[:, fx0 + int((fx1 - fx0) * 0.7) :] = False  # the back of the head: the ear
+    eyes = []
+    for (y0, x0, y1, x1, n) in components(dark, 4):
+        if n > 250 or y1 - y0 > 25 or x1 - x0 > 25:
+            continue
+        cy, cx = (y0 + y1) / 2, (x0 + x1) / 2
+        around = skin[max(0, int(cy) - 6) : int(cy) + 6, max(0, int(cx) - 6) : int(cx) + 6]
+        if around.mean() >= 0.3:  # mostly skin around it: an eye, not the hair's edge
+            eyes.append((cx, cy + top, n))
+    eyes.sort(key=lambda e: -e[2])
+    return [(x, y) for x, y, _ in eyes[:2]]
+
+
+def stamp_eyes(small, eyes, k):
+    """Put each eye back as a crisp dark mark (2px tall where there's room) on the shrunk pose,
+    moved onto skin if it landed on hair."""
+    px = small.load()
+    lum = lambda c: 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
+    warm = lambda c: c[3] and c[0] > c[2] + 15 and lum(c) > 60
+    if not eyes:
+        # none found (hair over the face, or too faint): the near eye of a three-quarter face
+        # sits in the upper middle of the visible skin, toward the side it's facing (left)
+        a = np.asarray(small)
+        top = int(np.nonzero(a[..., 3].any(1))[0][0])
+        face = [(x, y) for y in range(top, top + 12) for x in range(small.width) if warm(px[x, y])]
+        if face:
+            xs, ys = [f[0] for f in face], [f[1] for f in face]
+            x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
+            eyes = [((x0 + (x1 - x0) * 0.3) / k, (y0 + (y1 - y0) * 0.4) / k)]
+    for (x, y) in eyes:
+        ex, ey = int(x * k), int(y * k)
+        best = None
+        for dy in (0, 1, -1):
+            for dx in (0, -1, 1):
+                q = (ex + dx, ey + dy)
+                if 0 <= q[0] < small.width and 0 <= q[1] < small.height and warm(px[q]):
+                    best = q
+                    break
+            if best:
+                break
+        if not best:
+            continue
+        px[best] = EYE
+        below = (best[0], best[1] + 1)
+        if below[1] < small.height and warm(px[below]):
+            px[below] = EYE
 
 
 def make_gait(frames, fw, anchor):
@@ -193,7 +270,7 @@ def make_gait(frames, fw, anchor):
         fwd = (-1.0, 0.35) if d == "front" else (1.0, -0.3)  # the walking direction, in the sprite
         for k in range(4):
             s = math.cos(2 * math.pi * k / 4)  # +1 one leg forward, -1 the other
-            bob = -1 if abs(s) < 0.5 else 0
+            bob = -DENSITY if abs(s) < 0.5 else 0
             img = Image.new("RGBA", (fw, fh), (0, 0, 0, 0))
             px = img.load()
 
@@ -203,33 +280,32 @@ def make_gait(frames, fw, anchor):
                     px[x, y] = c
 
             def leg(hx, swing, near):
-                fx, fy = hx + fwd[0] * swing * 6.0, ay - 3 + fwd[1] * swing * 6.0
-                fy -= 2 if (abs(swing) < 0.3 and near) else 0  # the swinging foot clears the floor
+                D = DENSITY
+                fx, fy = hx + fwd[0] * swing * 6.0 * D, ay - 3 * D + fwd[1] * swing * 6.0 * D
+                fy -= 2 * D if (abs(swing) < 0.3 and near) else 0  # the swinging foot clears the floor
                 hy = hip + bob
                 L = max(1, int(fy - hy))
-                knee = 1.4 if swing < -0.3 else 0.5  # the trailing leg bends at the knee
+                knee = (1.4 if swing < -0.3 else 0.5) * D  # the trailing leg bends at the knee
                 for i in range(L + 1):
                     u = i / L
                     x = hx + (fx - hx) * u + fwd[0] * knee * math.sin(u * math.pi)
                     y = hy + (fy - hy) * u
-                    w = 3.1 - 0.7 * u  # baggy at the hip, narrower at the hem
+                    w = (3.5 - 0.6 * u) * D  # baggy at the hip, a little narrower at the hem
                     for dx in np.arange(-w, w + 0.01, 0.5):
-                        lit, shade = dx < -w + 1.1, dx > w - 1.3
-                        c = pants[2] if lit else (pants[0] if shade else pants[1])
-                        if not near:
-                            c = pants[1] if lit else pants[0]  # the far leg is in shade
+                        shade = dx > w - 1.4 * D
+                        c = pants[0] if (shade or not near) else pants[1]  # far leg and back edge in shade
                         put(x + dx, y, c)
                 tx = 1 if fwd[0] > 0 else -1
-                for i in range(-2, 6):  # a chunky sneaker, toe forward, white sole
-                    for j in range(4):
-                        if j == 0 and i > 3:
+                for i in range(-2 * D, 6 * D):  # a chunky sneaker, toe forward, white sole
+                    for j in range(4 * D):
+                        if j < D and i > 3 * D:
                             continue
-                        c = shoes[2] if j == 3 else (shoes[1] if (i < 4 or j > 0) else shoes[0])
-                        if not near and j < 3:
+                        c = shoes[2] if j >= 3 * D else (shoes[1] if (i < 4 * D or j >= D) else shoes[0])
+                        if not near and j < 3 * D:
                             c = shoes[0]
-                        put(fx + tx * i * 0.75 - tx * 0.5, fy - 1 + j + fwd[1] * i * 0.4, c)
+                        put(fx + tx * i * 0.75 - tx * 0.5 * D, fy - D + j + fwd[1] * i * 0.4, c)
 
-            far, near = (cx + 3.5, cx - 3.0) if d == "front" else (cx - 3.5, cx + 3.0)
+            far, near = (cx + 3.5 * DENSITY, cx - 3.0 * DENSITY) if d == "front" else (cx - 3.5 * DENSITY, cx + 3.0 * DENSITY)
             leg(far, -s if d == "front" else s, False)
             leg(near, s if d == "front" else -s, True)
             F = np.asarray(img).copy()
@@ -240,11 +316,7 @@ def make_gait(frames, fw, anchor):
             F[m] = U[m]
             out = Image.fromarray(F)
             al = out.getchannel("A").load()
-            o = out.copy()
-            for y in range(fh):
-                for x in range(fw):
-                    if not al[x, y] and any(0 <= x + dx < fw and 0 <= y + dy < fh and al[x + dx, y + dy] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
-                        o.putpixel((x, y), OUTLINE)
+            o = outline(out)
             j = ORDER.index(f"walk-{d}-{k + 1}")
             arr[:, j * fw : (j + 1) * fw] = np.asarray(o)
     return Image.fromarray(arr)
@@ -262,8 +334,9 @@ def import_character(path, name):
         if pose in MIRROR:
             c = c.transpose(Image.FLIP_LEFT_RIGHT)
         crops[pose] = c
-    k = STAND_H / crops["stand-front"].height
+    k = STAND_H * DENSITY / crops["stand-front"].height
     small = {p: shrink(c, k) for p, c in crops.items()}
+    eyes = {p: find_eyes(crops[p]) for p in crops if p in FACE_POSES}
     # one palette for the character, from all its frames together
     strip = Image.new("RGBA", (sum(s.width for s in small.values()), max(s.height for s in small.values())), (0, 0, 0, 0))
     x = 0
@@ -275,7 +348,11 @@ def import_character(path, name):
     al = np.asarray(strip)[..., 3]
     pal_img = Image.fromarray(np.asarray(strip)[..., :3]).quantize(colors=COLOURS, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert("RGB")
     snapped = Image.fromarray(np.dstack([np.asarray(pal_img), al]))
-    small = {p: outline(snapped.crop((spots[p], 0, spots[p] + s.width, s.height))) for p, s in small.items()}
+    small = {p: snapped.crop((spots[p], 0, spots[p] + s.width, s.height)) for p, s in small.items()}
+    if DENSITY < 2:
+        for p, e in eyes.items():
+            stamp_eyes(small[p], e, k)  # at this size the eyes would otherwise vanish
+    small = {p: outline(im) for p, im in small.items()}
     # frames share one size; standing/walking frames meet the floor at FOOT, seated at SEAT
     anchors = {p: anchor(s, p.startswith("sit")) for p, s in small.items()}
     left = max(anchors[p][0] for p in small) + 1
@@ -314,7 +391,7 @@ if __name__ == "__main__":
     for key in manifest:
         person, outfit = key.split("/")
         people.setdefault(person, []).append(outfit)
-    json.dump({"standHeight": STAND_H, "people": people, "characters": manifest}, open(os.path.join(OUT, "people.json"), "w"), indent=1)
+    json.dump({"standHeight": STAND_H, "density": DENSITY, "people": people, "characters": manifest}, open(os.path.join(OUT, "people.json"), "w"), indent=1)
     if "--preview" in sys.argv:
         S = 4
         rows = [Image.open(os.path.join(OUT, f"{k.replace('/', '--')}.png")).convert("RGBA") for k in manifest]

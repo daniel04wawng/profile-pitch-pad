@@ -179,7 +179,7 @@ export function makeWalk(layout: Layout, companions: Record<string, Companion>, 
     const edge = alongA ? { i: I - 1, j: c.j } : { i: c.i, j: J - 1 };
     const out = alongA ? { i: 1, j: 0 } : { i: 0, j: 1 };
     const onFloor = walkTo(edge, free)?.slice(-1)[0] ?? edge;
-    const steps = walkTo(onFloor, (q) => free(q) && (alongA ? onFloor.i - q.i : onFloor.j - q.j) >= 3) ?? [onFloor];
+    const steps = walkTo(onFloor, (q) => free(q) && (alongA ? onFloor.i - q.i : onFloor.j - q.j) >= 5) ?? [onFloor];
     // start well outside, so there's a proper walk in from the street
     const from = cellCentre({ i: onFloor.i + out.i * 6, j: onFloor.j + out.j * 6 });
     const approach = [4, 2].map((k) => cellCentre({ i: onFloor.i + out.i * k, j: onFloor.j + out.j * k }));

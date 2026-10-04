@@ -20,6 +20,7 @@ export type Actor = {
   frame: number;
   w: number;
   h: number;
+  sheetW?: number; // the whole sheet's width (room px), when drawn finer than the room
   footX: number; // where it stands, within a frame
   footY: number;
   x: number; // where it stands, in the scene
@@ -306,12 +307,13 @@ export function Stage({
             className="pointer-events-none absolute [image-rendering:pixelated]"
             style={{
               // whole pixels only, so the pixel art never lands between pixels
-              left: Math.round(a.x) - (a.flip ? a.w - a.footX : a.footX),
-              top: Math.round(a.y) - a.footY,
+              left: Math.round(a.x) - Math.round(a.flip ? a.w - a.footX : a.footX),
+              top: Math.round(a.y) - Math.round(a.footY),
               width: a.w,
               height: a.h,
               zIndex: a.z,
               backgroundImage: `url(${a.sheet})`,
+              backgroundSize: a.sheetW ? `${a.sheetW}px ${a.h}px` : undefined,
               backgroundPosition: `${-a.frame * a.w}px 0`,
               transform: a.flip ? "scaleX(-1)" : undefined,
               opacity: a.opacity ?? 1,

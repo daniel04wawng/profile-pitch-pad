@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
-import { isLook, keyOf, poseActor, sitPose, walkPose, type Look, type People } from "./avatar";
+import { isLook, keyOf, poseActor, roomSize, sitPose, walkPose, type Look, type People } from "./avatar";
 import type { Pt, Walk } from "./walk";
 import type { Actor } from "./Stage";
 
@@ -167,9 +167,8 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
   const people = me.people;
   for (const o of Object.values(others)) {
     if (!people) break;
-    const m = people.characters[keyOf(o.look)];
-    if (!m) continue;
-    const [fw, fh] = m.frame;
+    if (!people.characters[keyOf(o.look)]) continue;
+    const [fw, fh] = roomSize(people, keyOf(o.look));
     const seed = o.id.charCodeAt(0) + o.id.charCodeAt(1);
     const depth = (p: Pt) => me.walk.depthAt(p, { x0: p.x - fw / 2, y0: p.y - fh, x1: p.x + fw / 2, y1: p.y });
     let a: Actor | null = null;

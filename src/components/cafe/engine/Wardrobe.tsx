@@ -13,7 +13,8 @@ function Pose({ people, look, pose, scale }: { people: People; look: Look; pose:
   const m = people.characters[key];
   if (!m) return null;
   const i = Math.max(0, m.frames.indexOf(pose));
-  const [w, h] = m.frame;
+  const d = people.density ?? 1;
+  const [w, h] = [m.frame[0] / d, m.frame[1] / d]; // room pixels; the art inside is finer
   return (
     <div
       className="[image-rendering:pixelated]"

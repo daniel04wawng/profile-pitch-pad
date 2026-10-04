@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BARISTA_PERSON, isBarista, keyOf, poseActor, saveLook, savedLook, sitPose, usePeople, walkPose, type Look, type Pose } from "./avatar";
+import { BARISTA_PERSON, isBarista, keyOf, poseActor, roomSize, saveLook, savedLook, sitPose, usePeople, walkPose, type Look, type Pose } from "./avatar";
 import { makeWalk, seatOf, type Cell, type Pt } from "./walk";
 import { BASE, BOOT, frontOf, type Layout, type SpriteDef } from "./types";
 import { measureSprite, type Measure } from "./measure";
@@ -95,6 +95,11 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     s.arrivedAt = performance.now() + ARRIVE_DELAY;
     window.setTimeout(() => {
       s.path = e.path;
+      // once in, turn to face the room (and you), rather than ending with your back to it
+      s.arrive = () => {
+        s.back = false;
+        setFrame("stand-front");
+      };
       net.current.walk?.({ ...s.pos }, [...s.path]);
     }, ARRIVE_DELAY);
     tick((n) => n + 1);
@@ -276,9 +281,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   });
   let actor: Actor | null = null;
   if (people && look && s.placed) {
-    const m = people.characters[keyOf(look)];
-    const h = m ? m.frame[1] : 80;
-    const w = m ? m.frame[0] : 30;
+    const [w, h] = roomSize(people, keyOf(look));
     actor = s.seated
       ? // a seated frame meets the seat at its anchor: the seat's surface is `lift` above the floor
         poseActor(people, "me", look, sitPose(s.seated.back, now), s.seated.x, s.seated.y - s.seated.lift, s.seated.flip, s.seated.z)
