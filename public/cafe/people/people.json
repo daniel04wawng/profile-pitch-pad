@@ -1,9 +1,60 @@
 {
  "standHeight": 58,
+ "people": {
+  "denim": [
+   "original"
+  ],
+  "maroon": [
+   "original"
+  ],
+  "mustard": [
+   "original"
+  ],
+  "olive": [
+   "original"
+  ],
+  "plum": [
+   "original"
+  ],
+  "rust": [
+   "original"
+  ],
+  "sage": [
+   "original"
+  ],
+  "teal": [
+   "original"
+  ]
+ },
  "characters": {
-  "rust": {
+  "denim/original": {
    "frame": [
-    34,
+    35,
+    81
+   ],
+   "anchor": [
+    19,
+    59
+   ],
+   "frames": [
+    "walk-front-1",
+    "walk-front-2",
+    "walk-front-3",
+    "walk-front-4",
+    "walk-back-1",
+    "walk-back-2",
+    "walk-back-3",
+    "walk-back-4",
+    "stand-front",
+    "stand-back",
+    "sit-front",
+    "sit-sip",
+    "sit-back"
+   ]
+  },
+  "maroon/original": {
+   "frame": [
+    35,
     83
    ],
    "anchor": [
@@ -26,57 +77,7 @@
     "sit-back"
    ]
   },
-  "olive": {
-   "frame": [
-    34,
-    83
-   ],
-   "anchor": [
-    19,
-    59
-   ],
-   "frames": [
-    "walk-front-1",
-    "walk-front-2",
-    "walk-front-3",
-    "walk-front-4",
-    "walk-back-1",
-    "walk-back-2",
-    "walk-back-3",
-    "walk-back-4",
-    "stand-front",
-    "stand-back",
-    "sit-front",
-    "sit-sip",
-    "sit-back"
-   ]
-  },
-  "sage": {
-   "frame": [
-    38,
-    83
-   ],
-   "anchor": [
-    21,
-    59
-   ],
-   "frames": [
-    "walk-front-1",
-    "walk-front-2",
-    "walk-front-3",
-    "walk-front-4",
-    "walk-back-1",
-    "walk-back-2",
-    "walk-back-3",
-    "walk-back-4",
-    "stand-front",
-    "stand-back",
-    "sit-front",
-    "sit-sip",
-    "sit-back"
-   ]
-  },
-  "mustard": {
+  "mustard/original": {
    "frame": [
     32,
     81
@@ -101,7 +102,32 @@
     "sit-back"
    ]
   },
-  "plum": {
+  "olive/original": {
+   "frame": [
+    34,
+    83
+   ],
+   "anchor": [
+    19,
+    59
+   ],
+   "frames": [
+    "walk-front-1",
+    "walk-front-2",
+    "walk-front-3",
+    "walk-front-4",
+    "walk-back-1",
+    "walk-back-2",
+    "walk-back-3",
+    "walk-back-4",
+    "stand-front",
+    "stand-back",
+    "sit-front",
+    "sit-sip",
+    "sit-back"
+   ]
+  },
+  "plum/original": {
    "frame": [
     41,
     83
@@ -126,9 +152,9 @@
     "sit-back"
    ]
   },
-  "maroon": {
+  "rust/original": {
    "frame": [
-    35,
+    34,
     83
    ],
    "anchor": [
@@ -151,38 +177,38 @@
     "sit-back"
    ]
   },
-  "teal": {
+  "sage/original": {
+   "frame": [
+    38,
+    83
+   ],
+   "anchor": [
+    21,
+    59
+   ],
+   "frames": [
+    "walk-front-1",
+    "walk-front-2",
+    "walk-front-3",
+    "walk-front-4",
+    "walk-back-1",
+    "walk-back-2",
+    "walk-back-3",
+    "walk-back-4",
+    "stand-front",
+    "stand-back",
+    "sit-front",
+    "sit-sip",
+    "sit-back"
+   ]
+  },
+  "teal/original": {
    "frame": [
     37,
     83
    ],
    "anchor": [
     20,
-    59
-   ],
-   "frames": [
-    "walk-front-1",
-    "walk-front-2",
-    "walk-front-3",
-    "walk-front-4",
-    "walk-back-1",
-    "walk-back-2",
-    "walk-back-3",
-    "walk-back-4",
-    "stand-front",
-    "stand-back",
-    "sit-front",
-    "sit-sip",
-    "sit-back"
-   ]
-  },
-  "denim": {
-   "frame": [
-    35,
-    81
-   ],
-   "anchor": [
-    19,
     59
    ],
    "frames": [

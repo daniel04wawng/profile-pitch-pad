@@ -1,7 +1,6 @@
 """Import generated character pose sheets into game sprites.
 
-Each art/people/<set>/<character>/pose-sheet.png is a 4x4 grid of poses (see the pack's
-README): walk-front 1-4, walk-back 1-4, stand-front, stand-back, sit-front, sit-sip, sit-back.
+Each art/people/<person>/<outfit>/pose-sheet.png is a 4x4 grid of poses (see PACK-README): walk-front 1-4, walk-back 1-4, stand-front, stand-back, sit-front, sit-sip, sit-back.
 The grid isn't pixel-perfect, so poses are found from their actual alpha outlines, then:
   - mirrored where needed so 'front' poses face the viewer's left and 'back' poses face away
     to the right (the game's convention; it mirrors for the other two directions),
@@ -9,9 +8,10 @@ The grid isn't pixel-perfect, so poses are found from their actual alpha outline
     colour, alpha thresholded, colours snapped to one palette per character, 1px dark outline,
   - aligned: standing/walking frames at the feet (torso centre over the floor point), seated
     frames at the seat contact point.
-Writes public/cafe/people/<character>.png (frames side by side) and people.json.
+Writes public/cafe/people/<person>--<outfit>.png (frames side by side) and people.json, which
+lists every person and their outfits (a person's skin and hair are theirs; outfits vary).
 
-    python3 art/import_people.py [art/people/_incoming] [--preview out.png]
+    python3 art/import_people.py [--preview out.png]
 """
 import json
 import os
@@ -28,9 +28,6 @@ ORDER = ["walk-front-1", "walk-front-2", "walk-front-3", "walk-front-4",
 # the generated sheets face screen-right for front views and seated-from-behind faces left
 MIRROR = {"walk-front-1", "walk-front-2", "walk-front-3", "walk-front-4", "stand-front", "sit-front", "sit-sip", "sit-back"}
 STAND_H = 58  # px, standing height in game
-# characters are named in the game by what they wear (the pack's folders are named otherwise)
-NAMES = {"black": "rust", "east-asian": "olive", "indigenous": "sage", "latino": "mustard",
-         "mena": "plum", "south-asian": "maroon", "southeast-asian": "teal", "white": "denim"}
 OUTLINE = (30, 18, 14, 255)
 COLOURS = 40
 
@@ -201,21 +198,29 @@ def import_character(path, name):
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--") and not a.endswith(".png")]
-    src = args[0] if args else os.path.join(ART, "people", "_incoming")
+    src = os.path.join(ART, "people")
     manifest = {}
-    for name in sorted(os.listdir(src)):
-        p = os.path.join(src, name, "pose-sheet.png")
-        if os.path.exists(p):
-            game = NAMES.get(name, name)
-            manifest[game] = import_character(p, game)
-            print(f"{game:10s} frame {manifest[game]['frame']}")
-    json.dump({"standHeight": STAND_H, "characters": manifest}, open(os.path.join(OUT, "people.json"), "w"), indent=1)
+    for person in sorted(os.listdir(src)):
+        pdir = os.path.join(src, person)
+        if not os.path.isdir(pdir):
+            continue
+        for outfit in sorted(os.listdir(pdir)):
+            p = os.path.join(pdir, outfit, "pose-sheet.png")
+            if os.path.exists(p):
+                key = f"{person}/{outfit}"
+                manifest[key] = import_character(p, f"{person}--{outfit}")
+                print(f"{key:24s} frame {manifest[key]['frame']}")
+    for old in os.listdir(OUT):  # sheets for people/outfits that are gone
+        if old.endswith(".png") and old[:-4].replace("--", "/") not in manifest:
+            os.remove(os.path.join(OUT, old))
+    people = {}
+    for key in manifest:
+        person, outfit = key.split("/")
+        people.setdefault(person, []).append(outfit)
+    json.dump({"standHeight": STAND_H, "people": people, "characters": manifest}, open(os.path.join(OUT, "people.json"), "w"), indent=1)
     if "--preview" in sys.argv:
         S = 4
-        rows = []
-        for name, m in manifest.items():
-            rows.append(Image.open(os.path.join(OUT, f"{name}.png")).convert("RGBA"))
+        rows = [Image.open(os.path.join(OUT, f"{k.replace('/', '--')}.png")).convert("RGBA") for k in manifest]
         W = max(r.width for r in rows)
         H = sum(r.height for r in rows)
         sheet = Image.new("RGBA", (W, H), (205, 140, 85, 255))

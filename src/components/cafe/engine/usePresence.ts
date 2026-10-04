@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
-import { poseActor, sitPose, walkPose, type Look, type People } from "./avatar";
+import { isLook, keyOf, poseActor, sitPose, walkPose, type Look, type People } from "./avatar";
 import type { Pt, Walk } from "./walk";
 import type { Actor } from "./Stage";
 
@@ -41,16 +41,16 @@ const pt = (v: unknown, w: number, h: number): Pt | null => {
   const y = num(o?.y, 0, h);
   return x === null || y === null ? null : { x, y };
 };
-function cleanWire(v: unknown, w: number, h: number, characters: string[]): Wire | null {
+function cleanWire(v: unknown, w: number, h: number, people: People | null): Wire | null {
   const o = v as Partial<Wire> | null;
   const at = pt(o?.at, w, h);
   if (!o || !at) return null;
-  const c = (o.look as Partial<Look> | undefined)?.character;
-  if (typeof c !== "string" || !characters.includes(c)) return null; // only real characters
+  const l = o.look as Partial<Look> | undefined;
+  if (!people || !isLook(people, l)) return null; // only real people in real outfits
   const s = o.seat as Partial<Seat> | null | undefined;
   const sp = s ? pt(s, w, h) : null;
   const seat = s && sp ? { ...sp, lift: num(s.lift, 0, 40) ?? 0, back: !!s.back, flip: !!s.flip, z: num(s.z, 0, 2000) ?? 1 } : null;
-  return { at, seat, look: { character: c }, barista: !!o.barista, back: !!o.back, flip: !!o.flip };
+  return { at, seat, look: { person: l.person, outfit: l.outfit }, barista: !!o.barista, back: !!o.back, flip: !!o.flip };
 }
 
 export function usePresence(me: Me, size: { w: number; h: number }) {
@@ -74,7 +74,7 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
         const next: Record<string, Other> = {};
         for (const [key, metas] of Object.entries(state)) {
           if (key === id.current) continue;
-          const wire = cleanWire(metas[metas.length - 1], size.w, size.h, Object.keys(meRef.current.people?.characters ?? {}));
+          const wire = cleanWire(metas[metas.length - 1], size.w, size.h, meRef.current.people);
           if (!wire) continue;
           const was = prev[key];
           // a fresh resting spot ends any walk we were playing for them
@@ -163,7 +163,7 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
   const people = me.people;
   for (const o of Object.values(others)) {
     if (!people) break;
-    const m = people.characters[o.look.character];
+    const m = people.characters[keyOf(o.look)];
     if (!m) continue;
     const [fw, fh] = m.frame;
     const seed = o.id.charCodeAt(0) + o.id.charCodeAt(1);
@@ -194,11 +194,11 @@ export function usePresence(me: Me, size: { w: number; h: number }) {
         break;
       }
       const pose = done ? (back ? "stand-back" : "stand-front") : walkPose(back, now - o.moving.started);
-      a = poseActor(people, o.id, o.look.character, pose, pos.x, pos.y, flip, depth(pos));
+      a = poseActor(people, o.id, o.look, pose, pos.x, pos.y, flip, depth(pos));
     } else if (o.seat) {
-      a = poseActor(people, o.id, o.look.character, sitPose(o.seat.back, now, seed), o.seat.x, o.seat.y - o.seat.lift, o.seat.flip, o.seat.z);
+      a = poseActor(people, o.id, o.look, sitPose(o.seat.back, now, seed), o.seat.x, o.seat.y - o.seat.lift, o.seat.flip, o.seat.z);
     } else {
-      a = poseActor(people, o.id, o.look.character, o.back ? "stand-back" : "stand-front", o.at.x, o.at.y, o.flip, depth(o.at));
+      a = poseActor(people, o.id, o.look, o.back ? "stand-back" : "stand-front", o.at.x, o.at.y, o.flip, depth(o.at));
     }
     if (a) actors.push(a);
   }

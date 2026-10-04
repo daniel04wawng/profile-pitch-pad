@@ -9,22 +9,25 @@ import type { Actor } from "./Stage";
 // Standing and walking frames meet the floor at the anchor; seated frames meet the seat there.
 
 export type CharacterMeta = { frame: [number, number]; anchor: [number, number]; frames: string[] };
-export type People = { standHeight: number; characters: Record<string, CharacterMeta> };
+// people: person -> their outfits; characters: "person/outfit" -> that sheet's frames
+export type People = { standHeight: number; people: Record<string, string[]>; characters: Record<string, CharacterMeta> };
 export type Pose =
   | "walk-front-1" | "walk-front-2" | "walk-front-3" | "walk-front-4"
   | "walk-back-1" | "walk-back-2" | "walk-back-3" | "walk-back-4"
   | "stand-front" | "stand-back" | "sit-front" | "sit-sip" | "sit-back";
 
-// The barista is Daniel. Visitors are any of the others.
-export const BARISTA_CHARACTER = "olive";
+// The barista is Daniel (always this person, in any of his outfits). Visitors are the others.
+export const BARISTA_PERSON = "olive";
 
-export type Look = { character: string };
+// who you are (skin, hair: the person) and what you're wearing
+export type Look = { person: string; outfit: string };
+export const keyOf = (l: Look) => `${l.person}/${l.outfit}`;
 
 let peopleLoad: Promise<People> | null = null;
 export function loadPeople(): Promise<People> {
   peopleLoad ??= fetch(`${BASE}people/people.json?v=${BOOT}`, { cache: "no-store" })
     .then((r) => r.json() as Promise<People>)
-    .catch(() => ({ standHeight: 58, characters: {} }));
+    .catch(() => ({ standHeight: 58, people: {}, characters: {} }));
   return peopleLoad;
 }
 export function usePeople(): People | null {
@@ -39,8 +42,11 @@ export function usePeople(): People | null {
   return p;
 }
 
-export const sheetOf = (character: string) => `${BASE}people/${character}.png?v=${BOOT}`;
-export const visitorCharacters = (p: People) => Object.keys(p.characters).filter((c) => c !== BARISTA_CHARACTER);
+export const sheetOf = (key: string) => `${BASE}people/${key.replace("/", "--")}.png?v=${BOOT}`;
+export const visitorPeople = (p: People) => Object.keys(p.people).filter((x) => x !== BARISTA_PERSON);
+export const isLook = (p: People, l: Partial<Look> | null | undefined): l is Look =>
+  !!l && typeof l.person === "string" && typeof l.outfit === "string" && !!p.people[l.person]?.includes(l.outfit);
+export const firstOutfit = (p: People, person: string) => p.people[person]?.[0] ?? "original";
 
 // a walking frame: four steps per stride
 export const walkPose = (back: boolean, t: number, stepMs = 130): Pose =>
@@ -49,27 +55,32 @@ export const walkPose = (back: boolean, t: number, stepMs = 130): Pose =>
 export const sitPose = (back: boolean, t: number, seed = 0): Pose =>
   back ? "sit-back" : (t + seed * 977) % 7000 < 1400 ? "sit-sip" : "sit-front";
 
-// An actor (for the Stage) showing `character` in `pose`, standing (or sitting) at x, y.
-export function poseActor(p: People, id: string, character: string, pose: Pose, x: number, y: number, flip: boolean, z: number): Actor | null {
-  const m = p.characters[character];
+// An actor (for the Stage) showing `look` in `pose`, standing (or sitting) at x, y.
+export function poseActor(p: People, id: string, look: Look, pose: Pose, x: number, y: number, flip: boolean, z: number): Actor | null {
+  const key = keyOf(look);
+  const m = p.characters[key];
   if (!m) return null;
   const i = m.frames.indexOf(pose);
-  return { id, sheet: sheetOf(character), frame: Math.max(0, i), w: m.frame[0], h: m.frame[1], footX: m.anchor[0], footY: m.anchor[1], x, y, flip, z };
+  return { id, sheet: sheetOf(key), frame: Math.max(0, i), w: m.frame[0], h: m.frame[1], footX: m.anchor[0], footY: m.anchor[1], x, y, flip, z };
 }
 
 const LOOK_KEY = "cafe-look";
-export function savedLook(p: People): Look {
-  const all = visitorCharacters(p);
+// Your look as last chosen in this browser (the barista: Daniel, in his last outfit).
+export function savedLook(p: People, barista: boolean): Look {
+  let l: Partial<Look> | null = null;
   try {
-    const raw = localStorage.getItem(LOOK_KEY);
-    const l = raw ? (JSON.parse(raw) as Partial<Look>) : null;
-    if (l && typeof l.character === "string" && all.includes(l.character)) return { character: l.character };
+    l = JSON.parse(localStorage.getItem(LOOK_KEY) ?? "null");
   } catch {
     // private window or blocked storage: a fresh look each visit is fine
   }
-  const l = { character: all[Math.floor(Math.random() * all.length)] ?? BARISTA_CHARACTER };
-  saveLook(l);
-  return l;
+  if (barista) return isLook(p, l) && l.person === BARISTA_PERSON ? l : { person: BARISTA_PERSON, outfit: firstOutfit(p, BARISTA_PERSON) };
+  if (isLook(p, l) && l.person !== BARISTA_PERSON) return l;
+  const all = visitorPeople(p);
+  const person = all[Math.floor(Math.random() * all.length)] ?? BARISTA_PERSON;
+  const pick = p.people[person] ?? ["original"];
+  const look = { person, outfit: pick[Math.floor(Math.random() * pick.length)] };
+  saveLook(look);
+  return look;
 }
 export function saveLook(l: Look) {
   try {

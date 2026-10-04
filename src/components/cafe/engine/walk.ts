@@ -20,7 +20,7 @@ export const SEATS: Record<string, { h: number; forward: number }> = {
   booth: { h: 11, forward: 1.5 },
   couch: { h: 13, forward: 1.5 },
   "sofa-large": { h: 13, forward: 1.5 },
-  armchair: { h: 13, forward: 1.5 },
+  armchair: { h: 12, forward: 0.3 }, // deep seat: sit well back in it
 };
 export const seatOf = (s: SpriteDef) => SEATS[frontOf(nameOf(s.file))];
 

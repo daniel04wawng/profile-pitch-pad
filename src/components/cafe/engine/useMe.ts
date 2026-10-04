@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BARISTA_CHARACTER, isBarista, poseActor, saveLook, savedLook, sitPose, usePeople, walkPose, type Look, type Pose } from "./avatar";
+import { BARISTA_PERSON, isBarista, keyOf, poseActor, saveLook, savedLook, sitPose, usePeople, walkPose, type Look, type Pose } from "./avatar";
 import { makeWalk, seatOf, type Cell, type Pt } from "./walk";
 import { BASE, BOOT, frontOf, type Layout, type SpriteDef } from "./types";
 import { measureSprite, type Measure } from "./measure";
@@ -62,7 +62,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   // the barista is always Daniel; everyone else keeps their own look (a character)
   const [look, setLook] = useState<Look | null>(null);
   useEffect(() => {
-    if (people && !look) setLook(barista ? { character: BARISTA_CHARACTER } : savedLook(people));
+    if (people && !look) setLook(savedLook(people, barista));
   }, [people, look, barista]);
 
   const st = useRef({
@@ -268,18 +268,18 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   });
   let actor: Actor | null = null;
   if (people && look && s.placed) {
-    const m = people.characters[look.character];
+    const m = people.characters[keyOf(look)];
     const h = m ? m.frame[1] : 80;
     const w = m ? m.frame[0] : 30;
     actor = s.seated
       ? // a seated frame meets the seat at its anchor: the seat's surface is `lift` above the floor
-        poseActor(people, "me", look.character, sitPose(s.seated.back, now), s.seated.x, s.seated.y - s.seated.lift, s.seated.flip, s.seated.z)
-      : poseActor(people, "me", look.character, frame, s.pos.x, s.pos.y, s.flip,
+        poseActor(people, "me", look, sitPose(s.seated.back, now), s.seated.x, s.seated.y - s.seated.lift, s.seated.flip, s.seated.z)
+      : poseActor(people, "me", look, frame, s.pos.x, s.pos.y, s.flip,
           walk.depthAt(s.pos, { x0: s.pos.x - w / 2, y0: s.pos.y - h, x1: s.pos.x + w / 2, y1: s.pos.y }));
   }
 
   const changeLook = (l: Look) => {
-    if (barista) return; // Daniel stays Daniel
+    if (barista && l.person !== BARISTA_PERSON) return; // Daniel stays Daniel (any of his outfits)
     setLook(l);
     saveLook(l);
     window.setTimeout(() => net.current.settle?.(), 0); // tell the room about the new look
