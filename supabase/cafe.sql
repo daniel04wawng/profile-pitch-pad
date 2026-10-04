@@ -26,9 +26,23 @@ create table if not exists public.notes (
   y smallint not null default 500 check (y between 0 and 1000),
   hidden boolean not null default false,
   check (char_length(trim(body)) > 0 or doodle ~ '[1-7]'), -- something on it
-  check (body !~* '(https?://|www\.|[a-z0-9-]+\.(com|net|org|io|xyz|ru|gg|ly|co)\b)'), -- no links
-  check (name !~* '(https?://|www\.)')
+  constraint notes_no_links check (body !~* '(https?://|www\.|[a-z0-9-]+\.(com|net|org|io|xyz|ru|gg|ly|co)\y)'), -- \y: a word boundary in Postgres
+  constraint notes_name_no_links check (name !~* '(https?://|www\.|[a-z0-9-]+\.(com|net|org|io|xyz|ru|gg|ly|co)\y)')
 );
+-- older versions of this file wrote the link checks with \b (a backspace in Postgres, so
+-- domains slipped through): swap them for the ones above
+do $$ declare c record; begin
+  for c in select conname from pg_constraint where conrelid = 'public.notes'::regclass and contype = 'c'
+      and pg_get_constraintdef(oid) like '%https?%' and conname not in ('notes_no_links', 'notes_name_no_links') loop
+    execute format('alter table public.notes drop constraint %I', c.conname);
+  end loop;
+end $$;
+delete from public.notes where body ~* '(https?://|www\.|[a-z0-9-]+\.(com|net|org|io|xyz|ru|gg|ly|co)\y)'
+  or name ~* '(https?://|www\.|[a-z0-9-]+\.(com|net|org|io|xyz|ru|gg|ly|co)\y)';
+alter table public.notes drop constraint if exists notes_no_links;
+alter table public.notes add constraint notes_no_links check (body !~* '(https?://|www\.|[a-z0-9-]+\.(com|net|org|io|xyz|ru|gg|ly|co)\y)');
+alter table public.notes drop constraint if exists notes_name_no_links;
+alter table public.notes add constraint notes_name_no_links check (name !~* '(https?://|www\.|[a-z0-9-]+\.(com|net|org|io|xyz|ru|gg|ly|co)\y)');
 alter table public.notes add column if not exists x smallint not null default 500 check (x between 0 and 1000);
 alter table public.notes add column if not exists y smallint not null default 500 check (y between 0 and 1000);
 alter table public.notes enable row level security;
