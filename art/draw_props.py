@@ -1348,6 +1348,55 @@ def booth_table():
     return save(c, "booth-table", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
+def notes_board():
+    """The café's community corkboard: a cork panel in a wood frame on the wall, with sticky
+    notes in a few colours (some with a scribble or a tiny doodle) held up by pins. For the
+    back-right wall; it turns to face whichever wall it's on."""
+    import random
+    rng = random.Random(23)
+    c = Canvas(90, 110)
+    X0, Y0 = 10, 96
+    L, Z0, Z1, F = 20, 34, 76, 1.0  # width (units), bottom/top height (px), frame (units)
+    FZ = 3
+    notes_col = [((248, 226, 120), (226, 196, 84)), ((246, 176, 186), (222, 140, 156)), ((176, 226, 190), (140, 196, 158)),
+                 ((176, 206, 240), (138, 172, 214)), ((250, 250, 244), (214, 212, 204))]
+    # where the notes sit on the board (t along, z up), and their colours
+    notes = []
+    for row, zc in enumerate((Z1 - 12, Z1 - 25, Z0 + 10)):
+        t = 2.4 + rng.random() * 1.2
+        while t < L - 3.5:
+            notes.append((t, zc + rng.randint(-2, 2), notes_col[rng.randrange(len(notes_col))], rng.random()))
+            t += 3.6 + rng.random() * 1.6
+
+    def board(t, zr):
+        z = zr + Z0
+        if t < F or t > L - F or z < Z0 + FZ or z >= Z1 - FZ:
+            return "wood4" if (t < 0.4 or z >= Z1 - 1) else ("wood2" if z < Z0 + 1 else "wood3")
+        for (nt, nz, (col, shade), kind) in notes:
+            if nt - 1.5 <= t < nt + 1.5 and nz - 5 <= z < nz + 5:
+                u, v = t - (nt - 1.5), z - (nz - 5)
+                if v >= 9 and u < 0.6:
+                    return shade  # a curled corner
+                if kind < 0.45 and 2 <= v <= 6 and int(u * 4) % 3 != 2 and v % 2 == 0:
+                    return (90, 80, 70)  # handwriting
+                if 0.45 <= kind < 0.7 and abs(u - 1.5) < 0.6 and 3 <= v <= 6:
+                    return (196, 72, 72) if v > 4 else (120, 160, 90)  # a doodled flower
+                return col + (255,) if isinstance(col, tuple) else col
+        # cork: warm, speckled
+        k = (int(t * 7) * 13 + z * 7) % 11
+        return (150, 108, 64, 255) if k < 2 else ((212, 168, 112, 255) if k < 4 else (194, 148, 96, 255))
+
+    face_left(c, X0, Y0, 0, L, 0, Z0, Z1, board)
+    face_right(c, X0, Y0, L, 0, 0.8, Z0, Z1, lambda s_, z: "wood2")
+    face_top(c, X0, Y0, 0, L, 0, 0.8, Z1, lambda a, b: "wood4")
+    # pins on top of each note
+    for (nt, nz, _, _) in notes:
+        x, y = round(X0 + 2 * nt), round(Y0 + nt - (nz + 4))
+        c.px(x, y, (200, 60, 50, 255))
+        c.px(x, y - 1, (236, 110, 96, 255))
+    return save(c, "notes-board", foot=(X0, Y0 - Z0 + 1))
+
+
 def menu_board():
     """Large chalkboard menu for the wall, in a wood frame: a heading, three sections of items
     with prices, a coffee cup and a croissant drawn in chalk. For the back-right wall."""
@@ -1465,7 +1514,7 @@ ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key
        piano_back, bookshelf_back, armchair_back, booth_back, bar_counter_back, record_cabinet_back,
        espresso_station_back, laptop_back,
        fiddle_leaf_fig, snake_plant, fern_stand, succulent, tulip_pot, window_box,
-       couch, lambda: couch(back=True), menu_board, wardrobe, lambda: wardrobe(back=True), coffee_table, booth_table,
+       couch, lambda: couch(back=True), menu_board, notes_board, wardrobe, lambda: wardrobe(back=True), coffee_table, booth_table,
        lambda: couch(name="sofa-large", L=24, seats=4, R=("olive0", "olive1", "olive2", "olive3", "leaf3")),
        lambda: couch(back=True, name="sofa-large", L=24, seats=4, R=("olive0", "olive1", "olive2", "olive3", "leaf3"))]
 

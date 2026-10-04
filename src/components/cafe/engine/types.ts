@@ -40,7 +40,7 @@ export const ASSET_SECTIONS: [string, string[]][] = [
   ["Seating", ["cafe-chair", "armchair", "couch", "sofa-large", "booth", "piano-stool"]],
   ["Tables & counters", ["cafe-table", "cafe-table-cloth", "cafe-table-linen", "coffee-table", "booth-table", "bar-counter", "pastry-counter"]],
   ["Music & books", ["piano", "record-cabinet", "bookshelf"]],
-  ["Walls & windows", ["window", "kitchen-doorway", "menu-board", "chalkboard-menu", "back-bar-shelves", "sax-poster", "record-art", "framed-picture-tall", "window-box"]],
+  ["Walls & windows", ["window", "notes-board", "kitchen-doorway", "menu-board", "chalkboard-menu", "back-bar-shelves", "sax-poster", "record-art", "framed-picture-tall", "window-box"]],
   ["Changing", ["wardrobe", "changing-room"]],
   ["Lighting", ["globe-lamp", "wall-lamp", "floor-lamp"]],
   ["Plants", ["potted-plant", "fiddle-leaf-fig", "snake-plant", "fern-stand", "hanging-plant", "tulip-pot"]],
@@ -104,6 +104,7 @@ export const WALL_ITEMS: Record<string, { drawnFor?: "left" | "right"; onFloor?:
   "back-bar-shelves": { drawnFor: "right" },
   "window-box": { drawnFor: "right" },
   "menu-board": { drawnFor: "right" },
+  "notes-board": { drawnFor: "right" },
   "framed-picture-tall": { drawnFor: "left" },
   "wall-lamp": { drawnFor: "left" },
   "kitchen-doorway": { drawnFor: "left", onFloor: true },
@@ -145,6 +146,8 @@ export function rotOf(s: Pick<SpriteDef, "file" | "flipX" | "rot">) {
 
 // A built-in "screen" that isn't text: the changing room, where visitors change their avatar.
 export const WARDROBE = "wardrobe";
+// Another built-in: the community board, where visitors pin notes and doodles.
+export const NOTES = "notes";
 
 // What a freshly placed asset opens, so the furniture works the moment it's moved in.
 // Flat things (rugs) lie under everything else.
@@ -177,6 +180,7 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   bookshelf: { hotspot: "books", label: "books I love" },
   "changing-room": { hotspot: WARDROBE, label: "change your look" },
   wardrobe: { hotspot: WARDROBE, label: "change your look" },
+  "notes-board": { hotspot: NOTES, label: "leave a note" },
   "bar-counter": { hotspot: "about", label: "about me" },
   "special-board": { hotspot: "now", label: "special of the day" },
   booth: { hotspot: "chill", label: "sit for a while" },

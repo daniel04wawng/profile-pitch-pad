@@ -508,5 +508,11 @@
    "b": 6,
    "from": "front"
   }
+ },
+ "notes-board": {
+  "foot": {
+   "x": 2,
+   "y": 44
+  }
  }
 }

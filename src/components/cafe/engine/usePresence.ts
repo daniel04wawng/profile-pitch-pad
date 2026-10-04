@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { supabase as client } from "./supabase";
 import { isLook, keyOf, poseActor, roomSize, sitPose, walkPose, type Look, type People } from "./avatar";
 import type { Pt, Walk } from "./walk";
 import type { Actor } from "./Stage";
@@ -9,14 +10,11 @@ import type { Actor } from "./Stage";
 // A walk is one Broadcast message (start + path); every browser plays it back at the same
 // speed, so nothing is sent per frame. Joining mid-walk just shows people at their last spot.
 
-const URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 const ROOM = "cafe";
 const CAPACITY = 40; // more than this and newcomers watch without an avatar
 const SPEED = 64; // px/s, same as your own avatar
 const MAX_PATH = 120;
 
-const client = URL && KEY ? createClient(URL, KEY, { realtime: { params: { eventsPerSecond: 8 } } }) : null;
 
 type Seat = { x: number; y: number; lift: number; back: boolean; flip: boolean; z: number };
 type Rest = { at: Pt; seat: Seat | null; back: boolean; flip: boolean };
