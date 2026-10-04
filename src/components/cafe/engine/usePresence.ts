@@ -13,7 +13,7 @@ const URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 const ROOM = "cafe";
 const CAPACITY = 40; // more than this and newcomers watch without an avatar
-const SPEED = 42; // px/s, same as your own avatar
+const SPEED = 64; // px/s, same as your own avatar
 const MAX_PATH = 120;
 
 const client = URL && KEY ? createClient(URL, KEY, { realtime: { params: { eventsPerSecond: 8 } } }) : null;

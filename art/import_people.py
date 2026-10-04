@@ -154,6 +154,45 @@ def outline(im):
     return out
 
 
+def make_gait(frames, fw, anchor):
+    """The generated walk frames are all one stride with small wobbles, so walking looked like
+    gliding. Build a real alternating cycle per direction from the widest stride:
+      1 stride (as generated)  2 passing (feet together, 1px up)  3 the other stride (legs
+      mirrored about the body's centre)  4 passing."""
+    arr = np.asarray(frames).copy()
+    ax, ay = anchor
+    get = lambda n: arr[:, ORDER.index(n) * fw : (ORDER.index(n) + 1) * fw].copy()
+
+    def spread(f):
+        low = (f[..., 3] > 0)[ay - 4 : ay]
+        xs = np.nonzero(low.any(0))[0]
+        return xs.max() - xs.min() if len(xs) else 0
+
+    for d in ("front", "back"):
+        A = max((get(f"walk-{d}-{i}") for i in range(1, 5)), key=spread)
+        solid = A[..., 3] > 0
+        ys = np.nonzero(solid.any(1))[0]
+        top = ys[0]
+        hip = top + int((ay - top) * 0.62)  # below this: the legs
+        cx = int(np.median(np.nonzero(solid[top + int((ay - top) * 0.3) : top + int((ay - top) * 0.55)])[1]))
+        B = A.copy()
+        B[hip:] = 0
+        for x in range(fw):
+            mx = 2 * cx - x
+            if 0 <= mx < fw:
+                col = A[hip:, x]
+                B[hip:, mx] = np.where(col[:, 3:4] > 0, col, B[hip:, mx])
+        S = get(f"stand-{d}")
+        passing = np.zeros_like(A)
+        passing[:hip] = A[:hip]
+        passing[hip:] = np.where(S[hip:, :, 3:4] > 0, S[hip:], 0)
+        passing = np.roll(passing, -1, axis=0)  # a little bob
+        for i, f in enumerate((A, passing, B, passing), start=1):
+            k = ORDER.index(f"walk-{d}-{i}")
+            arr[:, k * fw : (k + 1) * fw] = f
+    return Image.fromarray(arr)
+
+
 def import_character(path, name):
     sheet = Image.open(path).convert("RGBA")
     boxes = find_poses(sheet)
@@ -192,6 +231,7 @@ def import_character(path, name):
         s = small[p]
         ax, ay = anchors[p]
         frames.alpha_composite(s, (i * fw + left - ax, up - ay))
+    frames = make_gait(frames, fw, (left, up))
     os.makedirs(OUT, exist_ok=True)
     frames.save(os.path.join(OUT, f"{name}.png"))
     return {"frame": [int(fw), int(fh)], "anchor": [int(left), int(up)], "frames": ORDER}

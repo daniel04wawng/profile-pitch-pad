@@ -8,7 +8,7 @@ import type { Actor, Companion } from "./Stage";
 // The visitor's own avatar: walks in, walks wherever you click (around the furniture), walks
 // up to things before their screen opens, and sits in seats.
 
-const SPEED = 42; // px per second across the screen
+const SPEED = 64; // px per second across the screen
 const nameOf = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/, "");
 
 type Seated = { x: number; y: number; lift: number; back: boolean; flip: boolean; z: number; seat: SpriteDef };

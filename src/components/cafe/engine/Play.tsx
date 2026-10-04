@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Stage, useCompanions } from "./Stage";
 import { useMe } from "./useMe";
+import { seatOf } from "./walk";
 import { usePresence } from "./usePresence";
 import { CafeScreen } from "./Screens";
 import { WARDROBE, type Layout, type SpriteDef } from "./types";
@@ -82,7 +83,8 @@ export function Play({
       <Stage
         layout={layout}
         versions={versions}
-        interactive={(s) => !!s.hotspot && (!!screens[s.hotspot] || s.hotspot === WARDROBE) && !focus}
+        // seats are always clickable (to sit); other things when they open a screen
+        interactive={(s) => !focus && (!!seatOf(s) || (!!s.hotspot && (!!screens[s.hotspot] || s.hotspot === WARDROBE)))}
         hovered={focus ? null : hovered?.id ?? null}
         camera={focus ? { x: focus.x, y: focus.y, w: focus.w, h: focus.h } : null}
         light={lightAt(hour)}
@@ -91,7 +93,9 @@ export function Play({
           onPointerMove: (_, e) => setMouse({ x: e.clientX, y: e.clientY }),
           onPointerDown: (s, p) => {
             if (focus) return;
-            if (s?.hotspot) me.visit(s, () => visit(s));
+            // a seat: walk over and sit down, no screen (the chill corner starts the music)
+            if (s && seatOf(s)) me.visit(s, () => s.hotspot === "chill" && setMusic(true));
+            else if (s?.hotspot) me.visit(s, () => visit(s));
             else me.walkTo(p);
           },
         }}

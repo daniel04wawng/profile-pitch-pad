@@ -49,7 +49,7 @@ export const isLook = (p: People, l: Partial<Look> | null | undefined): l is Loo
 export const firstOutfit = (p: People, person: string) => p.people[person]?.[0] ?? "original";
 
 // a walking frame: four steps per stride
-export const walkPose = (back: boolean, t: number, stepMs = 130): Pose =>
+export const walkPose = (back: boolean, t: number, stepMs = 105): Pose =>
   `walk-${back ? "back" : "front"}-${(Math.floor(t / stepMs) % 4) + 1}` as Pose;
 // sitting facing you, a sip of coffee now and then (every ~7s, for ~1.4s), offset per person
 export const sitPose = (back: boolean, t: number, seed = 0): Pose =>
