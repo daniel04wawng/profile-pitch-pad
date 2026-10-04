@@ -54,7 +54,7 @@ function Sticky({ note, ghost }: { note: Pick<Note, "id" | "body" | "name" | "co
       {img && <img src={img} alt="a doodle" className="mx-auto mb-1 h-20 w-20 [image-rendering:pixelated]" />}
       {note.body && <p className="whitespace-pre-wrap break-words text-[17px] leading-tight">{note.body}</p>}
       <p className="mt-auto pt-1.5 text-[14px] opacity-60">
-        {note.name ? `— ${note.name}` : "— someone"}
+        {note.name ? `from ${note.name}` : "from someone"}
         {note.created_at ? ` · ${ago(note.created_at)}` : ""}
       </p>
     </div>
