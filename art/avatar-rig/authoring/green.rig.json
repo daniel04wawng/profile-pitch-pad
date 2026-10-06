@@ -1,0 +1,142 @@
+{
+  "source": "../assets/green/source-standing.png",
+  "frameSize": [
+    256,
+    280
+  ],
+  "near": {
+    "hip": [
+      124.5,
+      149.5
+    ],
+    "knee": [
+      121.7,
+      186.5
+    ],
+    "ankle": [
+      121.7,
+      227.2
+    ]
+  },
+  "far": {
+    "hip": [
+      143.0,
+      143.9
+    ],
+    "knee": [
+      144.0,
+      182.8
+    ],
+    "ankle": [
+      144.9,
+      216.1
+    ]
+  },
+  "cameraDegrees": 35,
+  "hipSwingRadians": 0.3,
+  "kneeFlexRadians": 0.45,
+  "bodyHeight": 78,
+  "bodySway": 1.5,
+  "freeArm": {
+    "pivot": [
+      153,
+      122
+    ],
+    "swingRadians": 0.15
+  },
+  "layers": {
+    "legBoundaryX": 134,
+    "calfBoundaryX": 132,
+    "calfBoundaryY": 200,
+    "nearLegTop": 143,
+    "farLegTop": 139,
+    "torsoOverlapY": 156,
+    "nearShoeTop": 222,
+    "farShoeTop": 212,
+    "nearShinBottom": 224,
+    "farShinBottom": 215,
+    "kneeOverlap": 6,
+    "graySaturation": 35,
+    "grayMax": 165,
+    "footPolygons": [
+      [
+        [
+          106,
+          208
+        ],
+        [
+          133,
+          208
+        ],
+        [
+          137,
+          237
+        ],
+        [
+          150,
+          248
+        ],
+        [
+          150,
+          263
+        ],
+        [
+          130,
+          263
+        ],
+        [
+          106,
+          244
+        ]
+      ],
+      [
+        [
+          133,
+          196
+        ],
+        [
+          155,
+          196
+        ],
+        [
+          164,
+          217
+        ],
+        [
+          178,
+          229
+        ],
+        [
+          178,
+          245
+        ],
+        [
+          152,
+          245
+        ],
+        [
+          131,
+          225
+        ]
+      ]
+    ],
+    "sleevePolygon": [
+      [
+        150,
+        114
+      ],
+      [
+        163,
+        114
+      ],
+      [
+        164,
+        133
+      ],
+      [
+        151,
+        134
+      ]
+    ]
+  }
+}

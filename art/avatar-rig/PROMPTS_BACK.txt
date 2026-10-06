@@ -1,0 +1,4 @@
+Standing: Same character as source-standing.png, back three-quarter facing northeast, elevated orthographic isometric 35 degrees. Olive overshirt, charcoal rolled trousers, white sneakers, dark wavy hair, cream mug in right hand, left arm relaxed. Full body transparent, no floor, no shadow.
+Seated: Same back-view character and camera, seated on invisible chair facing northeast. Right hand holding mug, other hand on thigh. Preserve clothes and proportions. Transparent, no furniture.
+Clean plate: Preserve seated framing, remove right arm and mug, reconstruct underlying shirt and trousers.
+Generated with built-in image generation; movements are baked with the included calibrated code. Left directions are mirrored and therefore swap handedness and clothing asymmetries.

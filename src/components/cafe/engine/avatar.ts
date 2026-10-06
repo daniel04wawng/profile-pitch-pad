@@ -20,8 +20,10 @@ export type Pose =
 // The barista is Daniel (always this person, in any of his outfits). Visitors are the others.
 export const BARISTA_PERSON = "olive";
 
-// who you are (skin, hair: the person) and what you're wearing
-export type Look = { person: string; outfit: string };
+// who you are (skin, hair: the person) and what you're wearing. `avatar` picks a rigged avatar
+// from the catalog (rig.ts) instead: unset = the default one, "" = this classic person.
+export type Look = { person: string; outfit: string; avatar?: string };
+export const cleanAvatar = (v: unknown): string | undefined => (typeof v === "string" && /^[a-z0-9-]{0,32}$/.test(v) ? v : undefined);
 export const keyOf = (l: Look) => `${l.person}/${l.outfit}`;
 
 let peopleLoad: Promise<People> | null = null;
@@ -86,8 +88,9 @@ export function savedLook(p: People, barista: boolean): Look {
   } catch {
     // private window or blocked storage: a fresh look each visit is fine
   }
-  if (barista) return isLook(p, l) && l.person === BARISTA_PERSON ? l : { person: BARISTA_PERSON, outfit: firstOutfit(p, BARISTA_PERSON) };
-  if (isLook(p, l) && l.person !== BARISTA_PERSON) return l;
+  const avatar = cleanAvatar(l?.avatar);
+  if (barista) return isLook(p, l) && l.person === BARISTA_PERSON ? { person: l.person, outfit: l.outfit, avatar } : { person: BARISTA_PERSON, outfit: firstOutfit(p, BARISTA_PERSON), avatar };
+  if (isLook(p, l) && l.person !== BARISTA_PERSON) return { person: l.person, outfit: l.outfit, avatar };
   const all = visitorPeople(p);
   const person = all[Math.floor(Math.random() * all.length)] ?? BARISTA_PERSON;
   const pick = p.people[person] ?? ["original"];

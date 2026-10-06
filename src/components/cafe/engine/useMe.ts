@@ -5,11 +5,12 @@ import { makeWalk, seatOf, type Cell, type Pt } from "./walk";
 import { BASE, BOOT, frontOf, type Layout, type SpriteDef } from "./types";
 import { measureSprite, type Measure } from "./measure";
 import type { Actor, Companion } from "./Stage";
+import { Body, dirOf, facing, useCatalog, useRig } from "./rig";
 
 // The visitor's own avatar: walks in, walks wherever you click (around the furniture), walks
 // up to things before their screen opens, and sits in seats.
 
-const SPEED = 64; // px per second across the screen
+const SPEED = 64; // px per second across the screen (a rigged avatar strides to match)
 const ARRIVE_DELAY = 700; // ms after the page settles before you walk in
 const FADE_MS = 650; // fading in as you step in from the street
 const nameOf = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/, "");
@@ -78,12 +79,30 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     t: 0,
     placed: false,
     arrivedAt: 0, // when the walk in started (for the fade in)
+    since: 0, // when you sat down (wall clock, so others' sips line up with yours)
   });
   if (import.meta.env.DEV) (window as unknown as { __me?: unknown }).__me = { walk, st };
   // multiplayer hooks (usePresence fills these): a walk starting, and coming to rest
   const net = useRef<{ walk?: (from: Pt, path: Pt[]) => void; settle?: () => void }>({});
   const [frame, setFrame] = useState<Pose>("stand-front");
   const [, tick] = useState(0);
+
+  // A rigged avatar (rig.ts): the default for everyone who hasn't picked a classic person.
+  // If it can't load, the classic person stands in.
+  const catalog = useCatalog();
+  const rigId = !look || !catalog ? undefined : look.avatar === "" ? null : (catalog.find((a) => a.id === look.avatar) ?? catalog[0])?.id ?? null;
+  const rig = useRig(rigId);
+  const body = useRef<Body | null>(null);
+  if (rig && rig !== "failed") {
+    if (body.current?.rig !== rig) {
+      const old = body.current;
+      body.current = new Body(rig, old?.dir ?? dirOf(st.current.back, st.current.flip));
+      if (st.current.seated) body.current.seated();
+    }
+  } else body.current = null;
+  // still finding out which avatar you are: draw nobody rather than the wrong one
+  const pending = rigId === undefined || (rigId !== null && rig === null);
+  const faceBody = () => body.current?.face(dirOf(st.current.back, st.current.flip));
 
   // arrive: everyone (the barista too) walks in across the open front of the café
   useEffect(() => {
@@ -100,6 +119,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
       s.arrive = () => {
         s.back = false;
         setFrame("stand-front");
+        faceBody();
       };
       net.current.walk?.({ ...s.pos }, [...s.path]);
     }, ARRIVE_DELAY);
@@ -111,9 +131,21 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     let raf = 0;
     let last = performance.now();
     // advance the avatar by dt seconds (the frame loop calls this; tests can too)
+    let shown = "";
     const advance = (dt: number) => {
       const s = st.current;
       const w = walkRef.current;
+      const b = body.current;
+      if (b) {
+        b.tick(dt * 1000);
+        // redraw when the frame changes (idle breathing, sitting, sipping)
+        const now = `${b.av.action}:${b.av.frameIndex}:${b.dir}`;
+        if (now !== shown && !s.path.length) {
+          shown = now;
+          tick((n) => (n + 1) % 1e6);
+        }
+        if (b.mode === "sit-down" || b.mode === "stand-up") return; // finish getting up (or down) first
+      }
       if (!s.path.length && held.current && !s.seated) {
         // keep walking cell by cell while an arrow is held; stop at anything in the way
         const here = w.cellAt(s.pos);
@@ -137,11 +169,13 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
             s.back = t.y < s.pos.y;
             s.flip = t.x > s.pos.x ? !s.back : s.back;
             setFrame(s.back ? "stand-back" : "stand-front");
+            b?.face(facing(b.dir, t.x - s.pos.x, t.y - s.pos.y));
           }
         }
       }
       if (s.path.length) {
         let left = SPEED * dt;
+        let moved = 0;
         while (left > 0 && s.path.length) {
           const to = s.path[0];
           const dx = to.x - s.pos.x;
@@ -151,7 +185,10 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
             // face the way you're going: down-right/down-left = toward you, up = away
             s.back = dy < -0.01;
             s.flip = dx > 0.01 ? !s.back : dx < -0.01 ? s.back : s.flip;
+            // which way it looks on screen; turning keeps the stride's phase
+            if (b) b.face(facing(b.dir, dx, dy));
           }
+          moved += Math.min(dist, left);
           if (dist <= left) {
             s.pos = { ...to };
             s.path.shift();
@@ -172,6 +209,11 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
         s.t += dt * 1000;
         // keep striding between cells while an arrow is held, stand when you stop
         setFrame(s.path.length || held.current ? walkPose(s.back, s.t) : s.back ? "stand-back" : "stand-front");
+        const rb = body.current; // (the arrival may have just sat you down)
+        if (rb && rb.mode !== "sit-down") {
+          if (moved > 0) rb.walk(moved);
+          if (!s.path.length && !held.current) rb.stop();
+        }
         tick((n) => (n + 1) % 1e6);
       }
     };
@@ -192,7 +234,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
       const k = keyName(e);
       if (!KEYS[k] || !enabledRef.current || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return;
       e.preventDefault();
-      if (!heldKeys.current.size) standUp();
+      if (!heldKeys.current.size && st.current.seated) standUp();
       heldKeys.current.add(k);
       st.current.arrive = null;
     };
@@ -210,17 +252,30 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     };
   });
 
-  const standUp = () => {
+  // get up from a seat (a rigged avatar plays standing up first), then `after`
+  const standUp = (after?: () => void) => {
     const s = st.current;
-    if (!s.seated) return;
-    const seat = s.seated.seat;
-    s.seated = null;
-    // step off to the nearest free cell next to the seat
-    const beside = walk.besideOf(seat);
-    const from = walk.cellAt({ x: s.pos.x, y: s.pos.y });
-    const route = walk.walkTo(from, (c) => beside.has(walk.key(c))) ?? walk.walkTo(from, walk.free);
-    const out = route?.[route.length - 1];
-    if (out) s.pos = walk.cellCentre(out);
+    const sat = s.seated;
+    if (!sat) return after?.();
+    const b = body.current;
+    const leave = () => {
+      s.seated = null;
+      if (b) {
+        // the last stand-up frame stands where the seated feet were
+        s.pos = b.feetFromSeat(sat.x, sat.y - sat.lift, b.dir);
+      } else {
+        // step off to the nearest free cell next to the seat
+        const beside = walk.besideOf(sat.seat);
+        const from = walk.cellAt({ x: s.pos.x, y: s.pos.y });
+        const route = walk.walkTo(from, (c) => beside.has(walk.key(c))) ?? walk.walkTo(from, walk.free);
+        const out = route?.[route.length - 1];
+        if (out) s.pos = walk.cellCentre(out);
+      }
+      after?.();
+      tick((n) => n + 1);
+    };
+    if (b) b.standUp(leave);
+    else leave();
   };
 
   const go = (cells: Cell[] | null, arrive?: () => void) => {
@@ -235,8 +290,8 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   };
 
   // click on the floor: walk there (or as close as you can get)
-  const walkTo = (p: Pt) => {
-    standUp();
+  const walkTo = (p: Pt) => standUp(() => walkOn(p));
+  const walkOn = (p: Pt) => {
     const s = st.current;
     const target = walk.cellAt(p);
     if (!walk.inside(target)) return;
@@ -247,14 +302,37 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   };
 
   // click on a thing: walk up to it, then `then` (open its screen); seats: sit down first
-  const visit = (thing: SpriteDef, then: () => void) => {
-    standUp();
+  const visit = (thing: SpriteDef, then: () => void) => standUp(() => visitOn(thing, then));
+  const visitOn = (thing: SpriteDef, then: () => void) => {
     const s = st.current;
     const from = walk.cellAt(s.pos);
     const beside = walk.besideOf(thing);
     const route = walk.walkTo(from, (c) => beside.has(walk.key(c)));
     const seatSpot = seatOf(thing) ? walk.seatSpot(thing) : null;
     const arrive = () => {
+      const b = body.current;
+      if (seatSpot && b) {
+        // step to where the feet go when seated, then sit down (facing the way the seat does)
+        const dir = dirOf(seatSpot.back, seatSpot.flip);
+        const feet = b.feetFromSeat(seatSpot.x, seatSpot.y - seatSpot.lift, dir);
+        const sitNow = () => {
+          s.seated = { ...seatSpot, z: seatSpot.back ? thing.baseY - 1 : thing.baseY + 1, seat: thing };
+          s.pos = { x: seatSpot.x, y: seatSpot.y };
+          s.back = seatSpot.back;
+          s.flip = seatSpot.flip;
+          b.face(dir);
+          b.sit();
+          s.since = Date.now();
+          tick((n) => n + 1);
+          then();
+        };
+        if (Math.hypot(feet.x - s.pos.x, feet.y - s.pos.y) > 1) {
+          s.path = [feet];
+          s.arrive = sitNow;
+          net.current.walk?.({ ...s.pos }, [...s.path]);
+        } else sitNow();
+        return;
+      }
       if (seatSpot) {
         s.seated = { ...seatSpot, z: seatSpot.back ? thing.baseY - 1 : thing.baseY + 1, seat: thing };
         s.pos = { x: seatSpot.x, y: seatSpot.y };
@@ -265,6 +343,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
         s.back = mid.y < s.pos.y;
         s.flip = mid.x > s.pos.x ? !s.back : s.back;
         setFrame(s.back ? "stand-back" : "stand-front");
+        b?.face(facing(b.dir, mid.x - s.pos.x, mid.y - s.pos.y));
       }
       tick((n) => n + 1);
       then();
@@ -281,7 +360,15 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     return () => window.clearInterval(t);
   });
   let actor: Actor | null = null;
-  if (people && look && s.placed) {
+  const b = body.current;
+  if (b && s.placed) {
+    const fade = Math.max(0, Math.min(1, (performance.now() - s.arrivedAt) / FADE_MS));
+    const [fw, fh] = b.av.manifest.frameSize;
+    actor = s.seated
+      ? b.actor("me", s.seated.x, s.seated.y - s.seated.lift, s.seated.z)
+      : b.actor("me", s.pos.x, s.pos.y, walk.depthAt(s.pos, { x0: s.pos.x - fw / 2, y0: s.pos.y - fh, x1: s.pos.x + fw / 2, y1: s.pos.y }));
+    actor.opacity = fade;
+  } else if (people && look && s.placed && !pending) {
     const [w, h] = roomSize(people, keyOf(look));
     actor = s.seated
       ? // a seated frame meets the seat at its anchor: the seat's surface is `lift` above the floor
@@ -310,6 +397,8 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
       seat: s.seated ? { x: s.seated.x, y: s.seated.y, lift: s.seated.lift, back: s.seated.back, flip: s.seated.flip, z: s.seated.z } : null,
       back: s.back,
       flip: s.flip,
+      dir: body.current?.dir ?? dirOf(s.back, s.flip),
+      since: s.seated ? s.since : 0,
     };
   };
 

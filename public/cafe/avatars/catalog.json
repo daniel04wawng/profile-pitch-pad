@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "avatars": [
+    { "id": "green", "label": "Green overshirt", "manifest": "green/manifest.json" }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "frameSize": [
+    256,
+    280
+  ],
+  "source": "standing.png",
+  "cameraDegrees": 35,
+  "facingVector": [
+    0.70710678,
+    -0.40557979
+  ],
+  "hipSwingRadians": 0.3,
+  "kneeFlexRadians": 0.45,
+  "bodyHeight": 78,
+  "bodySway": 1.5,
+  "near": {
+    "hip": [
+      147,
+      150
+    ],
+    "knee": [
+      149,
+      196
+    ],
+    "ankle": [
+      151,
+      239
+    ]
+  },
+  "far": {
+    "hip": [
+      126,
+      149
+    ],
+    "knee": [
+      125,
+      182
+    ],
+    "ankle": [
+      124,
+      219
+    ]
+  },
+  "freeArm": {
+    "pivot": [
+      109,
+      108
+    ],
+    "swingRadians": 0.12
+  },
+  "layers": {
+    "boundaryX": 137,
+    "legTop": 143,
+    "nearShoeTop": 238,
+    "farShoeTop": 218,
+    "armPolygon": [
+      [
+        103,
+        107
+      ],
+      [
+        117,
+        107
+      ],
+      [
+        117,
+        126
+      ],
+      [
+        125,
+        151
+      ],
+      [
+        110,
+        153
+      ],
+      [
+        103,
+        130
+      ]
+    ]
+  }
+}

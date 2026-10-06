@@ -1,0 +1,15 @@
+{
+  "name": "daniel-cafe-avatar-rig",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/cafe-avatar.d.ts",
+      "import": "./src/cafe-avatar.mjs"
+    }
+  },
+  "scripts": {
+    "test": "node test.mjs"
+  },
+  "types": "./src/cafe-avatar.d.ts"
+}

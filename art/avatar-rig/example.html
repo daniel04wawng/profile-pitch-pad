@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>Four-direction café avatar</title><style>body{font:16px system-ui;background:#eee5d5;color:#342c22;margin:24px}button{padding:8px;margin:3px}canvas{background:#f6efe4;max-width:100%;image-rendering:pixelated}#status{max-width:700px}</style><h2>Four-direction café avatar</h2><div id="directions"></div><div id="actions"></div><p id="status">Loading…</p><canvas id="c" width="800" height="460"></canvas><script type="module">
+import {loadCafeAvatar} from './src/cafe-avatar.mjs';
+const status=document.getElementById('status');
+try {
+const avatar=await loadCafeAvatar(new URL('./assets/green/manifest.json',import.meta.url).href);
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const position={x:400,y:280},scale=3;let last=performance.now();
+for(const direction of ['SE','SW','NE','NW']){const b=document.createElement('button');b.textContent=direction;b.onclick=()=>avatar.setDirection(direction);document.getElementById('directions').appendChild(b)}
+for(const name of ['walk','idle','sit-down','stand-up','coffee-sip','seated-idle']){const b=document.createElement('button');b.textContent=name;b.onclick=()=>{avatar.play(name,{restart:true});position.x=400;position.y=280};document.getElementById('actions').appendChild(b)}
+status.textContent='Choose a direction and action. Turning preserves walk phase. Front and back views each have eight frames; left views are mirrored. Furniture is separate.';
+function tick(now){const dt=Math.min(now-last,80);last=now;const motion=avatar.update(dt);position.x+=motion.dx*scale;position.y+=motion.dy*scale;
+if(position.x>720||position.x<80||position.y>425||position.y<220){position.x=400;position.y=280}
+if(motion.justCompleted){if(avatar.action.startsWith('sit-down'))avatar.play('seated-idle');else if(avatar.action.startsWith('stand-up'))avatar.play('idle')}
+ctx.clearRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#d8cbb4';for(let y=40;y<460;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(800,y);ctx.stroke()}
+avatar.draw(ctx,{...position,scale});requestAnimationFrame(tick)}requestAnimationFrame(tick);
+} catch(error) {status.textContent=error.message+' Serve this folder over HTTP instead of opening it with file://.';}
+</script>
