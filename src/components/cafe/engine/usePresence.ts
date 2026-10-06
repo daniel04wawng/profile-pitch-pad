@@ -10,9 +10,21 @@ import type { Actor } from "./Stage";
 // they are (look, barista or not) and where they rest (a spot, or a seat); it changes rarely.
 // A walk is one Broadcast message (start + path); every browser plays it back at the same
 // speed, so nothing is sent per frame. Joining mid-walk just shows people at their last spot.
+//
+// Built to survive a crowd on Supabase's free tier (200 connections, 100 messages a second
+// for the whole project): people fill overflow rooms of CAPACITY (cafe-1, cafe-2, ...); once
+// every room is full, newcomers get the café to themselves and hold no connection at all
+// (trying again now and then); walks are sent at most every WALK_EVERY ms; a tab hidden for a
+// while gives its place up; and when the connection fails, it retries, backing off.
 
-const ROOM = "cafe";
-const CAPACITY = 40; // more than this and newcomers watch without an avatar
+// (the dev server takes ?rooms=&cap= to try overflow with a couple of tabs)
+const devQ = import.meta.env.DEV ? new URLSearchParams(location.search) : null;
+const ROOMS = Number(devQ?.get("rooms")) || 4;
+const CAPACITY = Number(devQ?.get("cap")) || 30;
+const WALK_EVERY = 500; // ms between walk messages (the last one always goes)
+const URGENT_EVERY = 150; // ...but a stop or a turn goes this soon
+const AWAY_MS = 120_000; // hidden this long: leave the room (rejoin when you're back)
+const FULL_RETRY_MS = 60_000;
 const SPEED = 64; // px/s, same as your own avatar
 const MAX_PATH = 120;
 
@@ -26,7 +38,7 @@ type Me = {
   people: People | null;
   barista: boolean;
   placed: boolean;
-  net: React.MutableRefObject<{ walk?: (from: Pt, path: Pt[]) => void; settle?: () => void }>;
+  net: React.MutableRefObject<{ walk?: (from: Pt, path: Pt[], urgent?: boolean) => void; settle?: () => void }>;
   snapshot: () => Rest;
   inFlight: () => { from: Pt; path: Pt[] } | null;
   walk: Walk;
@@ -72,14 +84,38 @@ export function usePresence(me: Me, size: { w: number; h: number }, on = true) {
   const catalog = useCatalog();
   const [rigs, setRigs] = useState<Record<string, Rig | "failed">>({});
   const joined = useRef(false);
-
-  // join the room once your avatar has arrived
+  // "connecting" | "in" | "full" (every room full) | "offline" (retrying)
+  const [status, setStatus] = useState<"connecting" | "in" | "full" | "offline">("connecting");
+  const [room, setRoom] = useState(0);
+  // bumped to try joining again (after a failure, or when the rooms might have space)
+  const [epoch, setEpoch] = useState(0);
+  const failures = useRef(0);
+  // a tab left hidden gives its place up
+  const [away, setAway] = useState(false);
   useEffect(() => {
-    if (!client || !on || !me.placed || chan.current) return;
-    const ch = client.channel(ROOM, { config: { presence: { key: id.current }, broadcast: { self: false } } });
-    chan.current = ch;
-    const sync = () => {
-      const state = ch.presenceState() as Record<string, unknown[]>;
+    let t = 0;
+    const vis = () => {
+      window.clearTimeout(t);
+      if (document.hidden) t = window.setTimeout(() => setAway(true), AWAY_MS);
+      else setAway(false);
+    };
+    document.addEventListener("visibilitychange", vis);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("visibilitychange", vis);
+    };
+  }, []);
+
+  // join a room once your avatar has arrived
+  useEffect(() => {
+    if (!client || !on || !me.placed || away) return;
+    let cancelled = false;
+    let retry = 0;
+    let ch: RealtimeChannel | null = null;
+    setStatus("connecting");
+
+    const sync = (c: RealtimeChannel) => () => {
+      const state = c.presenceState() as Record<string, unknown[]>;
       setOthers((prev) => {
         const next: Record<string, Other> = {};
         for (const [key, metas] of Object.entries(state)) {
@@ -96,73 +132,192 @@ export function usePresence(me: Me, size: { w: number; h: number }, on = true) {
         return next;
       });
     };
-    ch.on("presence", { event: "sync" }, sync)
-      .on("broadcast", { event: "walk" }, ({ payload }) => {
-        const p = payload as { id?: unknown; from?: unknown; path?: unknown };
-        if (typeof p.id !== "string" || p.id === id.current || !Array.isArray(p.path)) return;
-        const from = pt(p.from, size.w, size.h);
-        const path = (p.path as unknown[]).slice(0, MAX_PATH).map((q) => pt(q, size.w, size.h)).filter(Boolean) as Pt[];
-        if (!from || !path.length) return;
-        // someone getting up from a seat stands up first, then walks
-        setOthers((prev) => {
-          const o = prev[p.id as string];
-          if (!o) return prev;
-          const rise = o.seat && bodies.current.get(o.id)?.sitting ? o.seat : null;
-          return { ...prev, [o.id]: { ...o, seat: null, moving: { from, path, started: performance.now() + (rise ? SIT_MS : 0), rise } } };
+    const onWalk = ({ payload }: { payload: unknown }) => {
+      const p = payload as { id?: unknown; from?: unknown; path?: unknown };
+      if (typeof p.id !== "string" || p.id === id.current || !Array.isArray(p.path)) return;
+      const from = pt(p.from, size.w, size.h);
+      const path = (p.path as unknown[]).slice(0, MAX_PATH).map((q) => pt(q, size.w, size.h)).filter(Boolean) as Pt[];
+      if (!from || !path.length) return;
+      if (import.meta.env.DEV) {
+        const g = window as unknown as { __walks?: { sent: number; got: number } };
+        g.__walks = { ...(g.__walks ?? { sent: 0, got: 0 }), got: (g.__walks?.got ?? 0) + 1 };
+      }
+      // someone getting up from a seat stands up first, then walks
+      setOthers((prev) => {
+        const o = prev[p.id as string];
+        if (!o) return prev;
+        const rise = o.seat && bodies.current.get(o.id)?.sitting ? o.seat : null;
+        return { ...prev, [o.id]: { ...o, seat: null, moving: { from, path, started: performance.now() + (rise ? SIT_MS : 0), rise } } };
+      });
+    };
+    const drop = (c: RealtimeChannel | null) => {
+      if (!c) return;
+      c.untrack();
+      client.removeChannel(c);
+    };
+    const later = (ms: number) => {
+      retry = window.setTimeout(() => !cancelled && setEpoch((n) => n + 1), ms * (0.75 + Math.random() * 0.5)); // jittered, so a crowd doesn't retry at once
+    };
+    // when presence first arrives (or a short wait), who's in a room
+    const firstSync = (c: RealtimeChannel) =>
+      new Promise<void>((res) => {
+        const t = window.setTimeout(res, 2500);
+        c.on("presence", { event: "sync" }, () => {
+          window.clearTimeout(t);
+          res();
         });
-      })
-      .subscribe(async (status) => {
-        if (status !== "SUBSCRIBED") return;
-        const count = Object.keys(ch.presenceState()).length;
-        if (count >= CAPACITY) {
-          setFull(true); // watch only: you see everyone, nobody sees you
+      });
+    const keys = (c: RealtimeChannel) => Object.keys(c.presenceState());
+    // everyone in the room, oldest first (who keeps a place when two take the last one)
+    const order = (c: RealtimeChannel) =>
+      Object.entries(c.presenceState() as Record<string, { joinedAt?: number }[]>)
+        .map(([k, m]) => [k, Number(m[m.length - 1]?.joinedAt) || 0] as const)
+        .sort((x, y) => x[1] - y[1] || (x[0] < y[0] ? -1 : 1))
+        .map(([k]) => k);
+
+    // try a room: "joined", "full" or "error"
+    const tryRoom = async (n: number): Promise<"joined" | "full" | "error"> => {
+      const c = client.channel(`cafe-${n}`, { config: { presence: { key: id.current }, broadcast: { self: false } } });
+      c.on("presence", { event: "sync" }, sync(c)).on("broadcast", { event: "walk" }, onWalk);
+      const synced = firstSync(c);
+      const ok = await new Promise<boolean>((res) => {
+        const t = window.setTimeout(() => res(false), 10_000);
+        c.subscribe((st) => {
+          if (st === "SUBSCRIBED") {
+            window.clearTimeout(t);
+            res(true);
+          } else if (st === "CHANNEL_ERROR" || st === "TIMED_OUT" || st === "CLOSED") {
+            window.clearTimeout(t);
+            res(false);
+            // dropped later, once in: start over (backing off)
+            if (ch === c && !cancelled) {
+              joined.current = false;
+              chan.current = null;
+              setStatus("offline");
+              later(Math.min(60_000, 2000 * 2 ** failures.current++));
+            }
+          }
+        });
+      });
+      if (!ok || cancelled) return drop(c), "error";
+      await synced;
+      if (cancelled) return drop(c), "error";
+      if (keys(c).filter((k) => k !== id.current).length >= CAPACITY) return drop(c), "full";
+      ch = c;
+      chan.current = c;
+      joined.current = true;
+      await track({ joinedAt: Date.now() });
+      // two people took the last place at once: the later one moves on
+      await new Promise((r) => window.setTimeout(r, 1200));
+      if (cancelled) return "error";
+      if (order(c).indexOf(id.current) >= CAPACITY) {
+        ch = null;
+        chan.current = null;
+        joined.current = false;
+        drop(c);
+        return "full";
+      }
+      return "joined";
+    };
+
+    (async () => {
+      for (let n = 1; n <= ROOMS; n++) {
+        const r = await tryRoom(n);
+        if (cancelled) return;
+        if (r === "joined") {
+          failures.current = 0;
+          setRoom(n);
+          setFull(false);
+          setStatus("in");
+          // already walking (in from the street)? let everyone see it
+          const w = meRef.current.inFlight();
+          if (w) chan.current?.send({ type: "broadcast", event: "walk", payload: { id: id.current, from: w.from, path: w.path.slice(0, MAX_PATH) } });
           return;
         }
-        joined.current = true;
-        await track();
-        // already walking (in from the street)? let everyone see it
-        const w = meRef.current.inFlight();
-        if (w) ch.send({ type: "broadcast", event: "walk", payload: { id: id.current, from: w.from, path: w.path.slice(0, MAX_PATH) } });
-      });
+        if (r === "error") {
+          setStatus("offline");
+          return later(Math.min(60_000, 2000 * 2 ** failures.current++));
+        }
+        setOthers({}); // full: look in the next room
+        bodies.current.clear();
+      }
+      // every room is full: have the café to yourself, without holding a connection
+      setFull(true);
+      setStatus("full");
+      client.realtime.disconnect();
+      later(FULL_RETRY_MS);
+    })();
 
-    const leave = () => {
-      ch.untrack();
-      client.removeChannel(ch);
-    };
+    const leave = () => drop(ch);
     window.addEventListener("pagehide", leave);
     return () => {
+      cancelled = true;
+      window.clearTimeout(retry);
       window.removeEventListener("pagehide", leave);
       leave();
+      ch = null;
       chan.current = null;
       joined.current = false;
+      setOthers({});
+      bodies.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me.placed, on]);
+  }, [me.placed, on, away, epoch]);
 
-  const track = async () => {
+  // when you joined (kept on every update: it decides who keeps a place in a full room)
+  const joinedAt = useRef(0);
+  const track = async (extra?: { joinedAt: number }) => {
     const ch = chan.current;
     if (!ch || !joined.current) return;
     const m = meRef.current;
     if (!m.look) return;
-    await ch.track({ ...m.snapshot(), look: m.look, barista: m.barista } satisfies Wire);
+    if (extra) joinedAt.current = extra.joinedAt;
+    await ch.track({ ...m.snapshot(), look: m.look, barista: m.barista, joinedAt: joinedAt.current });
   };
 
   // your avatar tells the room when it starts walking and when it comes to rest
   useEffect(() => {
     let settleTimer = 0;
-    let lastWalk = 0;
-    me.net.current.walk = (from, path) => {
+    let walkTimer = 0;
+    let lastWalk = -Infinity;
+    // Every room-mate receives every walk, so they're kept rare: at most one per WALK_EVERY.
+    // A walk that comes too soon is sent when the wait is up, from wherever you are by then
+    // (others pick it up from there: a small hop at most).
+    let stopAt: { from: Pt; path: Pt[] } | null = null; // a stop, if that's the latest news
+    const sendWalk = () => {
       const ch = chan.current;
-      const now = performance.now();
-      if (!ch || !joined.current || now - lastWalk < 120) return; // at most ~8 walks a second
-      lastWalk = now;
-      ch.send({ type: "broadcast", event: "walk", payload: { id: id.current, from, path: path.slice(0, MAX_PATH) } });
+      const w = meRef.current.inFlight() ?? stopAt;
+      stopAt = null;
+      if (!ch || !joined.current || !w) return;
+      lastWalk = performance.now();
+      if (import.meta.env.DEV) {
+        const g = window as unknown as { __walks?: { sent: number; got: number; last?: unknown } };
+        g.__walks = { ...(g.__walks ?? { sent: 0, got: 0 }), sent: (g.__walks?.sent ?? 0) + 1, last: w.path.length };
+      }
+      ch.send({ type: "broadcast", event: "walk", payload: { id: id.current, from: w.from, path: w.path.slice(0, MAX_PATH) } });
+    };
+    me.net.current.walk = (from, path, urgent) => {
+      if (walkTimer && !urgent) return; // one's already waiting to go
+      // a stop has nothing in flight to read later: keep it
+      stopAt = path.length === 1 && Math.hypot(path[0].x - from.x, path[0].y - from.y) < 0.5 ? { from, path } : null;
+      window.clearTimeout(walkTimer);
+      walkTimer = 0;
+      const wait = (urgent ? URGENT_EVERY : WALK_EVERY) - (performance.now() - lastWalk);
+      if (wait <= 0) sendWalk();
+      else
+        walkTimer = window.setTimeout(() => {
+          walkTimer = 0;
+          sendWalk();
+        }, wait);
     };
     me.net.current.settle = () => {
       window.clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(track, 250); // presence updates are rate-limited: batch them
+      settleTimer = window.setTimeout(() => track(), 250); // presence updates are rate-limited: batch them
     };
-    return () => window.clearTimeout(settleTimer);
+    return () => {
+      window.clearTimeout(settleTimer);
+      window.clearTimeout(walkTimer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me.net]);
 
@@ -302,5 +457,5 @@ export function usePresence(me: Me, size: { w: number; h: number }, on = true) {
     }
   }
 
-  return { actors, count: Object.keys(others).length, full, online: !!client && on };
+  return { actors, count: Object.keys(others).length, full, online: !!client && on, status, room };
 }

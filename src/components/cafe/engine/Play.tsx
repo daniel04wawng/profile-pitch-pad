@@ -125,7 +125,18 @@ export function Play({
         className={`pointer-events-none absolute right-4 top-4 bg-[#f7efe1]/12 px-3 py-1 font-['Silkscreen'] text-[11px] text-[#f7efe1] backdrop-blur transition-opacity duration-500 sm:right-6 sm:top-6 ${focus ? "opacity-0" : ""}`}
       >
         {formatHour(hour)} in SF · {phaseName(hour)}
-        {room.online && <span className="opacity-80"> · {room.count + (room.full ? 0 : 1)} here{room.full ? " (café's full: watching)" : ""}</span>}
+        {room.online && (
+          <span className="opacity-80">
+            {" · "}
+            {room.status === "in"
+              ? `${room.count + 1} here`
+              : room.status === "full"
+                ? "café's packed: you've got this one to yourself"
+                : room.status === "offline"
+                  ? "reconnecting…"
+                  : "opening up…"}
+          </span>
+        )}
       </div>
 
       {/* the room blurs and dims behind the object's screen */}

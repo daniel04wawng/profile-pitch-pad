@@ -80,10 +80,15 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
     placed: false,
     arrivedAt: 0, // when the walk in started (for the fade in)
     since: 0, // when you sat down (wall clock, so others' sips line up with yours)
+    // walking on held arrows: the straight run of free cells ahead, told to the room as one
+    // walk (so others see a smooth walk, not a message a step), and which way it goes
+    ahead: [] as Pt[],
+    aheadDir: null as Cell | null,
   });
   if (import.meta.env.DEV) (window as unknown as { __me?: unknown }).__me = { walk, st };
   // multiplayer hooks (usePresence fills these): a walk starting, and coming to rest
-  const net = useRef<{ walk?: (from: Pt, path: Pt[]) => void; settle?: () => void }>({});
+  // walk(urgent): a walk started or changed (urgent: it stopped or turned, so tell them soon)
+  const net = useRef<{ walk?: (from: Pt, path: Pt[], urgent?: boolean) => void; settle?: () => void }>({});
   const [frame, setFrame] = useState<Pose>("stand-front");
   const [, tick] = useState(0);
 
@@ -156,7 +161,23 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
         const corners = !d.i || !d.j || (w.free({ i: here.i + d.i, j: here.j }) && w.free({ i: here.i, j: here.j + d.j }));
         if (w.free(next) && corners) {
           s.path = [w.cellCentre(next)];
-          net.current.walk?.({ ...s.pos }, [...s.path]);
+          const c = w.cellCentre(next);
+          const onTrack = s.aheadDir && s.aheadDir.i === d.i && s.aheadDir.j === d.j && s.ahead.length && Math.hypot(s.ahead[0].x - c.x, s.ahead[0].y - c.y) < 0.5;
+          if (onTrack) s.ahead.shift();
+          else {
+            // a new run (or a turn): every free cell straight ahead, up to a dozen
+            s.ahead = [];
+            for (let k = 1, at = next; k <= 12; k++) {
+              s.ahead.push(w.cellCentre(at));
+              const n2 = { i: at.i + d.i, j: at.j + d.j };
+              const ok = !d.i || !d.j || (w.free({ i: at.i + d.i, j: at.j }) && w.free({ i: at.i, j: at.j + d.j }));
+              if (!w.free(n2) || !ok) break;
+              at = n2;
+            }
+            s.aheadDir = d;
+            net.current.walk?.({ ...s.pos }, [...s.ahead], true);
+            s.ahead.shift();
+          }
         } else {
           const c = w.cellCentre(here);
           if (Math.hypot(c.x - s.pos.x, c.y - s.pos.y) > 0.5) {
@@ -199,7 +220,13 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
                 s.arrive = null;
                 f();
               }
-              if (!held.current) net.current.settle?.(); // came to rest (or sat down)
+              if (!held.current) {
+                // let go of the arrows before the run ran out: tell them where you stopped
+                if (s.ahead.length) net.current.walk?.({ ...s.pos }, [{ ...s.pos }], true);
+                s.ahead = [];
+                s.aheadDir = null;
+                net.current.settle?.(); // came to rest (or sat down)
+              }
             }
           } else {
             s.pos = { x: s.pos.x + (dx / dist) * left, y: s.pos.y + (dy / dist) * left };
@@ -387,6 +414,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   // a walk still under way (e.g. walking in when you join the room)
   const inFlight = () => {
     const s = st.current;
+    if (held.current && s.ahead.length) return { from: { ...s.pos }, path: [...s.path, ...s.ahead] };
     return s.path.length ? { from: { ...s.pos }, path: [...s.path] } : null;
   };
   // where you are right now, for the room
