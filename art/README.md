@@ -15,10 +15,10 @@ Everything the café's art needs to follow so any piece, generated or hand-drawn
 
 | File | What it is |
 |---|---|
-| `cafe-palette.gpl` | Color palette. Aseprite: Palette menu > Load Palette. Also works in GIMP/Krita. |
+| `cafe-palette.gpl` | Color palette (GIMP palette format). Loads in most pixel art apps (Aseprite, Pixelorama, LibreSprite, GIMP, Krita). |
 | `cafe-palette.hex` | Same palette as plain hex codes (for PixelLab / Retro Diffusion palette inputs). |
 | `cafe-palette.png` | Palette as a swatch image. |
-| `templates/iso-grid-480x320.png` | Drawing template: the isometric floor grid, café footprint, walls and door gap at real size. Open it in Aseprite as a bottom layer and draw above it. |
+| `templates/iso-grid-480x320.png` | Drawing template: the isometric floor grid, café footprint, walls and door gap at real size. Open it in your pixel art app as a bottom layer and draw above it. |
 | `templates/layout-guide-4x.png` | Same layout, labeled, enlarged. For reference only. |
 | `prompts.md` | Prompts for generating the scene and each object. |
 
@@ -59,7 +59,7 @@ Sizes are a starting point, measured in pixels at 1x.
 | A-frame sign | ~20 x 28 | Special of the day, on the sidewalk. |
 | Avatar | ~16 x 28 per frame | 2 facing directions (mirror for the other 2), walk cycle 4 frames, sit 1 frame, idle 1 frame. A few shirt/hair colors. |
 
-## Layers (in Aseprite)
+## Layers (in your pixel art app)
 
 Name layers like this and the site can use them directly:
 
@@ -70,6 +70,6 @@ Name layers like this and the site can use them directly:
 
 ## Exporting
 
-- Keep the `.aseprite` files in `art/source/` (your editable originals).
+- Keep your editable originals (layered files) in `art/source/`.
 - Export PNGs to `art/export/` at 1x, same file name as the source.
 - Tell Claude which files changed and they'll be wired into the café.

@@ -6,7 +6,7 @@ import { useCompanions } from "./Stage";
 import { CollisionPanel, changed, collisionFor, corners, setAssetCollision, type CollisionChange } from "./collision";
 import { measurePixels } from "./measure";
 
-// A small Aseprite-style pixel editor for touching up café sprites and the background.
+// A small pixel editor, written for the café, for touching up its sprites and background.
 // Edits the PNG at public/cafe/<file> and saves it straight back (dev server only).
 
 type Tool = "pencil" | "eraser" | "magic" | "fill" | "picker" | "select" | "hand";
