@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fileUrl, writePng } from "./store";
 import { Eraser, Hand, PaintBucket, Pencil, Pipette, SquareDashed, WandSparkles, type LucideIcon } from "lucide-react";
 import { BASE } from "./types";
+import { useCompanions } from "./Stage";
+import { CollisionPanel, changed, collisionFor, corners, setAssetCollision, type CollisionChange } from "./collision";
+import { measurePixels } from "./measure";
 
 // A small Aseprite-style pixel editor for touching up café sprites and the background.
 // Edits the PNG at public/cafe/<file> and saves it straight back (dev server only).
@@ -65,10 +68,14 @@ function colorsOf(data: Uint8ClampedArray, limit = 256) {
 export function PixelEditor({
   file,
   paletteFrom,
+  asset = null,
   onClose,
 }: {
   file: string;
   paletteFrom: string;
+  // a sprite (not the background): its name, and whether it's walked over by default (a rug,
+  // clutter), so its collision can be shown and edited here too
+  asset?: { name: string; passable: boolean } | null;
   onClose: (saved: boolean, shift: { x: number; y: number }) => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -101,6 +108,31 @@ export function PixelEditor({
   const [status, setStatus] = useState("");
   const [ready, setReady] = useState(false);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+
+  // ---------- collision (the asset's own; the café editor edits the same one) ----------
+  const comps = useCompanions();
+  const [showCollision, setShowCollision] = useState(true);
+  const [, bump] = useState(0);
+  const im0 = img.current;
+  const col = asset && im0 ? collisionFor(asset.name, comps, measurePixels(im0.data, im0.w, im0.h), im0, asset.passable) : null;
+  // drawn where the art is now: growing the canvas on the top or left moves the art (and so the
+  // collision) until it's saved
+  const colRef = useRef<{ pts: { x: number; y: number }[]; walk: boolean } | null>(null);
+  colRef.current =
+    col && showCollision
+      ? {
+          pts: corners(col.c).map((p) => ({ x: p.x + shift.current.x - savedShift.current.x, y: p.y + shift.current.y - savedShift.current.y })),
+          walk: !!col.c.walkable,
+        }
+      : null;
+  const editCollision = async (ch: CollisionChange) => {
+    if (!asset || !col) return;
+    try {
+      await setAssetCollision(asset.name, changed(col.c, ch));
+    } catch (e) {
+      setStatus("couldn't save the collision: " + String(e));
+    }
+  };
 
   // ---------- drawing to screen ----------
 
@@ -181,7 +213,28 @@ export function PixelEditor({
       ctx.strokeStyle = "rgba(255,255,255,0.8)";
       ctx.strokeRect(ox + (h.x - o) * z + 0.5, oy + (h.y - o) * z + 0.5, brush * z - 1, brush * z - 1);
     }
+
+    // the asset's collision: the floor it takes up
+    const cl = colRef.current;
+    if (cl) {
+      ctx.beginPath();
+      cl.pts.forEach((p, i) => (i ? ctx.lineTo(ox + p.x * z, oy + p.y * z) : ctx.moveTo(ox + p.x * z, oy + p.y * z)));
+      ctx.closePath();
+      ctx.fillStyle = cl.walk ? "rgba(120,220,140,0.14)" : "rgba(255,80,60,0.2)";
+      ctx.fill();
+      ctx.setLineDash(cl.walk ? [5, 4] : []);
+      ctx.strokeStyle = cl.walk ? "rgba(120,220,140,0.95)" : "#ff5a46";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.lineWidth = 1;
+    }
   }, [grid, tool, color, brush]);
+  // redraw when the collision (or showing it) changes
+  const colKey = JSON.stringify(colRef.current);
+  useEffect(() => {
+    draw();
+  }, [colKey, draw]);
 
   useEffect(() => {
     let alive = true;
@@ -419,7 +472,13 @@ export function PixelEditor({
       await writePng(file, c.toDataURL("image/png"));
       setDirty(false);
       setStatus("saved");
+      // the canvas grew on the top or left: the art moved inside the PNG, so its own collision
+      // moves with it (an automatic one is read off the pixels anyway)
+      const mx = shift.current.x - savedShift.current.x;
+      const my = shift.current.y - savedShift.current.y;
       savedShift.current = { ...shift.current };
+      if (asset && col?.own && (mx || my)) await setAssetCollision(asset.name, { ...col.c, foot: { x: col.c.foot.x + mx, y: col.c.foot.y + my } });
+      bump((n) => n + 1);
     } catch (e) {
       setStatus("save failed: " + String(e));
     }
@@ -576,6 +635,8 @@ export function PixelEditor({
         zoomAt(1, canvas.current!.clientWidth / 2, canvas.current!.clientHeight / 2);
       } else if (e.key === "-") {
         zoomAt(-1, canvas.current!.clientWidth / 2, canvas.current!.clientHeight / 2);
+      } else if (!mod && e.key.toLowerCase() === "c" && asset) {
+        setShowCollision((v) => !v);
       } else if (e.key === "'") {
         setGrid((g) => !g);
       } else if ((e.key === "[" || e.key === "]") && !mod) {
@@ -735,6 +796,21 @@ export function PixelEditor({
               <button onClick={trimCanvas} className="rounded border border-white/15 py-1 hover:bg-white/10" title="Shrink to the drawn pixels">trim</button>
             </div>
           </div>
+          {asset && col && (
+            <div className="space-y-2 border-b border-white/10 p-3">
+              <label className="flex items-center gap-2 text-[12px]">
+                <input type="checkbox" checked={showCollision} onChange={(e) => setShowCollision(e.target.checked)} />
+                show collision <span className="opacity-50">(C)</span>
+              </label>
+              <CollisionPanel
+                name={asset.name}
+                {...col}
+                onChange={editCollision}
+                onReset={() => asset && setAssetCollision(asset.name, null)}
+                btn="rounded border border-white/15 px-2 py-0.5 hover:bg-white/10"
+              />
+            </div>
+          )}
           <div className="grid flex-1 auto-rows-min grid-cols-8 gap-px overflow-y-auto p-2">
             {palette.map((c) => (
               <button

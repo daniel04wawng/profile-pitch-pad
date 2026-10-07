@@ -46,8 +46,13 @@ export function makeWalk(layout: Layout, companions: Record<string, Companion>, 
   const key = (c: Cell) => c.j * I + c.i;
 
   // A piece's footprint as a box in units (a0..a1, b0..b1), or null if it has no size.
+  const compOf = (s: SpriteDef) => companions[nameOf(s.file)] ?? companions[frontOf(nameOf(s.file))];
+  // the asset's own collision (set in the editor) if it has one; a back view without one uses
+  // its front's
+  const collisionOf = (s: SpriteDef) => companions[nameOf(s.file)]?.collision ?? companions[frontOf(nameOf(s.file))]?.collision;
   const footprint = (s: SpriteDef) => {
-    const comp = companions[nameOf(s.file)] ?? companions[frontOf(nameOf(s.file))];
+    const own = collisionOf(s);
+    const comp = own ? { foot: own.foot, size: own.size } : compOf(s);
     if (!comp?.size || !comp.foot) {
       // no size given: read it off the sprite's outline (front corner + its two extents)
       const m = measures[s.file];
@@ -83,10 +88,13 @@ export function makeWalk(layout: Layout, companions: Record<string, Companion>, 
   const solids: { box: NonNullable<ReturnType<typeof footprint>>; z: number; r: { x0: number; y0: number; x1: number; y1: number } }[] = [];
   layout.assets.forEach((s, n) => {
     const name = nameOf(s.file);
-    if (s.hidden || FLAT_ASSETS.has(name) || WALL_ITEMS[frontOf(name)] || isClutter(layout, name)) return;
+    if (s.hidden || WALL_ITEMS[frontOf(name)]) return;
+    // rugs and clutter don't block, unless the asset has a collision of its own
+    if (!collisionOf(s) && (FLAT_ASSETS.has(name) || isClutter(layout, name))) return;
     const box = footprint(s);
     if (!box) return;
     solids.push({ box, z: s.baseY, r: { x0: s.x, y0: s.y, x1: s.x + s.w, y1: s.y + s.h } });
+    if (collisionOf(s)?.walkable) return; // you can walk through it (it still sorts in depth)
     for (const c of cellsOf(box)) owner[key(c)] = n;
   });
 
@@ -186,6 +194,6 @@ export function makeWalk(layout: Layout, companions: Record<string, Companion>, 
     return { from, path: [...approach, ...steps.map(cellCentre)] };
   };
 
-  return { cellAt, cellCentre, inside, free, walkTo, besideOf, seatSpot, footprint, entrance, key, toScreen, toUnits, depthAt };
+  return { cellAt, cellCentre, inside, free, walkTo, besideOf, seatSpot, footprint, collisionOf, entrance, key, toScreen, toUnits, depthAt };
 }
 export type Walk = ReturnType<typeof makeWalk>;

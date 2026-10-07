@@ -18,19 +18,7 @@ export function measureSprite(src: string): Promise<Measure | null> {
         c.height = img.height;
         const ctx = c.getContext("2d")!;
         ctx.drawImage(img, 0, 0);
-        const d = ctx.getImageData(0, 0, img.width, img.height).data;
-        const low = new Int32Array(img.width).fill(-1); // lowest solid pixel in each column
-        for (let x = 0; x < img.width; x++)
-          for (let y = img.height - 1; y >= 0; y--)
-            if (d[(y * img.width + x) * 4 + 3] > 8) {
-              low[x] = y;
-              break;
-            }
-        const cols = [...low.keys()].filter((x) => low[x] >= 0);
-        if (!cols.length) return res(null);
-        const fy = Math.max(...cols.map((x) => low[x]));
-        const front = cols.filter((x) => low[x] === fy);
-        res({ fx: front.reduce((a, b) => a + b, 0) / front.length, fy, lx: cols[0], rx: cols[cols.length - 1], w: img.width, h: img.height });
+        res(measurePixels(ctx.getImageData(0, 0, img.width, img.height).data, img.width, img.height));
       };
       img.onerror = () => res(null);
       img.src = src;
@@ -38,4 +26,20 @@ export function measureSprite(src: string): Promise<Measure | null> {
     cache.set(src, p);
   }
   return p;
+}
+
+// the same, from pixels already in hand (the pixel editor's canvas)
+export function measurePixels(d: Uint8ClampedArray, w: number, h: number): Measure | null {
+  const low = new Int32Array(w).fill(-1); // lowest solid pixel in each column
+  for (let x = 0; x < w; x++)
+    for (let y = h - 1; y >= 0; y--)
+      if (d[(y * w + x) * 4 + 3] > 8) {
+        low[x] = y;
+        break;
+      }
+  const cols = [...low.keys()].filter((x) => low[x] >= 0);
+  if (!cols.length) return null;
+  const fy = Math.max(...cols.map((x) => low[x]));
+  const front = cols.filter((x) => low[x] === fy);
+  return { fx: front.reduce((a, b) => a + b, 0) / front.length, fy, lx: cols[0], rx: cols[cols.length - 1], w, h };
 }

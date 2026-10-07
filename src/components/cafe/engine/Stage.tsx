@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { fileUrl } from "./store";
+import { fileUrl, localCollisions } from "./store";
 import { Fragment } from "react";
 import { BASE, BOOT, DEFAULT_GRID, type Layout, type SpriteDef } from "./types";
 import type { Light } from "./lighting";
@@ -14,7 +14,11 @@ export type Companion = {
   sky?: string;
   light?: { file: string; dx: number; dy: number; w: number; h: number };
   glow?: { x: number; y: number; r: number };
+  // the asset's own collision, set in the editor: wins over foot/size (which the art scripts
+  // write) for walking. walkable: nothing to bump into (a rug, a hanging plant).
+  collision?: Collision;
 };
+export type Collision = { foot: { x: number; y: number }; size: { a: number; b: number; from: "front" | "back" | "centre" }; walkable?: boolean };
 export type Actor = {
   id: string;
   sheet: string; // sprite sheet (data URL), frames side by side
@@ -31,15 +35,38 @@ export type Actor = {
   opacity?: number; // fading in as they arrive
 };
 let companionsCache: Promise<Record<string, Companion>> | null = null;
+// Every asset's companion data, shared and live: a collision edited in the editor shows up at
+// once everywhere (walking, depth, the outlines). Your own café layers its edits on top.
+let companionsNow: Record<string, Companion> | null = null;
+const companionListeners = new Set<(c: Record<string, Companion>) => void>();
 export function useCompanions() {
-  const [c, setC] = useState<Record<string, Companion>>({});
+  const [c, setC] = useState<Record<string, Companion>>(companionsNow ?? {});
   useEffect(() => {
+    companionListeners.add(setC);
     companionsCache ??= fetch(`${BASE}sprites/_companions.json`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : {}))
-      .catch(() => ({}));
+      .catch(() => ({}))
+      .then((base: Record<string, Companion>) => {
+        const mine = localCollisions();
+        for (const [k, v] of Object.entries(mine)) base[k] = { ...base[k], collision: v ?? undefined };
+        companionsNow = base;
+        return base;
+      });
     companionsCache.then(setC);
+    return () => {
+      companionListeners.delete(setC);
+    };
   }, []);
   return c;
+}
+// change (or with null, clear) an asset's collision for everyone on this page
+export function setCollisionLive(name: string, col: Collision | null) {
+  const all = { ...(companionsNow ?? {}) };
+  all[name] = { ...all[name], collision: col ?? undefined };
+  if (!col) delete all[name].collision;
+  companionsNow = all;
+  companionsCache = Promise.resolve(all);
+  companionListeners.forEach((f) => f(all));
 }
 export const assetName = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/, "");
 const maskStyle = (url: string): React.CSSProperties => ({
@@ -108,6 +135,7 @@ export function Stage({
   showGrid = false,
   versions = {},
   marker = null,
+  shapes = [],
   camera = null,
   light = null,
   handlers,
@@ -126,6 +154,8 @@ export function Stage({
   versions?: Record<string, number>;
   // Floor tile to highlight (scene point at a tile's center), e.g. where a dragged object will land.
   marker?: { x: number; y: number } | null;
+  // collision outlines (floor polygons) to draw over everything: the editor's "collision" view
+  shapes?: { pts: { x: number; y: number }[]; tone: "solid" | "walk" | "selected" }[];
   // Scene rect to glide the camera into (walking up to an object). null = whole room.
   camera?: { x: number; y: number; w: number; h: number } | null;
   // Time-of-day lighting; null draws the room flat (no sky, sun or lamps).
@@ -369,7 +399,7 @@ export function Stage({
               })}
           </>
         )}
-        {(showGrid || marker) && (
+        {(showGrid || marker || shapes.length > 0) && (
           <svg
             className="pointer-events-none absolute left-0 top-0 z-[999] overflow-visible"
             width={layout.width}
@@ -414,6 +444,17 @@ export function Stage({
                   <rect width={layout.width} height={layout.height} fill="url(#iso-grid)" />
                 </>
               ))}
+            {shapes.map((sh, i) => (
+              <polygon
+                key={i}
+                points={sh.pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill={sh.tone === "selected" ? "rgba(255,90,70,0.35)" : sh.tone === "walk" ? "rgba(120,220,140,0.12)" : "rgba(255,70,60,0.16)"}
+                stroke={sh.tone === "selected" ? "#ff5a46" : sh.tone === "walk" ? "rgba(120,220,140,0.9)" : "rgba(255,90,70,0.85)"}
+                strokeWidth={sh.tone === "selected" ? 1 : 0.6}
+                strokeDasharray={sh.tone === "walk" ? "2 1.5" : undefined}
+                shapeRendering="geometricPrecision"
+              />
+            ))}
             {marker && (
               <path
                 d={`M${marker.x - g.tile / 2} ${marker.y} L${marker.x} ${marker.y - g.tile / 4} L${marker.x + g.tile / 2} ${marker.y} L${marker.x} ${marker.y + g.tile / 4} Z`}

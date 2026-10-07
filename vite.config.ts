@@ -64,6 +64,31 @@ function cafeEditorSaver(): Plugin {
           fs.writeFileSync(path.join(root, "screens.json"), JSON.stringify(data, null, 2) + "\n");
         }),
       );
+      // An asset's collision (set in the editor), kept with the asset in _companions.json under
+      // its own key, so re-running the art scripts (which write foot/size) never undoes it.
+      server.middlewares.use(
+        "/__cafe/collision",
+        handle((body) => {
+          const { name, collision } = JSON.parse(body);
+          if (typeof name !== "string" || !/^[a-z0-9_-]+$/i.test(name)) throw new Error("bad name");
+          const n = (v: unknown) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) < 4096;
+          if (collision !== null) {
+            const c = collision;
+            if (!c || !n(c.foot?.x) || !n(c.foot?.y) || !n(c.size?.a) || !n(c.size?.b) || !["front", "back", "centre"].includes(c.size?.from)) throw new Error("bad collision");
+          }
+          const file = path.join(root, "sprites", "_companions.json");
+          const all = JSON.parse(fs.readFileSync(file, "utf8"));
+          all[name] = { ...all[name] };
+          if (collision === null) delete all[name].collision;
+          else
+            all[name].collision = {
+              foot: { x: collision.foot.x, y: collision.foot.y },
+              size: { a: collision.size.a, b: collision.size.b, from: collision.size.from },
+              ...(collision.walkable ? { walkable: true } : {}),
+            };
+          fs.writeFileSync(file, JSON.stringify(all, null, 1)); // as the art scripts write it
+        }),
+      );
       // Asset library: every PNG in public/cafe/sprites.
       server.middlewares.use("/__cafe/assets", (req, res) => {
         if (req.method !== "GET" || !local.includes(req.socket.remoteAddress ?? "")) {

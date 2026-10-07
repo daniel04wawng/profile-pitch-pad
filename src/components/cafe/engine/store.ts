@@ -1,5 +1,6 @@
 import { BASE, BOOT, type Layout } from "./types";
 import type { Screens } from "./screenData";
+import type { Collision } from "./Stage";
 
 // Where a café's files live. Two places:
 //  - "disk": the dev server writes straight into public/cafe (how Daniel's café is made).
@@ -42,6 +43,21 @@ export const isMine = (file: string) => urls.has(file);
 let where: Where = "disk";
 export const storage = () => where;
 
+// Collisions you've set on assets in your own café (on top of the café's own, per asset name).
+let mineCollisions: Record<string, Collision | null> = {};
+export const localCollisions = () => mineCollisions;
+// Save an asset's collision (null: back to its automatic one), for every copy of it.
+export async function saveCollision(name: string, collision: Collision | null) {
+  if (!/^[a-z0-9_-]+$/i.test(name)) throw new Error("bad asset name");
+  if (where === "disk") {
+    const r = await fetch("/__cafe/collision", { method: "POST", body: JSON.stringify({ name, collision }) });
+    if (!r.ok) throw new Error(await r.text());
+    return;
+  }
+  mineCollisions = { ...mineCollisions, [name]: collision };
+  await tx("docs", "readwrite", (s) => s.put(mineCollisions, "collisions"));
+}
+
 // Load a café: Daniel's from the site, or yours from this browser (falling back to his).
 export async function openCafe(w: Where): Promise<{ layout: Layout; screens: Screens }> {
   where = w;
@@ -59,6 +75,7 @@ export async function openCafe(w: Where): Promise<{ layout: Layout; screens: Scr
       const blob = (await tx("files", "readonly", (s) => s.get(k))) as Blob;
       urls.set(k, URL.createObjectURL(blob));
     }
+    mineCollisions = ((await tx("docs", "readonly", (s) => s.get("collisions"))) as Record<string, Collision | null> | undefined) ?? {};
     const layout = (await tx("docs", "readonly", (s) => s.get("layout"))) as Layout | undefined;
     const screens = (await tx("docs", "readonly", (s) => s.get("screens"))) as Screens | undefined;
     if (layout && screens) return { layout, screens };
@@ -105,6 +122,7 @@ export async function listAssets(): Promise<string[]> {
 // Start over from Daniel's café (your drawings are kept unless `all`).
 export async function resetCafe(all = false) {
   await tx("docs", "readwrite", (s) => s.clear());
+  mineCollisions = {};
   if (all) {
     await tx("files", "readwrite", (s) => s.clear());
     urls.forEach((u) => URL.revokeObjectURL(u));
@@ -123,13 +141,18 @@ export async function exportCafe(layout: Layout, screens: Screens): Promise<Blob
       fr.readAsDataURL(b);
     });
   }
-  return new Blob([JSON.stringify({ cafe: 1, layout, screens, files })], { type: "application/json" });
+  return new Blob([JSON.stringify({ cafe: 1, layout, screens, files, collisions: mineCollisions })], { type: "application/json" });
 }
 export async function importCafe(f: File): Promise<{ layout: Layout; screens: Screens }> {
   const d = JSON.parse(await f.text());
   if (d?.cafe !== 1 || !Array.isArray(d.layout?.assets) || typeof d.screens !== "object") throw new Error("That isn't a café file.");
   for (const [k, v] of Object.entries(d.files ?? {})) {
     if (/^[a-z0-9_\-/]+\.png$/i.test(k) && !k.includes("..") && typeof v === "string" && v.startsWith("data:image/png;base64,")) await writePng(k, v);
+  }
+  for (const [k, v] of Object.entries(d.collisions ?? {})) {
+    const c = v as Collision | null;
+    const ok = c === null || (c && typeof c.foot?.x === "number" && typeof c.foot?.y === "number" && typeof c.size?.a === "number" && typeof c.size?.b === "number");
+    if (ok && /^[a-z0-9_-]+$/i.test(k)) await saveCollision(k, c);
   }
   await saveCafe(d.layout, d.screens);
   return { layout: d.layout, screens: d.screens };

@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { exportCafe, fileUrl, importCafe, listAssets, resetCafe, saveCafe, storage, writePng } from "./store";
 import { Stage, assetName, opaqueAt, useCompanions } from "./Stage";
+import { CollisionPanel, changed, collisionFor, setAssetCollision, type CollisionChange } from "./collision";
+import { makeWalk } from "./walk";
+import { measureSprite, type Measure } from "./measure";
 import { PixelEditor } from "./PixelEditor";
 import { Play } from "./Play";
 import { CafeScreen } from "./Screens";
@@ -69,6 +72,48 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     const ky = nat ? s.h / nat.h : 1;
     return { x: s.flipX ? s.w - f.x * kx : f.x * kx, y: f.y * ky };
   };
+  // ---------- collision (each asset's own: every copy, turn and mirror follows it) ----------
+  // footprints read off the pixels, for assets without one
+  const [measures, setMeasures] = useState<Record<string, Measure | null>>({});
+  useEffect(() => {
+    let alive = true;
+    const files = [...new Set(layout.assets.map((a) => a.file))].filter((f) => !(f in measures));
+    if (!files.length) return;
+    Promise.all(files.map((f) => measureSprite(fileUrl(f, versions[f] ?? BOOT)).then((m) => [f, m] as const))).then(
+      (all) => alive && setMeasures((m) => ({ ...m, ...Object.fromEntries(all) })),
+    );
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout.assets]);
+  const walkMap = useMemo(() => makeWalk(layout, companions, measures), [layout, companions, measures]);
+  // what an asset blocks now (its own collision, or the automatic one)
+  const collisionOf = (s: SpriteDef) => {
+    const name = nameOf(s.file);
+    return collisionFor(name, companions, measures[s.file] ?? null, { w: s.w, h: s.h }, FLAT_ASSETS.has(name) || isClutter(layout, name));
+  };
+  const editCollision = async (s: SpriteDef, ch: CollisionChange) => {
+    try {
+      await setAssetCollision(nameOf(s.file), changed(collisionOf(s).c, ch, !!s.flipX));
+    } catch {
+      setStatus("error");
+    }
+  };
+  const resetCollision = async (s: SpriteDef) => {
+    try {
+      await setAssetCollision(nameOf(s.file), null);
+    } catch {
+      setStatus("error");
+    }
+  };
+  const shapeOf = (s: SpriteDef) => {
+    const b = walkMap.footprint(s);
+    if (!b) return null;
+    const t = walkMap.toScreen;
+    return [t(b.a0, b.b0), t(b.a1, b.b0), t(b.a1, b.b1), t(b.a0, b.b1)];
+  };
+
   const [tab, setTab] = useState<"scene" | "assets" | "screens">("scene");
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -76,6 +121,8 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
   const [outlines, setOutlines] = useState(true);
   const [grid, setGrid] = useState(true);
   const [snap, setSnap] = useState(true);
+  // show every piece's collision (what you'd bump into), not just the selected one's
+  const [showCollision, setShowCollision] = useState(false);
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
   // "entrance" mode: the next click on the floor sets where visitors walk in
   const [placingEntrance, setPlacingEntrance] = useState(false);
@@ -509,6 +556,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
             ["outlines", outlines, setOutlines],
             ["grid", grid, setGrid],
             ["snap", snap, setSnap],
+            ["collision", showCollision, setShowCollision],
           ] as const
         ).map(([name, v, set]) => (
           <label key={name} className="flex items-center gap-1.5 text-[12px]">
@@ -583,6 +631,12 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
             showGrid={grid}
             versions={versions}
             marker={marker}
+            shapes={layout.assets.flatMap((a) => {
+              if (a.hidden || WALL_ITEMS[frontOf(nameOf(a.file))] || (!showCollision && a.id !== selected)) return [];
+              const pts = shapeOf(a);
+              if (!pts) return [];
+              return [{ pts, tone: a.id === selected ? ("selected" as const) : collisionOf(a).c.walkable ? ("walk" as const) : ("solid" as const) }];
+            })}
             light={lightOn ? lightAt(hour) : null}
             handlers={{
               onHover: (s) => !drag.current && setHovered(s?.id ?? null),
@@ -818,6 +872,16 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
                       <span className="block text-[11px] opacity-60">sits on top of things: drop it on a table, counter or shelf (applies to every {frontOf(nameOf(sel.file))})</span>
                     </span>
                   </label>
+                  {!WALL_ITEMS[frontOf(nameOf(sel.file))] && (
+                    <CollisionPanel
+                      name={nameOf(sel.file)}
+                      {...collisionOf(sel)}
+                      flip={!!sel.flipX}
+                      onChange={(ch) => editCollision(sel, ch)}
+                      onReset={() => resetCollision(sel)}
+                      btn={btn}
+                    />
+                  )}
                   <button onClick={() => paint(sel)} className="w-full rounded bg-[#f2c1b0] px-2 py-1.5 font-medium text-[#1a1512]">
                     Edit pixels
                   </button>
@@ -978,6 +1042,11 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
         <PixelEditor
           file={painting}
           paletteFrom={layout.scene}
+          asset={
+            painting === layout.scene || painting.startsWith("room")
+              ? null
+              : { name: nameOf(painting), passable: FLAT_ASSETS.has(nameOf(painting)) || isClutter(layout, nameOf(painting)) }
+          }
           onClose={async (changed, shift) => {
             const file = painting;
             setPainting(null);
