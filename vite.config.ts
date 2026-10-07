@@ -89,6 +89,33 @@ function cafeEditorSaver(): Plugin {
           fs.writeFileSync(file, JSON.stringify(all, null, 1)); // as the art scripts write it
         }),
       );
+      // Photos and videos for the screens (bakes, project demos): the raw file as the body,
+      // saved to public/cafe/media/<name>. Loopback only, like the rest.
+      server.middlewares.use("/__cafe/media", (req, res) => {
+        const fail = (code: number, msg: string) => {
+          res.statusCode = code;
+          res.end(msg);
+        };
+        if (req.method !== "POST" || !local.includes(req.socket.remoteAddress ?? "")) return fail(403, "");
+        const file = new URL(req.url ?? "", "http://x").searchParams.get("file") ?? "";
+        if (!/^media\/[a-z0-9-]+\.(jpg|jpeg|png|webp|gif|mp4|webm)$/i.test(file)) return fail(400, "bad file name");
+        const chunks: Buffer[] = [];
+        let size = 0;
+        req.on("data", (c: Buffer) => {
+          size += c.length;
+          if (size > 80_000_000) {
+            fail(413, "too big (80 MB max)");
+            req.destroy();
+          } else chunks.push(c);
+        });
+        req.on("end", () => {
+          if (res.writableEnded) return;
+          fs.mkdirSync(path.join(root, "media"), { recursive: true });
+          fs.writeFileSync(path.join(root, file), Buffer.concat(chunks));
+          res.statusCode = 204;
+          res.end();
+        });
+      });
       // Asset library: every PNG in public/cafe/sprites.
       server.middlewares.use("/__cafe/assets", (req, res) => {
         if (req.method !== "GET" || !local.includes(req.socket.remoteAddress ?? "")) {

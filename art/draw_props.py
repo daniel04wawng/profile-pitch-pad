@@ -1105,6 +1105,63 @@ def record_cabinet_back():
     return save(c, "record-cabinet-back", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
+def register():
+    """A vintage brass cash register to sit on the counter, facing down-left: a cash drawer,
+    three stepped rows of round keys, a tall ornate back with the price showing in its
+    window, and a crank on the side."""
+    c = Canvas(60, 64)
+    X0, Y0 = 16, 34
+    L, D = 8, 6  # along the counter, and front to back
+    BASE = 6
+
+    # the drawer: brass, a darker seam and a knob
+    def drawer(t, z):
+        if z >= BASE - 1:
+            return "brass2"
+        if abs(z - 2.5) < 0.6:
+            return "brass0"  # the drawer's seam
+        if 3.5 <= z < 4.6 and abs(t - L / 2) < 0.7:
+            return "iron"  # its knob
+        return "brass1" if t > 0.6 else "brass2"
+    face_left(c, X0, Y0, 0, L, D, 0, BASE, drawer)
+    face_right(c, X0, Y0, L, 0, D, 0, BASE, lambda s_, z: "brass2" if z >= BASE - 1 else "brass0")
+    # the key bank: three steps rising toward the back, each with a row of round keys
+    for i, (b0, b1, z) in enumerate(((3.5, 6, BASE + 1), (2, 3.5, BASE + 3), (0.5, 2, BASE + 5))):
+        face_left(c, X0, Y0, 0.5, L - 0.5, b1, z - 2 + (i == 0), z, lambda t, zz: "wood0")
+        face_top(c, X0, Y0, 0.5, L - 0.5, b0, b1, z, lambda a, bb: "wood1")
+        for k in range(4):
+            kx, ky = X0 + 2 * (1.4 + k * 1.7) - 2 * (b0 + b1) / 2, Y0 + 1.4 + k * 1.7 + (b0 + b1) / 2 - z
+            c.px(kx, ky - 1, "key2")
+            c.px(kx + 1, ky - 1, "key1")
+            c.px(kx, ky, "key1")
+    # the tall back: ornate brass, a window with the price flag showing
+    TOP = 24
+
+    def back(t, z):
+        if z >= TOP - 2:
+            return "brass2" if z >= TOP - 1 else "brass1"
+        if TOP - 9 <= z < TOP - 3 and 2 <= t < L - 2:
+            if TOP - 7 <= z < TOP - 4 and 3 <= t < L - 3:
+                return "cream2" if (int(t * 2) + int(z)) % 3 else "wood1"  # the price, in the window
+            return "iron"  # the window
+        if (int(t * 2) + int(z)) % 5 == 0:
+            return "brass0"  # embossed scrollwork
+        return "brass1" if t > 0.8 else "brass2"
+    face_left(c, X0, Y0, 0, L, 0.6, BASE, TOP, back)
+    face_right(c, X0, Y0, L, 0, 0.6, BASE, TOP, lambda s_, z: "brass0")
+    # a scrolled crest on top
+    cx, cy = X0 + L - 0.6, Y0 + L / 2 - TOP
+    for dx, dy in ((-3, 0), (-2, -1), (-1, -2), (0, -2), (1, -2), (2, -1), (3, 0), (0, -3)):
+        c.px(cx + dx, cy + dy, "brass2" if dy < -1 else "brass1")
+    # the crank on the right side
+    hx, hy = X0 + 2 * L - 2 * 3, Y0 + L + 3 - 4
+    for k in range(4):
+        c.px(hx + 1 + k, hy - k // 2, "iron")
+    c.px(hx + 5, hy - 2, "wood3")
+    c.px(hx + 5, hy - 3, "wood4")
+    return save(c, "register", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
+
+
 def espresso_station_back():
     c = Canvas(70, 60)
     X0, Y0 = 14, 30
@@ -1512,7 +1569,7 @@ ALL = [cafe_table, table_cloth("cafe-table-cloth", "red1", "red2", "gold1", "key
        bookshelf, window, hanging_plant, potted_plant, flower_vase,
        rug, booth, armchair, floor_lamp, special_board, coffee_cup, laptop, cake_stand, record_cabinet, back_bar_shelves, bar_counter, espresso_station, cafe_chair_back,
        piano_back, bookshelf_back, armchair_back, booth_back, bar_counter_back, record_cabinet_back,
-       espresso_station_back, laptop_back,
+       espresso_station_back, laptop_back, register,
        fiddle_leaf_fig, snake_plant, fern_stand, succulent, tulip_pot, window_box,
        couch, lambda: couch(back=True), menu_board, notes_board, wardrobe, lambda: wardrobe(back=True), coffee_table, booth_table,
        lambda: couch(name="sofa-large", L=24, seats=4, R=("olive0", "olive1", "olive2", "olive3", "leaf3")),

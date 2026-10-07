@@ -3,9 +3,8 @@ import { Frame, PixelButton } from "./Screens";
 import { useCatalog, useRig } from "./rig";
 import type { ScreenDef } from "./screenData";
 
-// The changing room: choose who you are (a person: their skin and hair) and what you're
-// wearing (that person's outfits), with a front and back preview. The barista is always
-// Daniel but can change his outfit here.
+// The changing room: pick who you are from the café's avatars (rig.ts catalog), with a front
+// and back preview. (The classic people still stand in if an avatar can't load.)
 
 const ROOM = { name: "Changing room", template: "text", tone: "wood", kicker: "the changing room", title: "Who are you today?", body: [], items: [], links: [] } as unknown as ScreenDef;
 
@@ -53,12 +52,12 @@ export function Wardrobe({ people, look, barista, onChange, onClose }: { people:
   if (!people || !look) return null;
   const persons = barista ? [BARISTA_PERSON] : visitorPeople(people);
   // which rigged avatar you are (null: a classic person); unset means the catalog's first
-  const rigId = !catalog || look.avatar === "" ? null : (catalog.find((a) => a.id === look.avatar) ?? catalog[0])?.id ?? null;
+  const rigId = !catalog ? null : (catalog.find((a) => a.id === look.avatar) ?? catalog[0])?.id ?? null;
   const outfits = people.people[look.person] ?? [];
   const shuffle = () => {
-    const person = barista ? BARISTA_PERSON : persons[Math.floor(Math.random() * persons.length)];
-    const fits = people.people[person] ?? [];
-    onChange({ person, outfit: fits[Math.floor(Math.random() * fits.length)] ?? firstOutfit(people, person), avatar: "" });
+    const all = catalog ?? [];
+    const pick = all[Math.floor(Math.random() * all.length)];
+    if (pick) onChange({ ...look, avatar: pick.id });
   };
 
   return (
@@ -78,50 +77,16 @@ export function Wardrobe({ people, look, barista, onChange, onClose }: { people:
           )}
         </div>
         <div className="min-w-0 flex-1">
-          {!!catalog?.length && (
-            <>
-              <p className="mb-2 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">avatar</p>
-              <div className="mb-4 flex flex-wrap gap-2">
-                {catalog.map((a) => (
-                  <button key={a.id} onClick={() => onChange({ ...look, avatar: a.id })} className="flex flex-col items-center gap-1 p-1" style={ring(rigId === a.id)} title={a.label}>
-                    <RigPose id={a.id} scale={1} />
-                    <span className="font-['Silkscreen'] text-[9px] uppercase tracking-wider opacity-80">{a.label}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="mb-2 text-[16px] opacity-60">{barista ? "or your classic barista look:" : "or one of the classic café people:"}</p>
-            </>
-          )}
-          {barista ? (
-            <p className="mb-3 text-[20px]">You're the barista, so you're always you. Pick what you're wearing.</p>
-          ) : (
-            <>
-              <p className="mb-2 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">who</p>
-              <div className="mb-4 flex flex-wrap gap-2">
-                {persons.map((person) => (
-                  <button
-                    key={person}
-                    onClick={() => onChange({ person, outfit: people.people[person]?.includes(look.outfit) ? look.outfit : firstOutfit(people, person), avatar: "" })}
-                    className="p-1"
-                    style={ring(!rigId && look.person === person)}
-                    title={label(person)}
-                  >
-                    <Pose people={people} look={{ person, outfit: firstOutfit(people, person) }} pose="stand-front" scale={1} />
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          <p className="mb-2 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">outfit</p>
+          <p className="mb-2 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">who you are</p>
           <div className="flex flex-wrap gap-2">
-            {outfits.map((outfit) => (
-              <button key={outfit} onClick={() => onChange({ person: look.person, outfit, avatar: "" })} className="flex flex-col items-center gap-1 p-1" style={ring(!rigId && look.outfit === outfit)}>
-                <Pose people={people} look={{ person: look.person, outfit }} pose="stand-front" scale={1} />
-                <span className="font-['Silkscreen'] text-[9px] uppercase tracking-wider opacity-80">{label(outfit)}</span>
+            {(catalog ?? []).map((a) => (
+              <button key={a.id} onClick={() => onChange({ ...look, avatar: a.id })} className="flex flex-col items-center gap-1 p-1" style={ring(rigId === a.id)} title={a.label}>
+                <RigPose id={a.id} scale={1} />
+                <span className="font-['Silkscreen'] text-[9px] uppercase tracking-wider opacity-80">{a.label}</span>
               </button>
             ))}
           </div>
-          {outfits.length < 2 && <p className="mt-2 text-[17px] opacity-60">More outfits coming soon.</p>}
+          {(catalog?.length ?? 0) < 2 && <p className="mt-2 text-[17px] opacity-60">More people coming soon.</p>}
           <div className="mt-5 flex gap-3">
             <PixelButton onClick={shuffle} fill="#86a86b">
               shuffle

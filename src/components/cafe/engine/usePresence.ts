@@ -322,7 +322,7 @@ export function usePresence(me: Me, size: { w: number; h: number }, on = true) {
   }, [me.net]);
 
   // which rigged avatar someone is (null: a classic person)
-  const rigIdOf = (o: Other) => (!catalog || o.look.avatar === "" ? null : (catalog.find((a) => a.id === o.look.avatar) ?? catalog[0])?.id ?? null);
+  const rigIdOf = (o: Other) => (!catalog ? null : (catalog.find((a) => a.id === o.look.avatar) ?? catalog[0])?.id ?? null);
   // load the avatars people are using, once each
   const wanted = [...new Set(Object.values(others).map(rigIdOf).filter(Boolean) as string[])].sort().join();
   useEffect(() => {

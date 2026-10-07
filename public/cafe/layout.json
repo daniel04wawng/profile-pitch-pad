@@ -18,8 +18,8 @@
       "w": 100,
       "h": 80,
       "baseY": 232,
-      "hotspot": "projects",
-      "label": "browse the pastry case"
+      "hotspot": "bakes",
+      "label": "see what I've baked"
     },
     {
       "id": "window",
@@ -65,8 +65,8 @@
       "w": 66,
       "h": 57,
       "baseY": 252,
-      "hotspot": "about",
-      "label": "about me"
+      "hotspot": null,
+      "label": null
     },
     {
       "id": "bar-counter-2",
@@ -76,8 +76,8 @@
       "w": 66,
       "h": 57,
       "baseY": 180,
-      "hotspot": "about",
-      "label": "about me"
+      "hotspot": null,
+      "label": null
     },
     {
       "id": "bar-counter-3",
@@ -87,8 +87,8 @@
       "w": 66,
       "h": 57,
       "baseY": 204,
-      "hotspot": "about",
-      "label": "about me"
+      "hotspot": null,
+      "label": null
     },
     {
       "id": "bar-counter-4",
@@ -98,8 +98,8 @@
       "w": 66,
       "h": 57,
       "baseY": 228,
-      "hotspot": "about",
-      "label": "about me"
+      "hotspot": null,
+      "label": null
     },
     {
       "id": "cake-stand",
@@ -109,8 +109,8 @@
       "w": 15,
       "h": 20,
       "baseY": 168,
-      "hotspot": "projects",
-      "label": "browse the pastry case"
+      "hotspot": "bakes",
+      "label": "see what I've baked"
     },
     {
       "id": "floor-lamp",
@@ -203,8 +203,8 @@
       "w": 28,
       "h": 30,
       "baseY": 307,
-      "hotspot": "chill",
-      "label": "sit for a while"
+      "hotspot": null,
+      "label": null
     },
     {
       "id": "cafe-chair",
@@ -271,8 +271,8 @@
       "w": 28,
       "h": 30,
       "baseY": 303,
-      "hotspot": "chill",
-      "label": "sit for a while"
+      "hotspot": null,
+      "label": null
     },
     {
       "id": "cafe-chair-2",
@@ -351,8 +351,8 @@
       "w": 32,
       "h": 29,
       "baseY": 229,
-      "hotspot": "about",
-      "label": "about me"
+      "hotspot": null,
+      "label": null
     },
     {
       "id": "cake-stand-2",
@@ -362,8 +362,8 @@
       "w": 15,
       "h": 20,
       "baseY": 205,
-      "hotspot": "projects",
-      "label": "browse the pastry case"
+      "hotspot": "bakes",
+      "label": "see what I've baked"
     },
     {
       "id": "flower-vase",
@@ -455,8 +455,8 @@
       "w": 50,
       "h": 35,
       "baseY": 373,
-      "hotspot": "chill",
-      "label": "sit for a while",
+      "hotspot": null,
+      "label": null,
       "flipX": true,
       "rot": 1
     },
@@ -479,8 +479,8 @@
       "w": 18,
       "h": 19,
       "baseY": 374,
-      "hotspot": null,
-      "label": null,
+      "hotspot": "projects",
+      "label": "see my projects",
       "flipX": false,
       "rot": 0
     },
@@ -492,10 +492,49 @@
       "w": 42,
       "h": 35,
       "baseY": 282,
-      "hotspot": "chill",
-      "label": "sit for a while",
+      "hotspot": null,
+      "label": null,
       "flipX": true,
       "rot": 1
+    },
+    {
+      "id": "register",
+      "file": "sprites/register.png",
+      "x": 341,
+      "y": 176,
+      "w": 30,
+      "h": 39,
+      "baseY": 253,
+      "hotspot": "contact",
+      "label": "say hello",
+      "flipX": false,
+      "rot": 0
+    },
+    {
+      "id": "wardrobe",
+      "file": "sprites/wardrobe.png",
+      "x": 490,
+      "y": 166,
+      "w": 40,
+      "h": 85,
+      "baseY": 251,
+      "hotspot": "wardrobe",
+      "label": "change your look",
+      "flipX": false,
+      "rot": 0
+    },
+    {
+      "id": "notes-board",
+      "file": "sprites/notes-board.png",
+      "x": 229,
+      "y": 83,
+      "w": 43,
+      "h": 65,
+      "baseY": 148,
+      "hotspot": "notes",
+      "label": "leave a note",
+      "flipX": true,
+      "rot": 3
     }
   ]
 }

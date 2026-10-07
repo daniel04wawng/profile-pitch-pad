@@ -404,6 +404,18 @@
    "a": 16,
    "b": 8,
    "from": "front"
+  },
+  "collision": {
+   "foot": {
+    "x": 33,
+    "y": 51
+   },
+   "size": {
+    "a": 16,
+    "b": 8,
+    "from": "front"
+   },
+   "walkable": true
   }
  },
  "couch-back": {
@@ -513,6 +525,17 @@
   "foot": {
    "x": 2,
    "y": 44
+  }
+ },
+ "register": {
+  "foot": {
+   "x": 17,
+   "y": 38
+  },
+  "size": {
+   "a": 8,
+   "b": 6,
+   "from": "front"
   }
  }
 }

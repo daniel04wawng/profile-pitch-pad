@@ -1,38 +1,56 @@
 {
   "screens": {
     "projects": {
-      "name": "Pastry case: projects",
-      "template": "case",
+      "name": "Laptop: projects",
+      "template": "laptop",
       "tone": "cream",
-      "kicker": "The pastry case",
-      "title": "Fresh from the oven",
+      "kicker": "on the laptop",
+      "title": "Things I've built",
       "body": [
-        "Each pastry is a project. Pick one to read the story behind it."
+        "Each box is a project: open one for the demo, the story and the links."
       ],
       "items": [
         {
           "title": "Surplus",
-          "meta": "Fresh croissant",
+          "meta": "Startup · 2026",
           "sprite": "pastry-croissant",
+          "tags": "AI agents, outreach",
           "note": "Placeholder. An AI agent that does the relationship work for you."
         },
         {
           "title": "Duet",
-          "meta": "Macarons",
+          "meta": "Cal Hacks 11.0 · First place grand prize",
           "sprite": "pastry-macaron",
-          "note": "Placeholder. Brain-computer interface that turns EEG signals into music. First place grand prize, Cal Hacks 11.0."
+          "tags": "EEG, Python, Next.js, Gemini",
+          "note": "Placeholder. A brain-computer interface that turns brainwaves into music in real time."
         },
         {
           "title": "Mira AI",
-          "meta": "Cinnamon roll",
+          "meta": "NimbleRx · shipped Aug 2025",
           "sprite": "pastry-cinnamon",
-          "note": "Placeholder. Digital patient twin, shipped at NimbleRx."
+          "tags": "healthcare AI, product",
+          "note": "Placeholder. A healthcare assistant that remembers context and stays safe."
+        },
+        {
+          "title": "JiaBot",
+          "meta": "NimbleRx · shipped Jul 2025",
+          "sprite": "cup",
+          "tags": "chatbot, product",
+          "note": "Placeholder. Cutting pharmacy hold times with an AI support assistant."
         },
         {
           "title": "VGC bench",
-          "meta": "Blueberry muffin",
+          "meta": "Benchmark",
           "sprite": "pastry-muffin",
+          "tags": "AI agents, benchmark",
           "note": "Placeholder. A benchmark for AI agents playing competitive Pokémon."
+        },
+        {
+          "title": "Daniel's café",
+          "meta": "This site",
+          "sprite": "pastry-cake",
+          "tags": "React, pixel art, multiplayer",
+          "note": "The café you're standing in: an isometric pixel café with a level editor, avatars and live visitors."
         }
       ],
       "links": []
@@ -181,6 +199,37 @@
         "Placeholder. What you're working on right now, plus anything freshly launched."
       ],
       "items": [],
+      "links": []
+    },
+    "bakes": {
+      "name": "Pastry case: baking",
+      "template": "case",
+      "tone": "cream",
+      "kicker": "The pastry case",
+      "title": "Fresh from my oven",
+      "body": [
+        "Everything in here I baked. Pick one to see it."
+      ],
+      "items": [
+        {
+          "title": "Cake",
+          "meta": "layer cake",
+          "sprite": "pastry-cake",
+          "note": "Placeholder: photos and the story coming soon."
+        },
+        {
+          "title": "Cookies",
+          "meta": "chocolate chip",
+          "sprite": "pastry-cookies",
+          "note": "Placeholder: photos and the story coming soon."
+        },
+        {
+          "title": "Crêpes",
+          "meta": "with strawberries",
+          "sprite": "pastry-crepe",
+          "note": "Placeholder: photos and the story coming soon."
+        }
+      ],
       "links": []
     }
   }

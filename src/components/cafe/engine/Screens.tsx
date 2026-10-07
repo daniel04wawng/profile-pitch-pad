@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { BASE } from "./types";
-import type { ScreenDef, ScreenItem, Tone } from "./screenData";
+import { fileUrl } from "./store";
+import type { Media, ScreenDef, ScreenItem, Tone } from "./screenData";
 
 // What you see after walking up to an object: a full screen in the café's pixel style
 // (pixel fonts, notched frames, hard shadows, pixel sprites). Each screen is data from
@@ -126,10 +127,49 @@ function Dotted({ item, color }: { item: ScreenItem; color: string }) {
   );
 }
 
+// One photo or video, as big as it fits; videos play muted on a loop (with controls).
+function MediaView({ m, className = "", fit = "contain" }: { m: Media; className?: string; fit?: "contain" | "cover" }) {
+  const style = { objectFit: fit, imageRendering: "auto" } as CSSProperties;
+  return m.kind === "video" ? (
+    <video src={fileUrl(m.src)} className={className} style={style} autoPlay muted loop playsInline controls={fit === "contain"} />
+  ) : (
+    <img src={fileUrl(m.src)} alt="" className={className} style={style} loading="lazy" />
+  );
+}
+
+// A gallery: the picked photo or video large, the rest as thumbnails to pick from.
+function Gallery({ media, frame = "#2b1d1a" }: { media: Media[]; frame?: string }) {
+  const [i, setI] = useState(0);
+  const m = media[Math.min(i, media.length - 1)];
+  if (!m) return null;
+  return (
+    <div>
+      <div className="flex h-[min(46dvh,340px)] items-center justify-center bg-black/80" style={pixelBox("#15131c", frame, 3, "rgba(0,0,0,0.25)")}>
+        <MediaView m={m} className="h-full w-full" />
+      </div>
+      {media.length > 1 && (
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {media.map((x, k) => (
+            <button key={x.src + k} onClick={() => setI(k)} className="relative h-14 w-14 shrink-0 overflow-hidden" style={{ outline: k === i ? `3px solid ${frame}` : "none", opacity: k === i ? 1 : 0.7 }}>
+              <MediaView m={x} className="h-full w-full" fit="cover" />
+              {x.kind === "video" && <span className="absolute bottom-0 left-0 bg-black/70 px-1 font-['Silkscreen'] text-[8px] text-white">▶</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Detail page for one item (a pastry you picked, a book you pulled out).
 function ItemDetail({ screen, item, onBack, onClose }: { screen: ScreenDef; item: ScreenItem; onBack: () => void; onClose: () => void }) {
   return (
     <Frame screen={screen} title={item.title} kicker={item.meta || screen.kicker} onBack={onBack} onClose={onClose}>
+      {item.media?.length ? (
+        <div className="mb-5">
+          <Gallery media={item.media} />
+        </div>
+      ) : null}
       <div className="flex items-start gap-5">
         {item.sprite && (
           <div className="shrink-0 p-3" style={pixelBox("#d6eef1", "#c98f3c", 4, "rgba(0,0,0,0.2)")}>
@@ -138,7 +178,7 @@ function ItemDetail({ screen, item, onBack, onClose }: { screen: ScreenDef; item
         )}
         <Body lines={(item.note ?? "").split("\n")} />
       </div>
-      {item.href && <LinkRow links={[{ label: "Open", href: item.href }]} screen={screen} />}
+      <LinkRow links={[...(item.href ? [{ label: "Open", href: item.href }] : []), ...(item.links ?? [])]} screen={screen} />
     </Frame>
   );
 }
@@ -310,8 +350,136 @@ function TextTemplate({ screen, onClose }: Props) {
   );
 }
 
+// ---------------------------------------------------------------- the laptop
+
+// Projects on the café laptop: a pixel laptop with a little website open on it. Each project
+// is a box (its demo playing, or its sprite), and opens to its demo, the story and its links.
+function LaptopTemplate({ screen, onClose }: Props) {
+  const [open, setOpen] = useState<number | null>(null);
+  const item = open !== null ? screen.items[open] : null;
+  const tags = (t?: string) =>
+    (t ?? "")
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
+  return (
+    <div className="relative m-2 flex w-[min(880px,94vw)] flex-col items-center" onClick={(e) => e.stopPropagation()}>
+      {/* the lid: dark bezel, the screen inside */}
+      <div className="w-full p-3 sm:p-4" style={pixelBox("#2f2b33", INK, 4, "rgba(0,0,0,0.4)")}>
+        <div className="flex h-[min(560px,70dvh)] flex-col overflow-hidden bg-[#fbf6ec] text-[#2b1d1a]">
+          {/* a browser bar */}
+          <div className="flex shrink-0 items-center gap-2 border-b-2 border-[#2b1d1a]/15 bg-[#efe4d0] px-3 py-1.5">
+            <span className="flex gap-1">
+              {["#e0695a", "#e8b45c", "#86a86b"].map((c) => (
+                <span key={c} className="h-2.5 w-2.5" style={{ background: c }} />
+              ))}
+            </span>
+            {item && (
+              <button onClick={() => setOpen(null)} className="font-['Silkscreen'] text-[10px] hover:opacity-70">
+                ← back
+              </button>
+            )}
+            <span className="min-w-0 flex-1 truncate bg-white/70 px-2 py-0.5 font-['VT323'] text-[15px] opacity-80">
+              daniel.cafe/{item ? `projects/${item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : "projects"}
+            </span>
+            <button onClick={onClose} className="font-['Silkscreen'] text-[12px] hover:opacity-70" title="Close">
+              ✕
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-7">
+            {item ? (
+              <article className="mx-auto max-w-2xl">
+                <p className="font-['Silkscreen'] text-[10px] uppercase tracking-wider opacity-60">{item.meta}</p>
+                <h2 className="mt-1 font-['Instrument_Serif'] text-4xl italic leading-tight">{item.title}</h2>
+                {tags(item.tags).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {tags(item.tags).map((t) => (
+                      <span key={t} className="bg-[#2b1d1a]/8 px-2 py-0.5 font-['Silkscreen'] text-[9px] uppercase tracking-wider" style={{ background: "rgba(43,29,26,0.08)" }}>
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {item.media?.length ? (
+                  <div className="mt-5">
+                    <Gallery media={item.media} />
+                  </div>
+                ) : null}
+                <div className="mt-5 space-y-3 font-['Space_Grotesk'] text-[15px] leading-relaxed">
+                  {(item.note ?? "").split("\n").filter((l) => l.trim()).map((l, k) => (
+                    <p key={k}>{l}</p>
+                  ))}
+                </div>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  {[...(item.href ? [{ label: "Open", href: item.href }] : []), ...(item.links ?? [])].map((l) => (
+                    <a key={l.label + l.href} href={l.href} target="_blank" rel="noreferrer" className="px-3 py-1 font-['Pixelify_Sans'] text-[15px] transition-transform hover:-translate-y-0.5" style={pixelBox("#e8b45c", INK, 2, "rgba(0,0,0,0.25)")}>
+                      {l.label} ↗
+                    </a>
+                  ))}
+                </div>
+              </article>
+            ) : (
+              <>
+                <header className="mb-6">
+                  <p className="font-['Silkscreen'] text-[10px] uppercase tracking-wider opacity-60">{screen.kicker}</p>
+                  <h2 className="mt-1 font-['Instrument_Serif'] text-4xl italic leading-tight">{screen.title}</h2>
+                  {screen.body.filter((l) => l.trim()).map((l, k) => (
+                    <p key={k} className="mt-2 max-w-xl font-['Space_Grotesk'] text-[15px] opacity-80">
+                      {l}
+                    </p>
+                  ))}
+                </header>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  {screen.items.map((it, i) => (
+                    <button key={i} onClick={() => setOpen(i)} className="group text-left transition-transform hover:-translate-y-1" style={pixelBox("#ffffff", INK, 3, "rgba(0,0,0,0.18)")}>
+                      <div className="flex aspect-video items-center justify-center overflow-hidden bg-[#efe4d0]">
+                        {it.media?.[0] ? (
+                          <MediaView m={it.media[0]} className="h-full w-full" fit="cover" />
+                        ) : (
+                          <img src={sprite(it.sprite || "cup")} alt="" className="h-16 w-auto [image-rendering:pixelated] transition-transform group-hover:scale-110" />
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <p className="font-['Pixelify_Sans'] text-[18px] leading-tight">{it.title}</p>
+                        {it.meta && <p className="mt-0.5 font-['Silkscreen'] text-[9px] uppercase tracking-wider opacity-60">{it.meta}</p>}
+                        {it.note && <p className="mt-2 line-clamp-2 font-['Space_Grotesk'] text-[13px] opacity-75">{it.note}</p>}
+                        {tags(it.tags).length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {tags(it.tags).slice(0, 4).map((t) => (
+                              <span key={t} className="px-1.5 py-px font-['Silkscreen'] text-[8px] uppercase tracking-wider" style={{ background: "rgba(43,29,26,0.08)" }}>
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {screen.links.length > 0 && (
+                  <div className="mt-8 flex flex-wrap gap-3 border-t-2 border-dashed border-[#2b1d1a]/15 pt-5">
+                    {screen.links.map((l) => (
+                      <a key={l.href} href={l.href} target="_blank" rel="noreferrer" className="font-['Pixelify_Sans'] text-[15px] underline decoration-2 underline-offset-4 hover:opacity-70">
+                        {l.label} ↗
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      {/* the base: the keyboard deck, a little wider than the lid */}
+      <div className="h-3 w-[104%]" style={{ ...pixelBox("#9a93a0", INK, 3, "rgba(0,0,0,0.35)") }} />
+    </div>
+  );
+}
+
 export function CafeScreen(props: Props) {
   switch (props.screen.template) {
+    case "laptop":
+      return <LaptopTemplate {...props} />;
     case "case":
       return <CaseTemplate {...props} />;
     case "menu":

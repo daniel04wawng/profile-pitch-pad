@@ -1,5 +1,65 @@
+import { useState } from "react";
 import { BASE } from "./types";
-import { TEMPLATES, TONES, UI_SPRITES, type ScreenDef, type ScreenItem, type Screens, type Template, type Tone } from "./screenData";
+import { fileUrl, saveMedia } from "./store";
+import { TEMPLATES, TONES, UI_SPRITES, type Media, type ScreenDef, type ScreenItem, type Screens, type Template, type Tone } from "./screenData";
+
+// An item's photos and videos: thumbnails you can reorder or remove, and a button to add more.
+function MediaList({ media, onChange }: { media: Media[]; onChange: (m: Media[]) => void }) {
+  const [busy, setBusy] = useState("");
+  const add = async (files: FileList) => {
+    const next = [...media];
+    for (const f of [...files]) {
+      setBusy(`adding ${f.name}…`);
+      try {
+        next.push(await saveMedia(f));
+      } catch (e) {
+        window.alert(String(e instanceof Error ? e.message : e));
+      }
+    }
+    setBusy("");
+    onChange(next);
+  };
+  const move = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= media.length) return;
+    const m = [...media];
+    [m[i], m[j]] = [m[j], m[i]];
+    onChange(m);
+  };
+  return (
+    <div className="mt-1">
+      {media.length > 0 && (
+        <div className="mb-1 flex flex-wrap gap-1">
+          {media.map((m, i) => (
+            <div key={m.src + i} className="group relative h-14 w-14 overflow-hidden rounded bg-black/40">
+              {m.kind === "video" ? (
+                <video src={fileUrl(m.src)} muted className="h-full w-full object-cover" />
+              ) : (
+                <img src={fileUrl(m.src)} alt="" className="h-full w-full object-cover" />
+              )}
+              {m.kind === "video" && <span className="absolute bottom-0 left-0 bg-black/70 px-1 text-[9px]">video</span>}
+              <div className="absolute inset-0 hidden items-center justify-center gap-0.5 bg-black/60 group-hover:flex">
+                <button onClick={() => move(i, -1)} className="px-1 text-[11px]" title="Earlier">
+                  ←
+                </button>
+                <button onClick={() => onChange(media.filter((_, k) => k !== i))} className="px-1 text-[11px] text-red-200" title="Remove">
+                  ✕
+                </button>
+                <button onClick={() => move(i, 1)} className="px-1 text-[11px]" title="Later">
+                  →
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <label className="inline-block cursor-pointer rounded border border-white/15 px-2 py-0.5 text-[11px] hover:bg-white/10">
+        {busy || "+ photos / videos"}
+        <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" className="hidden" onChange={(e) => e.target.files && add(e.target.files)} />
+      </label>
+    </div>
+  );
+}
 
 // The editor's Screens tab: create screens, edit their words, items and links, pick a
 // template and a style, preview them. Objects in the room connect to a screen by id.
@@ -122,7 +182,7 @@ export function ScreenEditor({
         <div>
           <div className="flex items-center justify-between">
             <p className="text-[11px] opacity-80">
-              items ({s.template === "case" ? "pastries" : s.template === "shelf" ? "books" : s.template === "music" ? "tracks" : "rows"})
+              items ({s.template === "case" ? "pastries" : s.template === "laptop" ? "projects" : s.template === "shelf" ? "books" : s.template === "music" ? "tracks" : "rows"})
             </p>
             <button onClick={() => set({ items: [...s.items, { title: "New item" }] })} className={small}>
               + add
@@ -147,7 +207,27 @@ export function ScreenEditor({
                 <input value={it.meta ?? ""} onChange={(e) => setItem(i, { meta: e.target.value || undefined })} className={input} placeholder="right side: price, date, subtitle" />
                 <textarea value={it.note ?? ""} onChange={(e) => setItem(i, { note: e.target.value || undefined })} rows={2} className={input} placeholder="details shown when opened" />
                 <input value={it.href ?? ""} onChange={(e) => setItem(i, { href: e.target.value || undefined })} className={input} placeholder="link (optional)" />
-                {s.template === "case" && (
+                {(s.template === "case" || s.template === "laptop") && (
+                  <MediaList media={it.media ?? []} onChange={(m) => setItem(i, { media: m.length ? m : undefined })} />
+                )}
+                {s.template === "laptop" && (
+                  <>
+                    <input value={it.tags ?? ""} onChange={(e) => setItem(i, { tags: e.target.value || undefined })} className={input} placeholder="tags: React, Python, hackathon…" />
+                    {(it.links ?? []).map((l, k) => (
+                      <div key={k} className="mt-0.5 flex gap-1">
+                        <input value={l.label} onChange={(e) => setItem(i, { links: it.links!.map((x, n) => (n === k ? { ...x, label: e.target.value } : x)) })} className="w-20 rounded bg-black/30 px-2 py-1 text-[12px]" />
+                        <input value={l.href} onChange={(e) => setItem(i, { links: it.links!.map((x, n) => (n === k ? { ...x, href: e.target.value } : x)) })} className="min-w-0 flex-1 rounded bg-black/30 px-2 py-1 text-[12px]" />
+                        <button onClick={() => setItem(i, { links: it.links!.filter((_, n) => n !== k) })} className={`${small} text-red-200`}>
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    <button onClick={() => setItem(i, { links: [...(it.links ?? []), { label: "Demo", href: "https://" }] })} className={`${small} mt-1`}>
+                      + button (demo, code…)
+                    </button>
+                  </>
+                )}
+                {(s.template === "case" || s.template === "laptop") && (
                   <select value={it.sprite ?? ""} onChange={(e) => setItem(i, { sprite: e.target.value || undefined })} className={input}>
                     <option value="">pastry sprite…</option>
                     {UI_SPRITES.map((sp) => (

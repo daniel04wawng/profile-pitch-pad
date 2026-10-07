@@ -53,7 +53,7 @@ export function sectionOf(l: Layout, name: string) {
 export const SECTION_ORDER = [...ASSET_SECTIONS.map(([s]) => s), "Clutter", "Your assets"];
 
 export const DEFAULT_CLUTTER = [
-  "coffee-cup", "flower-vase", "succulent", "tulip-pot", "laptop", "cake-stand", "espresso-station",
+  "coffee-cup", "flower-vase", "succulent", "tulip-pot", "laptop", "cake-stand", "espresso-station", "register",
 ];
 export const isClutter = (l: Layout, name: string) => (l.clutter ?? DEFAULT_CLUTTER).includes(frontOf(name));
 
@@ -89,7 +89,7 @@ export function snapIso(x: number, y: number, g: NonNullable<Layout["grid"]> = D
   return { x: g.ox + m * sx, y: g.oy + n * sy };
 }
 
-export const HOTSPOTS = ["projects", "about", "menu", "now", "contact", "piano", "books", "chill"] as const;
+export const HOTSPOTS = ["projects", "bakes", "about", "menu", "now", "contact", "piano", "books", "chill"] as const;
 
 export const BASE = "/cafe/";
 
@@ -164,7 +164,7 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "iso-tip-jar": { hotspot: "contact", label: "say hi" },
   "iso-register": { hotspot: "contact", label: "say hi" },
   // the original café's pieces, cleaned into standalone assets
-  "pastry-counter": { hotspot: "projects", label: "browse the pastry case" },
+  "pastry-counter": { hotspot: "bakes", label: "see what I've baked" },
   "chalkboard-menu": { hotspot: "menu", label: "read the menu" },
   "kitchen-doorway": { hotspot: "now", label: "what's in the oven" },
   "record-art": { hotspot: "piano", label: "my music" },
@@ -173,25 +173,20 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "menu-board": { hotspot: "menu", label: "read the menu" },
   "aframe-sign": { hotspot: "now", label: "special of the day" },
   "piano-stool": { hotspot: "piano", label: "play the piano" },
-  "cafe-table": { hotspot: "chill", label: "sit for a while" },
   "cafe-chair": { hotspot: "chill", label: "sit for a while" },
   "record-cabinet": { hotspot: "piano", label: "put on a record" },
-  "espresso-station": { hotspot: "about", label: "about me" },
   bookshelf: { hotspot: "books", label: "books I love" },
   "changing-room": { hotspot: WARDROBE, label: "change your look" },
   wardrobe: { hotspot: WARDROBE, label: "change your look" },
   "notes-board": { hotspot: NOTES, label: "leave a note" },
-  "bar-counter": { hotspot: "about", label: "about me" },
   "special-board": { hotspot: "now", label: "special of the day" },
   booth: { hotspot: "chill", label: "sit for a while" },
   couch: { hotspot: "chill", label: "sit and listen" },
   "sofa-large": { hotspot: "chill", label: "sit and listen" },
-  "coffee-table": { hotspot: "chill", label: "sit for a while" },
-  "booth-table": { hotspot: "chill", label: "sit for a while" },
   armchair: { hotspot: "chill", label: "sit and listen" },
-  "cafe-table-cloth": { hotspot: "chill", label: "sit for a while" },
-  "cafe-table-linen": { hotspot: "chill", label: "sit for a while" },
-  "cake-stand": { hotspot: "projects", label: "browse the pastry case" },
+  "cake-stand": { hotspot: "bakes", label: "see what I've baked" },
+  laptop: { hotspot: "projects", label: "see my projects" },
+  register: { hotspot: "contact", label: "say hello" },
   // pieces from the original café
   "cafe-pastry-counter": { hotspot: "projects", label: "browse the pastry case" },
   "cafe-piano": { hotspot: "piano", label: "play the piano" },
@@ -200,5 +195,4 @@ export const ASSET_DEFAULTS: Record<string, { hotspot: string; label: string }> 
   "cafe-menu-board": { hotspot: "menu", label: "read the menu" },
   "cafe-aframe-sign": { hotspot: "now", label: "special of the day" },
   "cafe-till": { hotspot: "contact", label: "say hi" },
-  "cafe-espresso-bar": { hotspot: "about", label: "about me" },
 };

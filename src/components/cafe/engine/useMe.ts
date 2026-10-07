@@ -95,7 +95,8 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   // A rigged avatar (rig.ts): the default for everyone who hasn't picked a classic person.
   // If it can't load, the classic person stands in.
   const catalog = useCatalog();
-  const rigId = !look || !catalog ? undefined : look.avatar === "" ? null : (catalog.find((a) => a.id === look.avatar) ?? catalog[0])?.id ?? null;
+  // everyone is a rigged avatar now (the classic people are only a fallback if one won't load)
+  const rigId = !look || !catalog ? undefined : (catalog.find((a) => a.id === look.avatar) ?? catalog[0])?.id ?? null;
   const rig = useRig(rigId);
   const body = useRef<Body | null>(null);
   if (rig && rig !== "failed") {

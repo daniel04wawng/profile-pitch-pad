@@ -112,6 +112,39 @@ export async function writePng(file: string, data: string) {
   urls.set(file, URL.createObjectURL(blob));
 }
 
+// Save a photo or video (a bake, a project demo) and return its path (media/<name>). Big
+// photos are shrunk to 1600px on their long side first, so the café stays light.
+export const MEDIA_TYPES = /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm))$/;
+export async function saveMedia(f: File): Promise<{ src: string; kind: "image" | "video" }> {
+  if (!MEDIA_TYPES.test(f.type)) throw new Error(`${f.name}: use a JPEG, PNG, WebP or GIF photo, or an MP4 or WebM video`);
+  const kind = f.type.startsWith("video") ? "video" : "image";
+  let blob: Blob = f;
+  let ext = f.name.split(".").pop()?.toLowerCase() ?? (kind === "video" ? "mp4" : "jpg");
+  if (kind === "image" && f.type !== "image/gif") {
+    const bmp = await createImageBitmap(f);
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    if (k < 1 || f.size > 600_000) {
+      const c = document.createElement("canvas");
+      c.width = Math.round(bmp.width * k);
+      c.height = Math.round(bmp.height * k);
+      c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+      const png = f.type === "image/png";
+      blob = await new Promise<Blob>((res) => c.toBlob((b) => res(b!), png ? "image/png" : "image/jpeg", 0.86));
+      ext = png ? "png" : "jpg";
+    }
+  }
+  const stem = f.name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "media";
+  const file = `media/${stem}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+  if (where === "disk") {
+    const r = await fetch(`/__cafe/media?file=${encodeURIComponent(file)}`, { method: "POST", body: blob });
+    if (!r.ok) throw new Error(await r.text());
+  } else {
+    await tx("files", "readwrite", (s) => s.put(blob, file));
+    urls.set(file, URL.createObjectURL(blob));
+  }
+  return { src: file, kind };
+}
+
 // Every asset you can place: the built-in sprites, plus your own.
 export async function listAssets(): Promise<string[]> {
   if (where === "disk") return (await fetch("/__cafe/assets")).json();
@@ -148,6 +181,11 @@ export async function importCafe(f: File): Promise<{ layout: Layout; screens: Sc
   if (d?.cafe !== 1 || !Array.isArray(d.layout?.assets) || typeof d.screens !== "object") throw new Error("That isn't a café file.");
   for (const [k, v] of Object.entries(d.files ?? {})) {
     if (/^[a-z0-9_\-/]+\.png$/i.test(k) && !k.includes("..") && typeof v === "string" && v.startsWith("data:image/png;base64,")) await writePng(k, v);
+    else if (/^media\/[a-z0-9-]+\.(jpg|jpeg|png|webp|gif|mp4|webm)$/i.test(k) && typeof v === "string" && /^data:(image|video)\//.test(v)) {
+      const blob = await (await fetch(v)).blob();
+      await tx("files", "readwrite", (s) => s.put(blob, k));
+      urls.set(k, URL.createObjectURL(blob));
+    }
   }
   for (const [k, v] of Object.entries(d.collisions ?? {})) {
     const c = v as Collision | null;

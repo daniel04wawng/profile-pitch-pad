@@ -5,6 +5,7 @@ Same palette and outline style as the room's furniture. Shown scaled up with har
     python3 art/draw_ui.py   # writes public/cafe/ui/<name>.png
 """
 import os
+import sys
 
 from draw_iso import P, Iso
 
@@ -13,7 +14,8 @@ OUT = os.path.join(os.path.dirname(ART), "public", "cafe", "ui")
 
 
 def save(s, name):
-    s.im.save(os.path.join(OUT, f"{name}.png"))
+    # the canvas is padded (so nothing clips): keep just the drawing
+    s.im.crop(s.im.getbbox()).save(os.path.join(OUT, f"{name}.png"))
 
 
 def croissant():
@@ -89,6 +91,89 @@ def cake_slice():
     save(s, "pastry-cake")
 
 
+def cookies():
+    """A little stack of chocolate chip cookies."""
+    s = Iso(18, 14)
+    for cy in (9, 6, 3):
+        s.d.ellipse([2, cy - 2, 15, cy + 3], fill=P["wood3"])
+        s.d.ellipse([3, cy - 2, 14, cy + 1], fill=P["wood4"])
+        for x in (5, 9, 12):
+            s.px(x + (cy % 2), cy - 1, "wood0")  # chocolate chips
+    s.px(6, 1, "cream2")
+    s.outline()
+    save(s, "pastry-cookies")
+
+
+def crepe():
+    """A folded crêpe with strawberries and a dusting of sugar."""
+    s = Iso(20, 14)
+    s.poly([(1, 10), (10, 3), (19, 10), (10, 12)], "gold1")
+    s.poly([(4, 9), (10, 5), (16, 9), (10, 11)], "gold2")
+    for x in range(3, 18, 3):
+        s.px(x, 10, "gold0")  # the lacy edge
+    for x, y in ((8, 6), (11, 6), (10, 4)):
+        s.px(x, y, "pink0"); s.px(x + 1, y, "pink1")  # strawberries
+    for x, y in ((6, 8), (13, 8), (9, 9), (12, 10)):
+        s.px(x, y, "white")
+    s.outline()
+    save(s, "pastry-crepe")
+
+
+def bread():
+    """A crusty loaf, scored on top."""
+    s = Iso(20, 12)
+    s.d.ellipse([1, 2, 18, 11], fill=P["wood3"])
+    s.d.ellipse([2, 2, 17, 8], fill=P["gold0"])
+    for x in (5, 9, 13):  # the scores
+        s.px(x, 4, "cream1"); s.px(x + 1, 5, "cream1")
+    s.px(4, 3, "gold2")
+    s.outline()
+    save(s, "pastry-bread")
+
+
+def pie():
+    """A lattice-top pie."""
+    s = Iso(18, 12)
+    s.d.ellipse([1, 1, 16, 10], fill=P["gold0"])
+    s.d.ellipse([3, 2, 14, 8], fill=P["pink0"])
+    for x in range(4, 14, 3):
+        s.vline(x, 2, 8, "gold1")
+    for y in (4, 6):
+        for x in range(3, 15):
+            s.px(x, y, "gold1")
+    for x in range(1, 17):
+        s.px(x, 10, "wood3")
+    s.outline()
+    save(s, "pastry-pie")
+
+
+def cupcake():
+    """A cupcake with a swirl of frosting and a cherry."""
+    s = Iso(14, 18)
+    s.d.ellipse([1, 4, 12, 11], fill=P["pink1"])
+    s.d.ellipse([3, 2, 10, 8], fill=P["pink2"])
+    s.px(6, 1, "pink0"); s.px(7, 1, "pink0")  # cherry
+    for y in range(11, 17):
+        inset = (y - 11) // 3
+        for x in range(2 + inset, 12 - inset):
+            s.px(x, y, "sage2" if x % 2 else "sage1")
+    s.outline()
+    save(s, "pastry-cupcake")
+
+
+def tart():
+    """A fruit tart: golden pastry ring, cream, berries."""
+    s = Iso(18, 12)
+    s.d.ellipse([1, 1, 16, 10], fill=P["gold1"])
+    s.d.ellipse([3, 2, 14, 7], fill=P["cream2"])
+    for x, y, c in ((5, 4, "blue1"), (8, 3, "pink0"), (11, 4, "blue1"), (7, 5, "sage2"), (10, 5, "pink0")):
+        s.px(x, y, c)
+    for x in range(2, 16, 2):
+        s.px(x, 9, "gold0")
+    s.outline()
+    save(s, "pastry-tart")
+
+
 def record():
     s = Iso(26, 26)
     s.d.ellipse([1, 1, 24, 24], fill=P["keyblack"])
@@ -117,6 +202,6 @@ def cup():
 
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    for f in (croissant, macaron, cinnamon, muffin, donut, cake_slice, record, cup):
+    for f in (cookies, crepe, bread, pie, cupcake, tart) if "--new" in sys.argv else (croissant, macaron, cinnamon, muffin, donut, cake_slice, cookies, crepe, bread, pie, cupcake, tart, record, cup):
         f()
     print("ui sprites ->", OUT)
