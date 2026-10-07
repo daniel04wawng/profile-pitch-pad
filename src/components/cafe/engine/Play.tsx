@@ -93,6 +93,7 @@ export function Play({
         interactive={(s) => !focus && (!!seatOf(s) || (!!s.hotspot && (!!screens[s.hotspot] || s.hotspot === WARDROBE || s.hotspot === NOTES)))}
         hovered={focus ? null : hovered?.id ?? null}
         camera={focus ? { x: focus.x, y: focus.y, w: focus.w, h: focus.h } : null}
+        follow={me.actor ? { x: me.actor.x, y: me.actor.y } : null}
         light={lightAt(hour)}
         handlers={{
           onHover: (s) => !focus && setHovered(s),
@@ -122,7 +123,7 @@ export function Play({
         <p className="mt-1 font-['Silkscreen'] text-[10px] uppercase tracking-wider opacity-70">coffee · pastries · records</p>
       </div>
       <div
-        className={`pointer-events-none absolute right-4 top-4 bg-[#f7efe1]/12 px-3 py-1 font-['Silkscreen'] text-[11px] text-[#f7efe1] backdrop-blur transition-opacity duration-500 sm:right-6 sm:top-6 ${focus ? "opacity-0" : ""}`}
+        className={`pointer-events-none absolute left-4 top-[4.6rem] bg-[#f7efe1]/12 px-3 py-1 font-['Silkscreen'] text-[11px] text-[#f7efe1] backdrop-blur transition-opacity duration-500 sm:left-auto sm:right-6 sm:top-6 ${focus ? "opacity-0" : ""}`}
       >
         {formatHour(hour)} in SF · {phaseName(hour)}
         {room.online && (

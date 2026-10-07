@@ -137,6 +137,7 @@ export function Stage({
   marker = null,
   shapes = [],
   camera = null,
+  follow = null,
   light = null,
   handlers,
   actors = [],
@@ -158,6 +159,9 @@ export function Stage({
   shapes?: { pts: { x: number; y: number }[]; tone: "solid" | "walk" | "selected" }[];
   // Scene rect to glide the camera into (walking up to an object). null = whole room.
   camera?: { x: number; y: number; w: number; h: number } | null;
+  // On a tall narrow screen (a phone held upright) the whole room would be a strip across the
+  // middle, so it's shown bigger and the camera follows this point (your avatar) sideways.
+  follow?: { x: number; y: number } | null;
   // Time-of-day lighting; null draws the room flat (no sky, sun or lamps).
   light?: Light | null;
   handlers: StageHandlers;
@@ -190,7 +194,15 @@ export function Stage({
 
   // Camera: zoom so the focused rect fills a good chunk of the screen, centered a little high.
   let cam = { k: 1, tx: 0, ty: 0 };
-  if (camera) {
+  const roomW = layout.width * scale;
+  const roomH = layout.height * scale;
+  if (!camera && follow && box.h / roomH > 1.6) {
+    const k = Math.min(2.4, (box.h * 0.6) / roomH);
+    const want = box.w / 2 - k * (ox + follow.x * scale);
+    // never past the room's sides
+    const tx = Math.min(-k * ox, Math.max(box.w - k * (ox + roomW), want));
+    cam = { k, tx: Math.round(tx), ty: Math.round(box.h * 0.52 - k * (oy + roomH / 2)) };
+  } else if (camera) {
     const k = Math.max(1.4, Math.min(5, (box.w * 0.5) / (camera.w * scale), (box.h * 0.45) / (camera.h * scale)));
     const cx = ox + (camera.x + camera.w / 2) * scale;
     const cy = oy + (camera.y + camera.h / 2) * scale;
@@ -199,7 +211,10 @@ export function Stage({
 
   const toScene = (e: { clientX: number; clientY: number }) => {
     const r = wrap.current!.getBoundingClientRect();
-    return { x: (e.clientX - r.left - ox) / scale, y: (e.clientY - r.top - oy) / scale };
+    // undo the camera too (a phone's follow view taps through it)
+    const cx = (e.clientX - r.left - cam.tx) / cam.k;
+    const cy = (e.clientY - r.top - cam.ty) / cam.k;
+    return { x: (cx - ox) / scale, y: (cy - oy) / scale };
   };
 
   const hit = (p: { x: number; y: number }) => {

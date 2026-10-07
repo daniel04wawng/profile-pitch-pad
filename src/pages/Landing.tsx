@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { formatHour, lightAt, pacificHour, phaseName } from "@/components/cafe/engine/lighting";
 import { BASE, type Layout } from "@/components/cafe/engine/types";
 import { fileUrl } from "@/components/cafe/engine/store";
-import { loadCatalog, loadRig } from "@/components/cafe/engine/rig";
+import { Body, facing, loadCatalog, loadRig } from "@/components/cafe/engine/rig";
+import type { Actor } from "@/components/cafe/engine/Stage";
 
 // The front door. Daniel's café seen from the street, lit for the time of day in San
 // Francisco, while the café itself loads behind it (its code, layout, every piece of art, your
@@ -55,6 +56,23 @@ function useStars(n: number) {
   }, [n]);
 }
 
+// your avatar on the street: a little smaller than inside, to suit the doorway out here
+const STREET_SCALE = 0.8;
+const STREET_SPEED = 46; // art px per second
+// the avatar you chose in the changing room (or the catalog's first)
+function chosenAvatar(ids: string[]) {
+  try {
+    const a = JSON.parse(localStorage.getItem("cafe-look") ?? "null")?.avatar;
+    if (typeof a === "string" && ids.includes(a)) return a;
+  } catch {
+    // no storage: the default
+  }
+  return ids[0];
+}
+
+// the next frame; a hidden page gets no animation frames, so a timer keeps the walk going
+const next = (f: (t: number) => void) => (document.hidden ? window.setTimeout(() => f(performance.now()), 50) : requestAnimationFrame(f));
+
 const reduceMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 export default function Landing() {
@@ -67,7 +85,10 @@ export default function Landing() {
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
   const [entering, setEntering] = useState(false);
-  const [art, setArt] = useState<{ w: number; h: number; door: { x: number; y: number } } | null>(null);
+  const [art, setArt] = useState<{ w: number; h: number; door: { x: number; y: number }; walk?: { x: number; y: number }[] } | null>(null);
+  // after "step inside": your avatar walking up to the door, then the zoom through it
+  const [walker, setWalker] = useState<(Actor & { opacity: number }) | null>(null);
+  const [zooming, setZooming] = useState(false);
   const [view, setView] = useState({ w: window.innerWidth, h: window.innerHeight });
   const stars = useStars(70);
   const started = useRef(false);
@@ -96,10 +117,60 @@ export default function Landing() {
     };
   }, []);
 
-  const enter = () => {
+  const zoomIn = () => {
+    setZooming(true);
+    window.setTimeout(() => navigate("/cafe"), reduceMotion() ? 0 : 950);
+  };
+  const enter = async () => {
     if (!ready || entering) return;
     setEntering(true);
-    window.setTimeout(() => navigate("/cafe"), reduceMotion() ? 0 : 950);
+    const path = art?.walk;
+    if (reduceMotion() || !path || path.length < 2) return zoomIn();
+    const cat = await loadCatalog().catch(() => []);
+    const id = chosenAvatar(cat.map((c) => c.id));
+    const rig = id ? await loadRig(id).catch(() => null) : null;
+    if (!rig) return zoomIn();
+    const body = new Body(rig, "SW");
+    let pos = { ...path[0] };
+    let leg = 1;
+    let walked = 0;
+    const total = path.slice(1).reduce((n, p, i) => n + Math.hypot(p.x - path[i].x, p.y - path[i].y), 0);
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      let left = STREET_SPEED * dt;
+      let moved = 0;
+      while (left > 0 && leg < path.length) {
+        const to = path[leg];
+        const dx = to.x - pos.x;
+        const dy = to.y - pos.y;
+        const d = Math.hypot(dx, dy);
+        if (d > 0.01) body.face(facing(body.dir, dx, dy));
+        if (d <= left) {
+          pos = { ...to };
+          left -= d;
+          moved += d;
+          leg++;
+        } else {
+          pos = { x: pos.x + (dx / d) * left, y: pos.y + (dy / d) * left };
+          moved += left;
+          left = 0;
+        }
+      }
+      walked += moved;
+      // the stride follows the distance (in the avatar's own pixels)
+      body.walk(moved / STREET_SCALE);
+      // fade in at the street's end, out as you go through the door
+      const opacity = Math.min(1, walked / 14, (total - walked) / 6 + 0.15);
+      setWalker({ ...body.actor("me", pos.x, pos.y, 0), opacity: Math.max(0, opacity) });
+      if (leg < path.length) next(step);
+      else {
+        setWalker(null);
+        zoomIn();
+      }
+    };
+    next(step);
   };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Enter" && enter();
@@ -153,7 +224,7 @@ export default function Landing() {
             height: H * k,
             cursor: ready ? "pointer" : "progress",
             transformOrigin: `${door.x * k}px ${door.y * k}px`,
-            transform: entering && !reduceMotion() ? "scale(7)" : "scale(1)",
+            transform: zooming && !reduceMotion() ? "scale(7)" : "scale(1)",
             transition: "transform 950ms cubic-bezier(.6,0,.9,.5)",
           }}
         >
@@ -179,6 +250,26 @@ export default function Landing() {
             style={{ opacity: night * 0.9, filter: `blur(${3 * k}px)` }}
             draggable={false}
           />
+          {walker &&
+            (() => {
+              const s = STREET_SCALE * k;
+              return (
+                <div
+                  className="pointer-events-none absolute [image-rendering:pixelated]"
+                  style={{
+                    left: walker.x * k - (walker.flip ? walker.w - walker.footX : walker.footX) * s,
+                    top: walker.y * k - walker.footY * s,
+                    width: walker.w * s,
+                    height: walker.h * s,
+                    backgroundImage: `url(${walker.sheet})`,
+                    backgroundSize: `${(walker.sheetW ?? walker.w) * s}px ${walker.h * s}px`,
+                    backgroundPosition: `${-walker.frame * walker.w * s}px 0`,
+                    transform: walker.flip ? "scaleX(-1)" : undefined,
+                    opacity: walker.opacity,
+                  }}
+                />
+              );
+            })()}
         </button>
       </div>
 
@@ -203,7 +294,7 @@ export default function Landing() {
       </div>
 
       {/* the doorway: the screen warms to the café's dark as you step through */}
-      <div className="pointer-events-none absolute inset-0 z-20 bg-[#15131c] transition-opacity duration-500" style={{ opacity: entering ? 1 : 0, transitionDelay: entering ? "500ms" : "0ms" }} />
+      <div className="pointer-events-none absolute inset-0 z-20 bg-[#15131c] transition-opacity duration-500" style={{ opacity: zooming ? 1 : 0, transitionDelay: zooming ? "500ms" : "0ms" }} />
     </div>
   );
 }

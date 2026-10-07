@@ -405,7 +405,13 @@ def main():
     # where the door is (its middle), so "step inside" can zoom right into it
     import json
     dx, dy = P2(X0, Y0, A, 24.5, 22)
-    json.dump({"w": W, "h": H, "door": {"x": round(dx), "y": round(dy)}}, open(os.path.join(OUT, "storefront.json"), "w"))
+    # the way in, for your avatar: in along the sidewalk from the far end of the side street,
+    # past the planter, then a turn up the step and through the door
+    walk = [P2(X0, Y0, A + 9, 1, 0), P2(X0, Y0, A + 9, 24.5, 0), P2(X0, Y0, A + 1.5, 24.5, 2)]
+    json.dump(
+        {"w": W, "h": H, "door": {"x": round(dx), "y": round(dy)}, "walk": [{"x": round(x, 1), "y": round(y, 1)} for x, y in walk]},
+        open(os.path.join(OUT, "storefront.json"), "w"),
+    )
     print("storefront", c.im.size)
     if "--preview" in sys.argv:
         bg = Image.new("RGBA", c.im.size, (40, 46, 78, 255))
