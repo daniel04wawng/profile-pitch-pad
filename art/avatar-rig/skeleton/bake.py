@@ -9,8 +9,8 @@ own baked sheets for now (`--seated-from`), recoloured the same way when asked. 
 format the café already plays: public/cafe/avatars/<id>/ (12 sheets + manifest.json), and the
 avatar is added to the café's catalog.
 
-Recolouring works on parts, so a new shirt colour changes only the shirt: the hue window
-picks the overshirt's colour, the shading is kept.
+Recolouring picks the overshirt by its colour (a hue window), in every part, keeping the
+shading; hair, skin, the tee and trousers are other colours and stay as they are.
 """
 import argparse
 import colorsys
@@ -27,7 +27,7 @@ from rig import Character, render
 HERE = pathlib.Path(__file__).parent
 SITE = HERE.parents[2] / "public" / "cafe" / "avatars"
 GAME = (64, 70)  # a game frame: the 256x280 art at a quarter, nearest neighbour
-SHIRT_PARTS = {"torso", "arm.free"}
+SHIRT_PARTS = None  # every part: the hue window only matches the overshirt, wherever a cut put it (the collar sits in the head part)
 SHIRT_HUES = (45, 100)  # degrees: the olive overshirt
 SKELETON_SHEETS = {("walk", "front"): "walk-front", ("walk", "back"): "walk-back", ("idle", "front"): "idle-front", ("idle", "back"): "idle-back"}
 
@@ -70,7 +70,7 @@ def main():
     for view in ("front", "back"):
         ch = Character(HERE / "characters" / args.character / view)
         if args.shirt:
-            for p in SHIRT_PARTS & set(ch.images):
+            for p in (SHIRT_PARTS or set(ch.images)) & set(ch.images):
                 ch.images[p] = recolor(ch.images[p], args.shirt)
         for anim, make in ANIMATIONS.items():
             frames = [render(ch, view, f).resize(GAME, Image.Resampling.NEAREST) for f in make(view)]

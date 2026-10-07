@@ -1,0 +1,55 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Avatar rig viewer</title>
+<style>
+:root{--bg:#f1ebe0;--ink:#2b1d1a;--card:#fffaf2;--line:#d9cdb9;--accent:#c8873a}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1816;--ink:#f1e6d4;--card:#26211d;--line:#3c342d;--accent:#e8b45c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 ui-sans-serif,system-ui,sans-serif;padding:16px}
+h1{font:600 22px/1.2 ui-serif,Georgia,serif;margin:0 0 4px}p.sub{margin:0 0 16px;opacity:.7}
+.wrap{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);max-width:980px;margin:0 auto}
+@media(min-width:820px){.wrap{grid-template-columns:420px minmax(0,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+canvas{width:100%;max-width:384px;aspect-ratio:192/260;image-rendering:pixelated;display:block;margin:0 auto;background:repeating-conic-gradient(#0000 0 25%,#8881 0 50%) 0 0/16px 16px;border-radius:6px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+button,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+button.on{background:var(--accent);color:#1a1210;border-color:var(--accent)}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.part{border:1px solid var(--line);border-radius:6px;padding:6px;text-align:center;font-size:12px}
+.part img{width:100%;image-rendering:pixelated}
+.k{opacity:.6;font-size:11px}
+code{font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:13px}
+.legend i{width:14px;height:3px;display:inline-block;border-radius:2px}
+</style></head><body>
+<div class="wrap">
+<div style="grid-column:1/-1"><h1>Avatar rig viewer</h1><p class="sub">The skeleton rig driving the café avatar's walk: 8 frames, baked from 9 sprite parts pinned to a shared skeleton.</p></div>
+<div class="card">
+ <canvas id="c" width="192" height="260"></canvas>
+ <div class="row"><button id="play" class="on">❚❚ pause</button><input id="f" type="range" min="0" max="7" value="0"><span id="fl">1/8</span></div>
+ <div class="row"><button data-view="front" class="on">front (SE)</button><button data-view="back">back (NE)</button></div>
+ <div class="row"><button data-shirt="green" class="on">green shirt</button><button data-shirt="navy">navy shirt</button><button id="sk" class="on">skeleton</button>
+ <label>speed <select id="sp"><option value="250">slow</option><option value="125" selected>normal</option><option value="70">fast</option></select></label></div>
+ <div class="row legend"><span><i style="background:#dc2828"></i>near leg (right)</span><span><i style="background:#285ae6"></i>far leg (left)</span><span><i style="background:#1e963c"></i>spine, shoulder, elbow</span></div>
+</div>
+<div class="card"><h3 style="margin:0 0 8px">The parts (<span id="pv">front</span>)</h3>
+ <p class="k" style="margin:0 0 10px">Each is a full-frame image holding only its pixels. <b>segment</b> parts stretch between two joints, <b>rigid</b> parts turn at a joint, <b>follow</b> parts ride a joint.</p>
+ <div class="parts" id="parts"></div>
+</div></div>
+<script>
+const D=__DATA__;
+let view="front",shirt="green",i=0,playing=true,skel=true,ms=125,timer=null;
+const c=document.getElementById("c"),g=c.getContext("2d");g.imageSmoothingEnabled=false;
+const cache={};const img=s=>cache[s]||(cache[s]=Object.assign(new Image(),{src:s}));
+function draw(){const key=shirt+"-"+view,im=img(D.frames[key][i]);const go=()=>{g.clearRect(0,0,192,260);g.drawImage(im,0,0);
+ if(skel){const J=D.joints[key][i];for(const[a,b]of D.bones){g.strokeStyle=(a+b).includes("near")?"#dc2828":(a+b).includes("far")?"#285ae6":"#1e963c";g.lineWidth=1.5;g.beginPath();g.moveTo(J[a][0],J[a][1]);g.lineTo(J[b][0],J[b][1]);g.stroke();}
+ for(const k in J){g.fillStyle="#fff";g.strokeStyle="#222";g.lineWidth=1;g.beginPath();g.arc(J[k][0],J[k][1],2.5,0,7);g.fill();g.stroke();}}
+ document.getElementById("f").value=i;document.getElementById("fl").textContent=(i+1)+"/8";};im.complete?go():im.onload=go;}
+function parts(){document.getElementById("pv").textContent=view;document.getElementById("parts").innerHTML=D.parts[view].map(p=>`<div class="part"><img src="${p.src}" alt=""><div><code>${p.name}</code></div><div class="k">${p.kind}</div></div>`).join("");}
+function loop(){clearInterval(timer);if(playing)timer=setInterval(()=>{i=(i+1)%8;draw();},ms);}
+document.getElementById("play").onclick=e=>{playing=!playing;e.target.textContent=playing?"❚❚ pause":"▶ play";e.target.classList.toggle("on",playing);loop();};
+document.getElementById("f").oninput=e=>{i=+e.target.value;playing=false;const b=document.getElementById("play");b.textContent="▶ play";b.classList.remove("on");loop();draw();};
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{view=b.dataset.view;document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on",x===b));draw();parts();});
+document.querySelectorAll("[data-shirt]").forEach(b=>b.onclick=()=>{shirt=b.dataset.shirt;document.querySelectorAll("[data-shirt]").forEach(x=>x.classList.toggle("on",x===b));draw();});
+document.getElementById("sk").onclick=e=>{skel=!skel;e.target.classList.toggle("on",skel);draw();};
+document.getElementById("sp").onchange=e=>{ms=+e.target.value;loop();};
+draw();parts();loop();
+</script></body></html>

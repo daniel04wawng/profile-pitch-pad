@@ -74,9 +74,10 @@ def pose(ch: Character, view: str, f: dict) -> dict:
     a = f.get("angles", {})
     breath = f.get("breath", 0.0)
     P = {"pelvis": J["pelvis"] + off, "neck": J["neck"] + off + [0, -breath]}
-    # the shoulder rides on the torso: it rises with the chest in proportion to its height
-    t = (J["pelvis"][1] - J["shoulder.free"][1]) / max(1e-6, J["pelvis"][1] - J["neck"][1])
-    P["shoulder.free"] = J["shoulder.free"] + off + [0, -breath * t]
+    # the arm rides on the torso: each joint rises with the chest in proportion to its height
+    for k in ("shoulder.free", "elbow.free"):
+        t = (J["pelvis"][1] - J[k][1]) / max(1e-6, J["pelvis"][1] - J["neck"][1])
+        P[k] = J[k] + off + [0, -breath * t]
     for side in ("near", "far"):
         H, K, A = J[f"hip.{side}"], J[f"knee.{side}"], J[f"ankle.{side}"]
         hip = a.get(f"hip.{side}", 0.0)

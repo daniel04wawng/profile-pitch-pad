@@ -29,6 +29,10 @@
    219
   ],
   "shoulder.free": [
+   113,
+   78
+  ],
+  "elbow.free": [
    109,
    108
   ],
@@ -90,7 +94,7 @@
   {
    "part": "arm.free",
    "kind": "rigid",
-   "at": "shoulder.free"
+   "at": "elbow.free"
   }
  ]
 }

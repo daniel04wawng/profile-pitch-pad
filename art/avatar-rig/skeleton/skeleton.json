@@ -52,6 +52,9 @@
     },
     "ankle.far": {
       "parent": "knee.far"
+    },
+    "elbow.free": {
+      "parent": "shoulder.free"
     }
   },
   "legs": {

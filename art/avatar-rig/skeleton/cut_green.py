@@ -92,20 +92,22 @@ def front():
     j = {
         "hip.near": near["hip"], "knee.near": near["knee"], "ankle.near": near["ankle"],
         "hip.far": far["hip"], "knee.far": far["knee"], "ankle.far": far["ankle"],
-        "shoulder.free": cfg["freeArm"]["pivot"],
+        "shoulder.free": [150, 82],  # where the free arm's sleeve meets the shoulder
+        "elbow.free": cfg["freeArm"]["pivot"],  # the forearm swings from here, out of the rolled cuff
         "pelvis": [(near["hip"][0] + far["hip"][0]) / 2, (near["hip"][1] + far["hip"][1]) / 2],
         "neck": [128, NECK_Y],
     }
     tn, sn = legs_split(a, legs[0], near["knee"][1], L["kneeOverlap"], L["nearShinBottom"])
     tf, sf = legs_split(a, legs[1], far["knee"][1], L["kneeOverlap"], L["farShinBottom"])
     parts = {"head": head, "torso": torso, "arm.free": arm, "thigh.near": tn, "shin.near": sn, "foot.near": feet[0], "thigh.far": tf, "shin.far": sf, "foot.far": feet[1]}
-    spec = [  # back to front: the far leg, the body, the free arm, the near leg
+    spec = [  # back to front: the body and its free arm, then the far leg, then the near leg
+        # (the legs are drawn over the shirt's hem, as the approved frames have them)
+        {"part": "torso", "kind": "segment", "from": "pelvis", "to": "neck"},
+        {"part": "head", "kind": "follow", "at": "neck"},
+        {"part": "arm.free", "kind": "rigid", "at": "elbow.free"},
         {"part": "thigh.far", "kind": "segment", "from": "hip.far", "to": "knee.far"},
         {"part": "shin.far", "kind": "segment", "from": "knee.far", "to": "ankle.far"},
         {"part": "foot.far", "kind": "rigid", "at": "ankle.far"},
-        {"part": "torso", "kind": "segment", "from": "pelvis", "to": "neck"},
-        {"part": "head", "kind": "follow", "at": "neck"},
-        {"part": "arm.free", "kind": "rigid", "at": "shoulder.free"},
         {"part": "thigh.near", "kind": "segment", "from": "hip.near", "to": "knee.near"},
         {"part": "shin.near", "kind": "segment", "from": "knee.near", "to": "ankle.near"},
         {"part": "foot.near", "kind": "rigid", "at": "ankle.near"},
@@ -154,7 +156,8 @@ def back():
     j = {
         "hip.near": near["hip"], "knee.near": near["knee"], "ankle.near": near["ankle"],
         "hip.far": far["hip"], "knee.far": far["knee"], "ankle.far": far["ankle"],
-        "shoulder.free": cfg["freeArm"]["pivot"],
+        "shoulder.free": [113, 78],
+        "elbow.free": cfg["freeArm"]["pivot"],
         "pelvis": [(near["hip"][0] + far["hip"][0]) / 2, (near["hip"][1] + far["hip"][1]) / 2],
         "neck": [138, NECK_Y],
     }
@@ -170,7 +173,7 @@ def back():
         {"part": "foot.near", "kind": "rigid", "at": "ankle.near"},
         {"part": "torso", "kind": "segment", "from": "pelvis", "to": "neck"},
         {"part": "head", "kind": "follow", "at": "neck"},
-        {"part": "arm.free", "kind": "rigid", "at": "shoulder.free"},
+        {"part": "arm.free", "kind": "rigid", "at": "elbow.free"},
     ]
     save("back", parts, j, spec)
 
