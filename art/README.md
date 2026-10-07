@@ -15,8 +15,8 @@ Everything the café's art needs to follow so any piece, generated or hand-drawn
 
 | File | What it is |
 |---|---|
-| `cafe-palette.gpl` | Color palette (GIMP palette format). Loads in most pixel art apps (Aseprite, Pixelorama, LibreSprite, GIMP, Krita). |
-| `cafe-palette.hex` | Same palette as plain hex codes (for PixelLab / Retro Diffusion palette inputs). |
+| `cafe-palette.gpl` | Color palette (`.gpl` palette format). Loads in most pixel art and paint apps. |
+| `cafe-palette.hex` | Same palette as plain hex codes (for image generators that take a palette). |
 | `cafe-palette.png` | Palette as a swatch image. |
 | `templates/iso-grid-480x320.png` | Drawing template: the isometric floor grid, café footprint, walls and door gap at real size. Open it in your pixel art app as a bottom layer and draw above it. |
 | `templates/layout-guide-4x.png` | Same layout, labeled, enlarged. For reference only. |

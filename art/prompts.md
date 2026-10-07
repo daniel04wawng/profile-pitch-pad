@@ -1,6 +1,6 @@
 # Prompts
 
-Written for pixel art image generators (PixelLab, Retro Diffusion), but they work in any image generator.
+Written for pixel art image generators, but they work in any image generator.
 Always attach or load `cafe-palette` if the tool allows it, and set isometric / 2:1 when there's an option.
 
 ## Style line (paste at the end of every prompt)
