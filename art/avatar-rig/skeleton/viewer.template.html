@@ -59,7 +59,7 @@ function hsv2rgb(h,s,v){const i=Math.floor(h*6),f=h*6-i,p=v*(1-s),q=v*(1-f*s),t=
 function paint(base,map){og.clearRect(0,0,192,260);og.drawImage(base,0,0);const A=og.getImageData(0,0,192,260);og.clearRect(0,0,192,260);og.drawImage(map,0,0);const M=og.getImageData(0,0,192,260).data,P=A.data;
  const target={};for(const k in app)if(app[k]){const[r,gg,b]=hex(app[k]);target[IDS[k]]={hsv:rgb2hsv(r,gg,b),ref:D.refs[k]};}
  for(let p=0;p<P.length;p+=4){if(!P[p+3])continue;const t=target[M[p]];if(!t)continue;const[,s,v]=rgb2hsv(P[p]/255,P[p+1]/255,P[p+2]/255);
-  const nv=Math.min(1,v*t.hsv[2]/Math.max(1e-6,t.ref)),ns=Math.min(1,t.hsv[1]*(0.6+0.4*Math.min(1.5,s/0.4)));const[r,gg,b]=hsv2rgb(t.hsv[0],ns,nv);P[p]=r*255;P[p+1]=gg*255;P[p+2]=b*255;}
+  const pale=t.ref>0.8,nv=pale?Math.min(1,Math.max(0,t.hsv[2]+(v-t.ref)*0.45)):Math.min(1,v*t.hsv[2]/Math.max(1e-6,t.ref)),ns=pale?t.hsv[1]:Math.min(1,t.hsv[1]*(0.6+0.4*Math.min(1.5,s/0.4)));const[r,gg,b]=hsv2rgb(t.hsv[0],ns,nv);P[p]=r*255;P[p+1]=gg*255;P[p+2]=b*255;}
  og.putImageData(A,0,0);return off;}
 function draw(){const key=look+"-"+view,im=img(D.frames[key][i]),mp=img(D.maps[key][i]);const go=()=>{if(!im.complete||!mp.complete)return;g.clearRect(0,0,192,260);g.drawImage(paint(im,mp),0,0);
  if(skel){const J=D.joints[key][i];for(const[a,b]of D.bones){g.strokeStyle=(a+b).includes("near")?"#dc2828":(a+b).includes("far")?"#285ae6":"#1e963c";g.lineWidth=1.5;g.beginPath();g.moveTo(J[a][0],J[a][1]);g.lineTo(J[b][0],J[b][1]);g.stroke();}

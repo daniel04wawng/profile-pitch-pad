@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image
 
 from animations import walk
-from materials import MATERIALS, material_map, reference_values
+from materials import HEM, MATERIALS, material_map, reference_values
 from rig import Character, pose, render
 
 HERE = pathlib.Path(__file__).parent
@@ -36,7 +36,7 @@ def _thumb(im):
     return im.crop((x0 - 3, y0 - 3, x1 + 3, y1 + 3))
 
 
-def id_character(ch: Character) -> Character:
+def id_character(ch: Character, view: str) -> Character:
     """The same character with every part replaced by its material ids (R = id), so rendering
     it gives each frame's material map; layers (hats, glasses) are id 0: never recoloured."""
     ids = Character.__new__(Character)
@@ -44,7 +44,7 @@ def id_character(ch: Character) -> Character:
     ids.images, ids.overlays = {}, {}
     for n, a in ch.images.items():
         m = np.zeros_like(a)
-        m[:, :, 0] = material_map(n, a)
+        m[:, :, 0] = material_map(n, a, HEM[view])
         m[:, :, 3] = np.where(a[:, :, 3] > 0, 255, 0)
         ids.images[n] = m
     for n, lst in ch.overlays.items():
@@ -55,11 +55,11 @@ def id_character(ch: Character) -> Character:
 def build():
     data = {"frames": {}, "maps": {}, "parts": {}, "joints": {}, "bones": BONES, "looks": list(LOOKS), "materials": MATERIALS}
     base = Character(HERE / "characters" / "green" / "front")
-    data["refs"] = reference_values([(a, material_map(n, a)) for n, a in base.images.items()])
+    data["refs"] = reference_values([(a, material_map(n, a, HEM["front"])) for n, a in base.images.items()])
     for look, layers in LOOKS.items():
         for view in ("front", "back"):
             ch = Character(HERE / "characters" / "green" / view, layers=layers)
-            ids = id_character(ch)
+            ids = id_character(ch, view)
             key = f"{look}-{view}"
             data["frames"][key], data["maps"][key], data["joints"][key] = [], [], []
             for f in walk(view):

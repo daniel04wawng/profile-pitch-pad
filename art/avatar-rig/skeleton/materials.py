@@ -38,34 +38,45 @@ def _hsv(arr):
     return hue, sat, mx, rgb
 
 
-def material_map(part: str, arr: np.ndarray) -> np.ndarray:
+# where the shirt's hem is, per character and view (rows below it in the torso are the trouser
+# tops kept under the hem); above it, grey in the torso is the tee's shading
+HEM = {"front": 148, "back": 150}
+
+
+def material_map(part: str, arr: np.ndarray, hem: int = 149) -> np.ndarray:
     """Per pixel, the material id (0 = leave it)."""
     hue, sat, v, rgb = _hsv(arr)
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     solid = arr[:, :, 3] > 0
     ink = v < 0.22
+    # the hair's darkest shading is about as dark as the outlines: in hair, only true black-brown
+    # line work (darker still, and greyer) counts as outline
+    hair_ink = (v < 0.16) | ((v < 0.22) & (sat < 0.25))
     out = np.zeros(arr.shape[:2], np.uint8)
 
     def ok(name):
         return any(part.startswith(p) for p in WHERE[name])
 
-    skin = solid & ~ink & (hue < 40) & (r > 0.62) & (sat > 0.15) & (sat < 0.65)
+    # skin is warm and fairly saturated; the cream mug is the same hue but much paler
+    skin = solid & ~ink & (hue < 40) & (r > 0.62) & (sat > 0.28) & (sat < 0.65)
     shirt = solid & ~ink & (hue >= 45) & (hue <= 100) & (sat > 0.18)
     light = solid & ~ink & (sat < 0.14) & (v > 0.74)
-    grey = solid & ~ink & (sat < 0.22) & (v <= 0.62)
-    hair = solid & ~ink & ~skin & ((hue < 45) | (sat < 0.12)) & (v < 0.72) & ~light
+    grey = solid & ~ink & (sat < 0.22) & (v <= 0.72) & ~light  # the trousers, highlights included
+    hair = solid & ~hair_ink & ~skin & ((hue < 45) | (sat < 0.12)) & (v < 0.72) & ~light
     if ok("hair"):
         out[hair] = IDS["hair"]
     if ok("skin"):
         out[skin] = IDS["skin"]
     if ok("shirt"):
         out[shirt] = IDS["shirt"]
-    if ok("tee"):
-        out[light] = IDS["tee"]
+    yy = np.mgrid[: arr.shape[0], : arr.shape[1]][0]
+    if ok("tee"):  # the tee: white, and its grey shading above the hem
+        out[light | (grey & (yy < hem))] = IDS["tee"]
     if ok("trousers"):
-        out[grey & ~(out > 0)] = IDS["trousers"]
-    if ok("shoes"):
-        out[light] = IDS["shoes"]
+        below = (yy >= hem) if part.startswith("torso") else np.ones_like(solid)
+        out[grey & below & ~(out > 0)] = IDS["trousers"]
+    if ok("shoes"):  # the sneakers: every shade of them, so a new colour has no grey left in it
+        out[(light | grey) & ~(out > 0)] = IDS["shoes"]
     return out
 
 
@@ -91,12 +102,19 @@ def recolour(arr: np.ndarray, mmap: np.ndarray, appearance: dict, refs: dict) ->
         if not m.any():
             continue
         th, ts, tv = colorsys.rgb_to_hsv(*[int(hexc[i : i + 2], 16) / 255 for i in (1, 3, 5)])
-        scale = tv / max(1e-6, refs[name])
+        ref = refs[name]
+        # near-white art (the tee, the sneakers) has almost no colour or shading of its own:
+        # give it the new colour fully, and keep its shading as gentle steps, not a ratio
+        pale = ref > 0.8
+        scale = tv / max(1e-6, ref)
         ys, xs = np.nonzero(m)
         for y, x in zip(ys, xs):
-            nv = min(1.0, v[y, x] * scale)
-            # keep a little of each pixel's own saturation variation
-            ns = min(1.0, ts * (0.6 + 0.4 * min(1.5, sat[y, x] / max(1e-6, 0.4))))
+            if pale:
+                nv = min(1.0, max(0.0, tv + (v[y, x] - ref) * 0.45))
+                ns = ts
+            else:
+                nv = min(1.0, v[y, x] * scale)
+                ns = min(1.0, ts * (0.6 + 0.4 * min(1.5, sat[y, x] / max(1e-6, 0.4))))  # keep a little of the art's own variation
             rr, gg, bb = colorsys.hsv_to_rgb(th, ns, nv)
             out[y, x, :3] = [round(rr * 255), round(gg * 255), round(bb * 255)]
     return out

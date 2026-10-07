@@ -68,6 +68,32 @@ Seated back, clean plate:
 > trousers behind them filled in naturally. Nothing else changed: same framing, pixels and
 > colours.
 
+## Variants: hairstyles and outfits for the same character
+
+Hair and clothes are swapped by part: generate the same character again with only one thing
+changed, and the rig takes just that part from it (the new head for a hairstyle, the new torso
+and arms for a top). Everything else stays the first image's, so the variant drops onto the
+same skeleton. For each variant, generate standing front and standing back (and the two
+seated images when sitting is on the rig).
+
+Rules for a variant: attach the character's own standing image as the reference and say
+"identical pose, body, face, camera, scale and colours; change only the hair" (or "only the
+top"). The less else changes, the cleaner the swap.
+
+Hairstyles (one prompt each, front and back):
+
+> Same character, identical pose, body, face, outfit, camera and scale as the attached image.
+> Change only the hair to: [a short buzz cut / a short textured crop with a fringe / hair
+> pulled back into a bun on top / shoulder-length wavy hair / long straight hair tied in a low
+> ponytail / curly afro]. Same pixel-art style. Transparent background, no shadow.
+
+Just the tee (no overshirt):
+
+> Same character, identical pose, body, face, hair, trousers, shoes, camera and scale as the
+> attached image. Remove the olive overshirt: he wears only the plain white tee, short
+> sleeves, arms bare from the sleeve down. Right hand still holds the mug at the chest; left
+> arm relaxed at the side. Same pixel-art style. Transparent background, no shadow.
+
 ## After generating
 
 The images will need a little cleanup (stray pixels, a background halo). Claude handles that

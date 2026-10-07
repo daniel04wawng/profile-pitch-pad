@@ -25,7 +25,10 @@ Layers: a character can wear layers (hair, glasses, a hat, a jacket): extra imag
 drawn right over it and moved exactly as it moves. They live in
 characters/<name>/layers/<layer>/<view>/<part>.png, and a bake picks which layers to wear. A
 layer can also hide what it covers: <part>.hide.png marks pixels of the part to take away
-(a beanie takes away the hair above its cuff, so the hair doesn't stick out around it).
+(a beanie takes away the hair above its cuff, so the hair doesn't stick out around it), and
+<part>.fill.png puts pixels back on the part (a short haircut gives back the forehead the old
+fringe covered). layer.json can say what material the layer is ({"material": "hair"}), so
+appearance changes recolour it.
 
 Draw order is the order in parts.json, back to front; an animation frame can move a part in
 front of or behind others for that frame ("depth": part -> position in the order).
@@ -56,22 +59,33 @@ class Character:
         # true lengths for bones not drawn hanging down (bone "a>b" -> px), when a character needs them
         self.lengths = {k: float(v) for k, v in spec.get("lengths", {}).items()}
         self.images = {p["part"]: np.array(Image.open(folder / f"{p['part']}.png").convert("RGBA")) for p in self.parts}
-        # part -> the layer images over it
+        # part -> the layer images over it, and the material each is (layer.json), if any
         self.overlays: dict = {}
+        self.overlay_materials: dict = {}
         view = folder.name
         for layer in layers:
             d = folder.parent / "layers" / layer / view
             if not (folder.parent / "layers" / layer).is_dir():
                 raise FileNotFoundError(f"no layer {layer!r} for this character")
+            meta = folder.parent / "layers" / layer / "layer.json"
+            material = json.load(open(meta)).get("material") if meta.exists() else None
             for p in self.parts:  # a layer may skip a view (glasses don't show from behind)
                 f = d / f"{p['part']}.png"
                 if f.exists():
                     self.overlays.setdefault(p["part"], []).append(np.array(Image.open(f).convert("RGBA")))
+                    self.overlay_materials.setdefault(p["part"], []).append(material)
                 h = d / f"{p['part']}.hide.png"
                 if h.exists():  # what the layer covers, taken away from the part underneath
                     hide = np.array(Image.open(h).convert("RGBA"))[:, :, 3] > 0
                     img = self.images[p["part"]].copy()
                     img[hide] = 0
+                    self.images[p["part"]] = img
+                fl = d / f"{p['part']}.fill.png"
+                if fl.exists():  # what the layer puts back on the part (skin where old hair hid it)
+                    fill = np.array(Image.open(fl).convert("RGBA"))
+                    img = self.images[p["part"]].copy()
+                    on = fill[:, :, 3] > 0
+                    img[on] = fill[on]
                     self.images[p["part"]] = img
 
 
