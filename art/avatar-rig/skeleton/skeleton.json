@@ -1,0 +1,15 @@
+{
+  "about": "The café's avatar skeleton. Character-independent: joints are named here, a character supplies where they sit in its art (parts.json per view), animations move them.",
+  "cameraDegrees": 35,
+  "views": {
+    "front": { "forward": [0.70710678, 0.40557979], "note": "facing you, walking down-right (SE); SW is this mirrored" },
+    "back": { "forward": [0.70710678, -0.40557979], "note": "facing away, walking up-right (NE); NW is this mirrored" }
+  },
+  "joints": {
+    "pelvis": { "parent": null },
+    "neck": { "parent": "pelvis" },
+    "shoulder.free": { "parent": "neck" },
+    "hip.near": { "parent": "pelvis" }, "knee.near": { "parent": "hip.near" }, "ankle.near": { "parent": "knee.near" },
+    "hip.far": { "parent": "pelvis" }, "knee.far": { "parent": "hip.far" }, "ankle.far": { "parent": "knee.far" }
+  }
+}

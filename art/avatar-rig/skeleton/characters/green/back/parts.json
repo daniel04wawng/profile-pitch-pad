@@ -1,0 +1,96 @@
+{
+ "frameSize": [
+  256,
+  280
+ ],
+ "joints": {
+  "hip.near": [
+   147,
+   150
+  ],
+  "knee.near": [
+   149,
+   196
+  ],
+  "ankle.near": [
+   151,
+   239
+  ],
+  "hip.far": [
+   126,
+   149
+  ],
+  "knee.far": [
+   125,
+   182
+  ],
+  "ankle.far": [
+   124,
+   219
+  ],
+  "shoulder.free": [
+   109,
+   108
+  ],
+  "pelvis": [
+   136.5,
+   149.5
+  ],
+  "neck": [
+   138,
+   80
+  ]
+ },
+ "parts": [
+  {
+   "part": "thigh.far",
+   "kind": "segment",
+   "from": "hip.far",
+   "to": "knee.far"
+  },
+  {
+   "part": "shin.far",
+   "kind": "segment",
+   "from": "knee.far",
+   "to": "ankle.far"
+  },
+  {
+   "part": "foot.far",
+   "kind": "rigid",
+   "at": "ankle.far"
+  },
+  {
+   "part": "thigh.near",
+   "kind": "segment",
+   "from": "hip.near",
+   "to": "knee.near"
+  },
+  {
+   "part": "shin.near",
+   "kind": "segment",
+   "from": "knee.near",
+   "to": "ankle.near"
+  },
+  {
+   "part": "foot.near",
+   "kind": "rigid",
+   "at": "ankle.near"
+  },
+  {
+   "part": "torso",
+   "kind": "segment",
+   "from": "pelvis",
+   "to": "neck"
+  },
+  {
+   "part": "head",
+   "kind": "follow",
+   "at": "neck"
+  },
+  {
+   "part": "arm.free",
+   "kind": "rigid",
+   "at": "shoulder.free"
+  }
+ ]
+}

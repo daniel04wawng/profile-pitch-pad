@@ -1,6 +1,15 @@
 {
   "version": 1,
   "avatars": [
-    { "id": "green", "label": "Green overshirt", "manifest": "green/manifest.json" }
+    {
+      "id": "green",
+      "label": "Green overshirt",
+      "manifest": "green/manifest.json"
+    },
+    {
+      "id": "green-navy",
+      "label": "Navy overshirt",
+      "manifest": "green-navy/manifest.json"
+    }
   ]
 }

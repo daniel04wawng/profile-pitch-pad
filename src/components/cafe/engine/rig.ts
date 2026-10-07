@@ -14,7 +14,7 @@ export type CatalogEntry = { id: string; label: string; manifest: string };
 const CATALOG_URL = `${BASE}avatars/catalog.json`;
 let catalogLoad: Promise<CatalogEntry[]> | null = null;
 export function loadCatalog(): Promise<CatalogEntry[]> {
-  catalogLoad ??= fetch(CATALOG_URL)
+  catalogLoad ??= fetch(CATALOG_URL, { cache: "no-cache" }) // a new avatar shows up without a hard reload
     .then((r) => (r.ok ? r.json() : { avatars: [] }))
     .then((d) =>
       (Array.isArray(d?.avatars) ? d.avatars : [])
