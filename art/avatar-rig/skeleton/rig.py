@@ -23,7 +23,9 @@ Part kinds:
 
 Layers: a character can wear layers (hair, glasses, a hat, a jacket): extra images for a part,
 drawn right over it and moved exactly as it moves. They live in
-characters/<name>/layers/<layer>/<view>/<part>.png, and a bake picks which layers to wear.
+characters/<name>/layers/<layer>/<view>/<part>.png, and a bake picks which layers to wear. A
+layer can also hide what it covers: <part>.hide.png marks pixels of the part to take away
+(a beanie takes away the hair above its cuff, so the hair doesn't stick out around it).
 
 Draw order is the order in parts.json, back to front; an animation frame can move a part in
 front of or behind others for that frame ("depth": part -> position in the order).
@@ -53,6 +55,7 @@ class Character:
         self.parts = spec["parts"]
         # true lengths for bones not drawn hanging down (bone "a>b" -> px), when a character needs them
         self.lengths = {k: float(v) for k, v in spec.get("lengths", {}).items()}
+        self.images = {p["part"]: np.array(Image.open(folder / f"{p['part']}.png").convert("RGBA")) for p in self.parts}
         # part -> the layer images over it
         self.overlays: dict = {}
         view = folder.name
@@ -64,7 +67,12 @@ class Character:
                 f = d / f"{p['part']}.png"
                 if f.exists():
                     self.overlays.setdefault(p["part"], []).append(np.array(Image.open(f).convert("RGBA")))
-        self.images = {p["part"]: np.array(Image.open(folder / f"{p['part']}.png").convert("RGBA")) for p in self.parts}
+                h = d / f"{p['part']}.hide.png"
+                if h.exists():  # what the layer covers, taken away from the part underneath
+                    hide = np.array(Image.open(h).convert("RGBA"))[:, :, 3] > 0
+                    img = self.images[p["part"]].copy()
+                    img[hide] = 0
+                    self.images[p["part"]] = img
 
 
 def swing(rest: np.ndarray, angle: float, forward: np.ndarray, name: str = "bone", length: Optional[float] = None) -> np.ndarray:

@@ -38,35 +38,39 @@ def outline(im, color=INK):
                 im.putpixel((x, y), color)
 
 
-def beanie(cx, top, bottom, rx, cuff_h, tilt, light_left=True):
-    """A knit beanie: a dome from `top` down to the cuff, and a ribbed cuff above `bottom`.
-    `tilt` px drops the cuff toward the right (the head's tilt in the art)."""
+def beanie(cx, top, cuff_top, rx, cuff_h, tilt, light_left=True):
+    """A knit beanie that hugs the skull: a dome from `top` to the cuff, and a ribbed cuff
+    `cuff_h` px deep below `cuff_top`. `tilt` px drops the cuff toward the right (the head's
+    tilt in the art). Returns the beanie and what it hides: everything of the head above the
+    cuff's bottom edge (the hair it pulls down over), so only hair below the cuff shows."""
     im = canvas()
-    px = im.load()
-    cy = bottom - cuff_h  # where the dome meets the cuff
-    ry = cy - top
-    for y in range(top, bottom + 1):
-        for x in range(int(cx - rx - 2), int(cx + rx + 3)):
-            u = (x - cx) / rx  # -1..1 across
-            drop = tilt * (u + 1) / 2  # the cuff (and dome edge) sit lower to the right
-            if y <= cy + drop:  # the dome: an ellipse above the cuff line
-                dy = (cy + drop - y) / ry
+    hide = canvas()
+    px, hx = im.load(), hide.load()
+    ry = cuff_top - top
+    # the head is hidden above the cuff's bottom edge, all the way across (stray tufts too)
+    for x in range(SIZE[0]):
+        u = max(-1.0, min(1.0, (x - cx) / rx))
+        for y in range(0, round(cuff_top + tilt * (u + 1) / 2 + cuff_h) + 1):
+            hx[x, y] = (0, 0, 0, 255)
+    for x in range(int(cx - rx - 3), int(cx + rx + 4)):
+        u = (x - cx) / rx
+        drop = tilt * (u + 1) / 2  # the cuff (and dome edge) sit lower to the right
+        bottom = cuff_top + drop + cuff_h
+        for y in range(top - 1, round(bottom) + 1):
+            if y <= cuff_top + drop:  # the dome
+                dy = (cuff_top + drop - y) / ry
                 if u * u + dy * dy > 1:
                     continue
-                # shade: light from the upper left, knit rows every 2px
                 shade = 2 + (1 if (u < -0.2 if light_left else u > 0.2) and dy > 0.35 else 0) - (1 if u > 0.55 or dy < 0.12 else 0)
                 if (y + int(x * 0.5)) % 3 == 0:
                     shade -= 1  # the knit's little ridges
                 px[x, y] = KNIT[max(0, min(4, shade))]
-            elif y <= cy + drop + cuff_h and abs(u) <= 1.03:  # the folded cuff, ribbed
-                rib = (x % 2 == 0)
-                edge = y >= cy + drop + cuff_h - 1
-                px[x, y] = KNIT[0] if edge else (KNIT[2] if rib else KNIT[1])
+            elif abs(u) <= 1.04:  # the folded cuff, ribbed, its lower edge darker
+                px[x, y] = KNIT[0] if y >= bottom - 1 else (KNIT[2] if x % 2 == 0 else KNIT[1])
     outline(im)
-    # a glint on the crown
-    for gx, gy in ((cx - rx * 0.45, top + ry * 0.35), (cx - rx * 0.4, top + ry * 0.35 + 1)):
+    for gx, gy in ((cx - rx * 0.45, top + ry * 0.4), (cx - rx * 0.4, top + ry * 0.4 + 1)):
         im.putpixel((round(gx), round(gy)), KNIT[4])
-    return im
+    return im, hide
 
 
 def ring(im, cx, cy, rx, ry):
@@ -90,14 +94,19 @@ def glasses_front():
     return im
 
 
-def save(im, layer, view, part="head"):
+def save(im, layer, view, part="head", hide=None):
     d = LAYERS / layer / view
     d.mkdir(parents=True, exist_ok=True)
     im.save(d / f"{part}.png")
+    if hide is not None:
+        hide.save(d / f"{part}.hide.png")
     print(layer, view, part, im.getbbox())
 
 
 if __name__ == "__main__":
-    save(beanie(cx=127, top=21, bottom=47, rx=24, cuff_h=6, tilt=-3), "beanie", "front")
-    save(beanie(cx=138, top=21, bottom=48, rx=25, cuff_h=6, tilt=2, light_left=True), "beanie", "back")
+    # sized to the skull, not the hair: it sits low on the forehead, the hair above it is hidden
+    b, h = beanie(cx=127, top=29, cuff_top=43, rx=21, cuff_h=6, tilt=-2)
+    save(b, "beanie", "front", hide=h)
+    b, h = beanie(cx=137, top=29, cuff_top=44, rx=22, cuff_h=6, tilt=2)
+    save(b, "beanie", "back", hide=h)
     save(glasses_front(), "glasses", "front")
