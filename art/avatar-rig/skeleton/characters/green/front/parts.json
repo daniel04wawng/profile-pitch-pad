@@ -58,7 +58,13 @@
    "at": "neck"
   },
   {
-   "part": "arm.free",
+   "part": "upper-arm.free",
+   "kind": "segment",
+   "from": "shoulder.free",
+   "to": "elbow.free"
+  },
+  {
+   "part": "forearm.free",
    "kind": "rigid",
    "at": "elbow.free"
   },

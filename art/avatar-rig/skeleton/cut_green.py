@@ -78,6 +78,32 @@ def split_head(body: np.ndarray, neck_y: float):
     return head, solid & ~head
 
 
+# The free arm's sleeve, traced by hand along the art's own lines (outline, the seam drawn down
+# the inside of the sleeve, the cuff's fold), as the earlier rig traced the shoes: colour can't
+# tell a sleeve from the shirt it's sewn to, or a seam from a fold.
+SLEEVE_FRONT = [(150, 78), (153, 79), (156, 84), (158, 90), (160, 98), (162, 106), (164, 113), (162, 119), (152, 119), (150, 110), (150, 90)]
+SLEEVE_BACK = [(107, 75), (112, 77), (110, 86), (111, 93), (113, 101), (116, 108), (118, 116), (112, 120), (100, 120), (99, 110), (100, 95), (102, 82)]
+
+
+def fill_under(body: np.ndarray, hole: np.ndarray, reach: int = 3) -> None:
+    """Paint in the part of `hole` that sits against the body (within `reach` px of it) with the
+    nearest body pixel's colour: the shirt the art never drew behind the arm, so the arm can
+    swing away from it without leaving a gap. In place."""
+    solid = body[:, :, 3] > 0
+    dist, (iy, ix) = distance_transform_edt(~solid, return_indices=True)
+    fill = hole & ~solid & (dist <= reach)
+    body[fill] = body[iy[fill], ix[fill]]
+
+
+def keep_under(body: np.ndarray, src: np.ndarray, taken: np.ndarray, reach: int = 3) -> None:
+    """Keep a strip of what was taken from the body (the trouser tops under the shirt's hem)
+    on it too, `reach` px deep, so a leg swinging away doesn't open a gap there. In place."""
+    solid = body[:, :, 3] > 0
+    dist = distance_transform_edt(~solid)
+    keep = taken & ~solid & (dist <= reach) & (src[:, :, 3] > 0)
+    body[keep] = src[keep]
+
+
 def legs_split(a, leg, knee_y, overlap, shin_bottom=None):
     """A whole trouser leg into thigh and shin, overlapping a little at the knee."""
     yy = np.mgrid[: a.shape[0], : a.shape[1]][0]
@@ -121,6 +147,17 @@ def front():
     arm = a.copy()
     arm[~am] = 0
     body[am & (yy > 126)] = 0
+    # the sleeve (shoulder to cuff), cut along the seam the art draws inside it
+    traced = poly(im.size, SLEEVE_FRONT) & (body[:, :, 3] > 0)
+    # the sleeve reaches 3px into the cuff, so the elbow stays covered as the forearm turns
+    sleeve_m = traced & (~am | (yy < 117))
+    sleeve = a.copy()
+    sleeve[~sleeve_m] = 0
+    hole = traced | am
+    body[hole] = 0  # nothing of the arm stays on the torso (it would stay put as the arm swings)
+    fill_under(body, hole)
+    # under the hem, keep the trouser tops so a swinging leg never shows a gap
+    keep_under(body, a, (regions[0] | regions[1]) & (a[:, :, 3] > 0) & (yy >= L["torsoOverlapY"]) & (yy < 175))
     # the head, cut along the art (hair, face, neck), so the torso can breathe under it
     NECK_Y = 82  # the neck joint: where the head turns and rides
     hm, tm = split_head(body, NECK_Y)
@@ -139,12 +176,13 @@ def front():
     }
     tn, sn = legs_split(a, legs[0], near["knee"][1], L["kneeOverlap"], L["nearShinBottom"])
     tf, sf = legs_split(a, legs[1], far["knee"][1], L["kneeOverlap"], L["farShinBottom"])
-    parts = {"head": head, "torso": torso, "arm.free": arm, "thigh.near": tn, "shin.near": sn, "foot.near": feet[0], "thigh.far": tf, "shin.far": sf, "foot.far": feet[1]}
+    parts = {"head": head, "torso": torso, "upper-arm.free": sleeve, "forearm.free": arm, "thigh.near": tn, "shin.near": sn, "foot.near": feet[0], "thigh.far": tf, "shin.far": sf, "foot.far": feet[1]}
     spec = [  # back to front: the body and its free arm, then the far leg, then the near leg
         # (the legs are drawn over the shirt's hem, as the approved frames have them)
         {"part": "torso", "kind": "segment", "from": "pelvis", "to": "neck"},
         {"part": "head", "kind": "follow", "at": "neck"},
-        {"part": "arm.free", "kind": "rigid", "at": "elbow.free"},
+        {"part": "upper-arm.free", "kind": "segment", "from": "shoulder.free", "to": "elbow.free"},
+        {"part": "forearm.free", "kind": "rigid", "at": "elbow.free"},
         {"part": "thigh.far", "kind": "segment", "from": "hip.far", "to": "knee.far"},
         {"part": "shin.far", "kind": "segment", "from": "knee.far", "to": "ankle.far"},
         {"part": "foot.far", "kind": "rigid", "at": "ankle.far"},
@@ -187,6 +225,14 @@ def back():
     arm = a.copy()
     arm[~armmask] = 0
     body[armmask & (yy >= 116)] = 0
+    traced = poly(im.size, SLEEVE_BACK) & (body[:, :, 3] > 0)
+    sleeve_m = traced & (~armmask | (yy < 110))
+    sleeve = a.copy()
+    sleeve[~sleeve_m] = 0
+    hole = traced | armmask
+    body[hole] = 0
+    fill_under(body, hole)
+    keep_under(body, a, (regions[0] | regions[1] | (yy >= 155)) & (a[:, :, 3] > 0) & (yy < 175) & ~armmask)
     NECK_Y = 80
     hm, tm = split_head(body, NECK_Y)
     head = body.copy()
@@ -204,7 +250,7 @@ def back():
     }
     tn, sn = legs_split(a, legs[0], near["knee"][1], 5)
     tf, sf = legs_split(a, legs[1], far["knee"][1], 5)
-    parts = {"head": head, "torso": torso, "arm.free": arm, "thigh.near": tn, "shin.near": sn, "foot.near": feet[0], "thigh.far": tf, "shin.far": sf, "foot.far": feet[1]}
+    parts = {"head": head, "torso": torso, "upper-arm.free": sleeve, "forearm.free": arm, "thigh.near": tn, "shin.near": sn, "foot.near": feet[0], "thigh.far": tf, "shin.far": sf, "foot.far": feet[1]}
     spec = [  # seen from behind: the legs first, then the body over them, the arm on top
         {"part": "thigh.far", "kind": "segment", "from": "hip.far", "to": "knee.far"},
         {"part": "shin.far", "kind": "segment", "from": "knee.far", "to": "ankle.far"},
@@ -214,7 +260,8 @@ def back():
         {"part": "foot.near", "kind": "rigid", "at": "ankle.near"},
         {"part": "torso", "kind": "segment", "from": "pelvis", "to": "neck"},
         {"part": "head", "kind": "follow", "at": "neck"},
-        {"part": "arm.free", "kind": "rigid", "at": "elbow.free"},
+        {"part": "upper-arm.free", "kind": "segment", "from": "shoulder.free", "to": "elbow.free"},
+        {"part": "forearm.free", "kind": "rigid", "at": "elbow.free"},
     ]
     save("back", parts, j, spec)
 

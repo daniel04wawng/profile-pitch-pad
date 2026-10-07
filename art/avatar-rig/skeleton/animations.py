@@ -27,7 +27,7 @@ def walk(view: str, frames: int = 8):
         phase = i / frames
         bob = WALK["bodyHeight"] * (1 - math.cos(WALK["hipSwing"] * math.cos(2 * math.pi * phase)))
         sway = WALK["bodySway"] * math.sin(2 * math.pi * phase)
-        f = {"offset": [sway, bob], "angles": {}, "turns": {"arm.free": ARM_SWING[view] * math.cos(2 * math.pi * phase)}}
+        f = {"offset": [sway, bob], "angles": {}, "turns": {"forearm.free": ARM_SWING[view] * math.cos(2 * math.pi * phase)}}
         for side in ("near", "far"):
             body = SIDES[view]["sides"][side]
             g = (phase + (0.0 if body == "right" else 0.5)) % 1  # right leg leads, left half a stride behind
