@@ -28,6 +28,12 @@ def b64(im):
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
+def _thumb(im):
+    """A part cropped to its own pixels (with a little room), so small parts show up."""
+    x0, y0, x1, y1 = im.getbbox()
+    return im.crop((x0 - 3, y0 - 3, x1 + 3, y1 + 3))
+
+
 def build():
     data = {"frames": {}, "parts": {}, "joints": {}, "bones": BONES}
     looks = {"none": (), "beanie": ("beanie",), "glasses": ("glasses",), "both": ("beanie", "glasses")}
@@ -44,7 +50,8 @@ def build():
                 data["frames"][key].append(b64(render(ch, view, f).crop(CROP)))
                 data["joints"][key].append({k: [float(v[0]) - CROP[0], float(v[1]) - CROP[1]] for k, v in pose(ch, view, f).items()})
             if shirt == "green" and look == "none":
-                data["parts"][view] = [{"name": p["part"], "kind": p["kind"], "src": b64(Image.fromarray(ch.images[p["part"]]).crop(CROP))} for p in ch.parts]
+                data["parts"][view] = [{"name": p["part"], "kind": p["kind"], "src": b64(_thumb(Image.fromarray(ch.images[p["part"]])))} for p in ch.parts]
+                data["count"] = len(ch.parts)
     OUT.write_text((HERE / "viewer.template.html").read_text().replace("__DATA__", json.dumps(data)))
     print(OUT)
 
