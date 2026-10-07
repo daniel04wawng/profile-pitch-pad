@@ -85,10 +85,12 @@ export default function Landing() {
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
   const [entering, setEntering] = useState(false);
-  const [art, setArt] = useState<{ w: number; h: number; door: { x: number; y: number }; walk?: { x: number; y: number }[] } | null>(null);
+  const [art, setArt] = useState<{ w: number; h: number; door: { x: number; y: number }; doorFrames?: number; walk?: { x: number; y: number }[] } | null>(null);
   // after "step inside": your avatar walking up to the door, then the zoom through it
   const [walker, setWalker] = useState<(Actor & { opacity: number }) | null>(null);
   const [zooming, setZooming] = useState(false);
+  // the door swinging open as you reach it (0 = shut, then each frame of the swing)
+  const [doorFrame, setDoorFrame] = useState(0);
   const [view, setView] = useState({ w: window.innerWidth, h: window.innerHeight });
   const stars = useStars(70);
   const started = useRef(false);
@@ -136,6 +138,8 @@ export default function Landing() {
     let walked = 0;
     const total = path.slice(1).reduce((n, p, i) => n + Math.hypot(p.x - path[i].x, p.y - path[i].y), 0);
     let last = performance.now();
+    let doorAt = 0; // when you turned up the step (the door starts to open)
+    const frames = art?.doorFrames ?? 0;
     const step = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
@@ -159,6 +163,11 @@ export default function Landing() {
         }
       }
       walked += moved;
+      // on the last stretch, up the step: the door swings in ahead of you
+      if (leg >= path.length - 1 && frames) {
+        doorAt ||= now;
+        setDoorFrame(Math.min(frames, 1 + Math.floor((now - doorAt) / 120)));
+      }
       // the stride follows the distance (in the avatar's own pixels)
       body.walk(moved / STREET_SCALE);
       // fade in at the street's end, out as you go through the door
@@ -250,6 +259,17 @@ export default function Landing() {
             style={{ opacity: night * 0.9, filter: `blur(${3 * k}px)` }}
             draggable={false}
           />
+          {/* the door's swing (all frames loaded up front, the current one shown) */}
+          {Array.from({ length: art?.doorFrames ?? 0 }, (_, i) => (
+            <img
+              key={i}
+              src={`${ART}door-${i + 1}.png`}
+              alt=""
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              style={{ opacity: doorFrame === i + 1 ? 1 : 0 }}
+              draggable={false}
+            />
+          ))}
           {walker &&
             (() => {
               const s = STREET_SCALE * k;

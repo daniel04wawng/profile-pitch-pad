@@ -206,7 +206,7 @@ def facade_left(c):
 def facade_right(c):
     """The face looking down-right (a = A), in the shade: a window, the door, a window."""
     win = [(4, 15), (35, 45)]
-    door = (19, 30)
+    door = DOOR
 
     def col(s, z):
         if z < 5:
@@ -247,7 +247,7 @@ def facade_right(c):
 
     face_right(c, X0, Y0, A, d0, d1, 0, GF - 15, dcol)
     face_right(glow, X0, Y0, A, d0, d1, 0, GF - 15, lambda s, z: "lit2" if 22 < z < GF - 19 and 2 <= s < (d1 - d0) - 2 else None)
-    hx, hy = P2(X0, Y0, A, d0 + 2.5, 24)
+    hx, hy = P2(X0, Y0, A, d1 - 2.5, 24)
     c.px(hx, hy, "brass2")
     c.px(hx, hy + 1, "brass1")
     # step
@@ -381,6 +381,58 @@ def street_lamp(c, a, b):
         c.px(x, top - 15, "iron")
 
 
+DOOR = (19, 30)  # along the shaded front (b), hinges at the first end, handle at the second
+
+
+def door_frames():
+    """The door swinging in, three steps: each a full-size overlay (the doorway lit from inside,
+    the leaf turned on its hinges into the café), stacked over the picture by the page."""
+    import math
+
+    d0, d1 = DOOR
+    L = d1 - d0  # the leaf's width
+    top = GF - 15
+    frames = []
+    for angle in (35, 70, 100):
+        c = Canvas(W, H)
+        # the doorway: warm light from inside, brightest up high, a sliver of floor
+        def room(s, z):
+            if s < 1 or s >= L - 1 or z >= top - 1:
+                return "wood0"  # the frame stays put
+            if z < 3:
+                return "wood3" if (s + z) % 4 else "wood4"  # the café floor just inside
+            v = z / top
+            return "lit4" if v > 0.75 else ("lit3" if v > 0.45 else "lit2")
+
+        face_right(c, X0, Y0, A, d0, d1, 0, top, room)
+        # the opening itself (inside the frame): an inward-swinging leaf is only seen through it
+        hole = Canvas(W, H)
+        face_right(hole, X0, Y0, A, d0, d1, 0, top, lambda s, z: None if (s < 1 or s >= L - 1 or z >= top - 1) else "line")
+        ha = hole.im.getchannel("A").load()
+        leaf = Canvas(W, H)
+        # the leaf, from the hinges (b = d0 + 1) swung in by `angle`
+        t = math.radians(angle)
+        hb = d0 + 1
+        ea, eb = A - (L - 2) * math.sin(t), hb + (L - 2) * math.cos(t)
+        for z in range(1, top - 1):
+            p0 = P2(X0, Y0, A, hb, z)
+            p1 = P2(X0, Y0, ea, eb, z)
+            n = int(max(abs(p1[0] - p0[0]), abs(p1[1] - p0[1])) * 2) + 1
+            for i in range(n + 1):
+                f = i / n
+                x, y = p0[0] + (p1[0] - p0[0]) * f, p0[1] + (p1[1] - p0[1]) * f
+                glass = 22 < z < top - 4 and 0.18 < f < 0.85
+                edge = f > 0.93 or z < 3 or z > top - 3
+                leaf.px(x, y, "wood1" if edge else ("lit3" if glass and angle < 90 else ("wood3" if f < 0.5 else "wood2")))
+        la = leaf.im.load()
+        for y in range(H):
+            for x in range(W):
+                if la[x, y][3] and ha[x, y]:
+                    c.im.putpixel((x, y), la[x, y])
+        frames.append(c.im)
+    return frames
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     c = Canvas(W, H)
@@ -402,6 +454,8 @@ def main():
                 gp[x, y] = (0, 0, 0, 0)
     c.im.save(os.path.join(OUT, "storefront.png"))
     glow.im.save(os.path.join(OUT, "storefront.glow.png"))
+    for i, im in enumerate(door_frames(), 1):
+        im.save(os.path.join(OUT, f"door-{i}.png"))
     # where the door is (its middle), so "step inside" can zoom right into it
     import json
     dx, dy = P2(X0, Y0, A, 24.5, 22)
@@ -409,7 +463,7 @@ def main():
     # past the planter, then a turn up the step and through the door
     walk = [P2(X0, Y0, A + 9, 1, 0), P2(X0, Y0, A + 9, 24.5, 0), P2(X0, Y0, A + 1.5, 24.5, 2)]
     json.dump(
-        {"w": W, "h": H, "door": {"x": round(dx), "y": round(dy)}, "walk": [{"x": round(x, 1), "y": round(y, 1)} for x, y in walk]},
+        {"w": W, "h": H, "door": {"x": round(dx), "y": round(dy)}, "doorFrames": 3, "walk": [{"x": round(x, 1), "y": round(y, 1)} for x, y in walk]},
         open(os.path.join(OUT, "storefront.json"), "w"),
     )
     print("storefront", c.im.size)
