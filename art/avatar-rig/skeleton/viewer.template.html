@@ -17,6 +17,7 @@ input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
 .part img{width:100%;height:96px;object-fit:contain;image-rendering:pixelated}
 .k{opacity:.6;font-size:11px}
 code{font-size:13px}
+.sw{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);padding:0;cursor:pointer}.sw.on{outline:3px solid var(--accent);outline-offset:1px}.grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}.grp b{width:70px;font-weight:500;font-size:13px}
 .legend span{display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:13px}
 .legend i{width:14px;height:3px;display:inline-block;border-radius:2px}
 </style></head><body>
@@ -26,7 +27,8 @@ code{font-size:13px}
  <canvas id="c" width="192" height="260"></canvas>
  <div class="row"><button id="play" class="on">❚❚ pause</button><input id="f" type="range" min="0" max="7" value="0"><span id="fl">1/8</span></div>
  <div class="row"><button data-view="front" class="on">front (SE)</button><button data-view="back">back (NE)</button></div>
- <div class="row"><button data-shirt="green" class="on">green shirt</button><button data-shirt="navy">navy shirt</button><button id="sk" class="on">skeleton</button></div>
+ <div class="row"><button id="sk" class="on">skeleton</button></div>
+ <div id="app"></div>
  <div class="row"><span>wear:</span><button data-look="none" class="on">nothing</button><button data-look="beanie">beanie</button><button data-look="glasses">glasses</button><button data-look="both">both</button>
  <label>speed <select id="sp"><option value="250">slow</option><option value="125" selected>normal</option><option value="70">fast</option></select></label></div>
  <div class="row legend"><span><i style="background:#dc2828"></i>near leg (right)</span><span><i style="background:#285ae6"></i>far leg (left)</span><span><i style="background:#1e963c"></i>spine, shoulder, elbow</span></div>
@@ -37,21 +39,42 @@ code{font-size:13px}
 </div></div>
 <script>
 const D=__DATA__;
-let view="front",shirt="green",look="none",i=0,playing=true,skel=true,ms=125,timer=null;
+let view="front",look="none",i=0,playing=true,skel=true,ms=125,timer=null;
+// appearance: material -> #RRGGBB, or null for the art's own colour
+const PALETTES={
+ skin:[null,"#f6d2b8","#eab896","#d39a72","#b07650","#8a5636","#5e3a24"],
+ hair:[null,"#1c1614","#5a3a24","#8a4a2a","#c88a4a","#e8c27a","#9a9a9a","#d86a8a"],
+ shirt:[null,"#3c5878","#a8432c","#e3d6b8","#2a2a2e","#7a2a3a","#4f7a8a"],
+ tee:[null,"#2a2a2e","#a8c8e0","#e8b45c"],
+ trousers:[null,"#3a5a8a","#b8a07a","#1e1e22","#5a6a4a"],
+ shoes:[null,"#1e1e22","#c84a3a","#3a5a8a"]};
+const app={};for(const k in PALETTES)app[k]=null;
+const IDS={};for(const k in D.materials)IDS[D.materials[k]]=+k;
 const c=document.getElementById("c"),g=c.getContext("2d");g.imageSmoothingEnabled=false;
 const cache={};const img=s=>cache[s]||(cache[s]=Object.assign(new Image(),{src:s}));
-function draw(){const key=shirt+"-"+look+"-"+view,im=img(D.frames[key][i]);const go=()=>{g.clearRect(0,0,192,260);g.drawImage(im,0,0);
+const off=document.createElement("canvas");off.width=192;off.height=260;const og=off.getContext("2d",{willReadFrequently:true});
+const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);
+function rgb2hsv(r,g,b){const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;if(d){h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h/=6;if(h<0)h+=1;}return[h,mx?d/mx:0,mx];}
+function hsv2rgb(h,s,v){const i=Math.floor(h*6),f=h*6-i,p=v*(1-s),q=v*(1-f*s),t=v*(1-(1-f)*s);return[[v,t,p],[q,v,p],[p,v,t],[p,q,v],[t,p,v],[v,p,q]][((i%6)+6)%6];}
+function paint(base,map){og.clearRect(0,0,192,260);og.drawImage(base,0,0);const A=og.getImageData(0,0,192,260);og.clearRect(0,0,192,260);og.drawImage(map,0,0);const M=og.getImageData(0,0,192,260).data,P=A.data;
+ const target={};for(const k in app)if(app[k]){const[r,gg,b]=hex(app[k]);target[IDS[k]]={hsv:rgb2hsv(r,gg,b),ref:D.refs[k]};}
+ for(let p=0;p<P.length;p+=4){if(!P[p+3])continue;const t=target[M[p]];if(!t)continue;const[,s,v]=rgb2hsv(P[p]/255,P[p+1]/255,P[p+2]/255);
+  const nv=Math.min(1,v*t.hsv[2]/Math.max(1e-6,t.ref)),ns=Math.min(1,t.hsv[1]*(0.6+0.4*Math.min(1.5,s/0.4)));const[r,gg,b]=hsv2rgb(t.hsv[0],ns,nv);P[p]=r*255;P[p+1]=gg*255;P[p+2]=b*255;}
+ og.putImageData(A,0,0);return off;}
+function draw(){const key=look+"-"+view,im=img(D.frames[key][i]),mp=img(D.maps[key][i]);const go=()=>{if(!im.complete||!mp.complete)return;g.clearRect(0,0,192,260);g.drawImage(paint(im,mp),0,0);
  if(skel){const J=D.joints[key][i];for(const[a,b]of D.bones){g.strokeStyle=(a+b).includes("near")?"#dc2828":(a+b).includes("far")?"#285ae6":"#1e963c";g.lineWidth=1.5;g.beginPath();g.moveTo(J[a][0],J[a][1]);g.lineTo(J[b][0],J[b][1]);g.stroke();}
  for(const k in J){g.fillStyle="#fff";g.strokeStyle="#222";g.lineWidth=1;g.beginPath();g.arc(J[k][0],J[k][1],2.5,0,7);g.fill();g.stroke();}}
- document.getElementById("f").value=i;document.getElementById("fl").textContent=(i+1)+"/8";};im.complete?go():im.onload=go;}
+ document.getElementById("f").value=i;document.getElementById("fl").textContent=(i+1)+"/8";};im.onload=mp.onload=go;go();}
 function parts(){document.getElementById("pv").textContent=view;document.getElementById("parts").innerHTML=D.parts[view].map(p=>`<div class="part"><img src="${p.src}" alt=""><div><code>${p.name}</code></div><div class="k">${p.kind}</div></div>`).join("");}
+function swatches(){const LBL={skin:"skin tone",hair:"hair",shirt:"overshirt",tee:"tee",trousers:"trousers",shoes:"shoes"};
+ document.getElementById("app").innerHTML=Object.keys(PALETTES).map(k=>`<div class="grp"><b>${LBL[k]}</b>${PALETTES[k].map((c,j)=>`<button class="sw${app[k]===c?" on":""}" data-m="${k}" data-c="${c??""}" title="${c??"as drawn"}" style="background:${c??"conic-gradient(#ccc 0 25%,#fff 0 50%,#ccc 0 75%,#fff 0)"}"></button>`).join("")}</div>`).join("");
+ document.querySelectorAll(".sw").forEach(b=>b.onclick=()=>{app[b.dataset.m]=b.dataset.c||null;swatches();draw();});}
 function loop(){clearInterval(timer);if(playing)timer=setInterval(()=>{i=(i+1)%8;draw();},ms);}
 document.getElementById("play").onclick=e=>{playing=!playing;e.target.textContent=playing?"❚❚ pause":"▶ play";e.target.classList.toggle("on",playing);loop();};
 document.getElementById("f").oninput=e=>{i=+e.target.value;playing=false;const b=document.getElementById("play");b.textContent="▶ play";b.classList.remove("on");loop();draw();};
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{view=b.dataset.view;document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on",x===b));draw();parts();});
-document.querySelectorAll("[data-shirt]").forEach(b=>b.onclick=()=>{shirt=b.dataset.shirt;document.querySelectorAll("[data-shirt]").forEach(x=>x.classList.toggle("on",x===b));draw();});
 document.querySelectorAll("[data-look]").forEach(b=>b.onclick=()=>{look=b.dataset.look;document.querySelectorAll("[data-look]").forEach(x=>x.classList.toggle("on",x===b));draw();});
 document.getElementById("sk").onclick=e=>{skel=!skel;e.target.classList.toggle("on",skel);draw();};
 document.getElementById("sp").onchange=e=>{ms=+e.target.value;loop();};
-document.getElementById("np").textContent=D.count;draw();parts();loop();
+document.getElementById("np").textContent=D.count;swatches();draw();parts();loop();
 </script></body></html>
