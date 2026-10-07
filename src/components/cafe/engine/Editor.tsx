@@ -462,7 +462,7 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
         if (e.key === "Escape") setPreviewing(null);
         return;
       }
-      if (painting || (e.target as HTMLElement).closest("input, select, textarea")) return;
+      if (painting || (e.target instanceof HTMLElement && e.target.closest("input, select, textarea"))) return;
       const mod = e.metaKey || e.ctrlKey;
       const k = e.key.toLowerCase();
       if (k === "p" && !mod) return setPlaying((p) => !p);
