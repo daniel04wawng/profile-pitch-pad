@@ -86,8 +86,12 @@ export function makeWalk(layout: Layout, companions: Record<string, Companion>, 
   // which cells are taken, and by what
   const owner = new Int32Array(I * J).fill(-1);
   const solids: { box: NonNullable<ReturnType<typeof footprint>>; z: number; r: { x0: number; y0: number; x1: number; y1: number } }[] = [];
+  // things on the walls (doorways, posters, shelves): nobody can stand behind a wall, so
+  // anyone on the floor in front of one is drawn over it
+  const onWalls: { z: number; r: { x0: number; y0: number; x1: number; y1: number } }[] = [];
   layout.assets.forEach((s, n) => {
     const name = nameOf(s.file);
+    if (!s.hidden && WALL_ITEMS[frontOf(name)]) onWalls.push({ z: s.baseY, r: { x0: s.x, y0: s.y, x1: s.x + s.w, y1: s.y + s.h } });
     if (s.hidden || WALL_ITEMS[frontOf(name)]) return;
     // rugs and clutter don't block, unless the asset has a collision of its own
     if (!collisionOf(s) && (FLAT_ASSETS.has(name) || isClutter(layout, name))) return;
@@ -106,6 +110,10 @@ export function makeWalk(layout: Layout, companions: Record<string, Companion>, 
     const u = toUnits(p);
     let z = 1;
     let below = Infinity;
+    for (const w of onWalls) {
+      if (w.r.x1 <= rect.x0 || w.r.x0 >= rect.x1 || w.r.y1 <= rect.y0 || w.r.y0 >= rect.y1) continue;
+      z = Math.max(z, w.z + 1);
+    }
     for (const s of solids) {
       if (s.r.x1 <= rect.x0 || s.r.x0 >= rect.x1 || s.r.y1 <= rect.y0 || s.r.y0 >= rect.y1) continue;
       if (u.a >= s.box.a1 - 0.25 || u.b >= s.box.b1 - 0.25) z = Math.max(z, s.z + 1);

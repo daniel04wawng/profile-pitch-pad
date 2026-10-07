@@ -1,4 +1,5 @@
-import { BASE, BOOT, type Layout } from "./types";
+import { BASE, BOOT, frontOf, type Layout } from "./types";
+import { SEATS } from "./walk";
 import type { Screens } from "./screenData";
 import type { Collision } from "./Stage";
 
@@ -58,8 +59,28 @@ export async function saveCollision(name: string, collision: Collision | null) {
   await tx("docs", "readwrite", (s) => s.put(mineCollisions, "collisions"));
 }
 
+// Tidy a layout from before a rule changed: only seats say "sit" (or open the sit-and-listen
+// screen), and the counters and the espresso machine don't open "about me".
+const NO_ABOUT = new Set(["bar-counter", "espresso-station", "cafe-espresso-bar"]);
+export function tidyLayout(l: Layout): Layout {
+  return {
+    ...l,
+    assets: l.assets.map((a) => {
+      const name = frontOf(a.file.replace(/^sprites\//, "").replace(/\.png$/, ""));
+      const seat = !!SEATS[name];
+      const sits = !seat && (/\bsit\b/i.test(a.label ?? "") || (a.hotspot === "chill" && name !== "record-cabinet"));
+      const about = NO_ABOUT.has(name) && a.hotspot === "about";
+      return sits || about ? { ...a, hotspot: null, label: null } : a;
+    }),
+  };
+}
+
 // Load a café: Daniel's from the site, or yours from this browser (falling back to his).
 export async function openCafe(w: Where): Promise<{ layout: Layout; screens: Screens }> {
+  const c = await openCafeRaw(w);
+  return { ...c, layout: tidyLayout(c.layout) };
+}
+async function openCafeRaw(w: Where): Promise<{ layout: Layout; screens: Screens }> {
   where = w;
   const site = async () => {
     const [layout, screens] = await Promise.all([
@@ -143,6 +164,31 @@ export async function saveMedia(f: File): Promise<{ src: string; kind: "image" |
     urls.set(file, URL.createObjectURL(blob));
   }
   return { src: file, kind };
+}
+
+// The dev server only (Daniel's machine): make the café you built in this browser the real
+// one, writing its layout, screens, collisions and every drawing or photo it uses into
+// public/cafe, exactly as the café editor saves.
+export async function publishMineToSite(layout: Layout, screens: Screens) {
+  if (!import.meta.env.DEV) throw new Error("only on the dev server");
+  const post = async (url: string, body: BodyInit) => {
+    const r = await fetch(url, { method: "POST", body });
+    if (!r.ok) throw new Error(`${url}: ${await r.text()}`);
+  };
+  for (const k of (await tx("files", "readonly", (s) => s.getAllKeys())) as string[]) {
+    const blob = (await tx("files", "readonly", (s) => s.get(k))) as Blob;
+    if (/\.png$/i.test(k) && !k.startsWith("media/")) {
+      const data = await new Promise<string>((res) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result as string);
+        fr.readAsDataURL(blob);
+      });
+      await post("/__cafe/image", JSON.stringify({ file: k, data }));
+    } else if (k.startsWith("media/")) await post(`/__cafe/media?file=${encodeURIComponent(k)}`, blob);
+  }
+  for (const [name, collision] of Object.entries(mineCollisions)) await post("/__cafe/collision", JSON.stringify({ name, collision }));
+  await post("/__cafe/layout", JSON.stringify(layout));
+  await post("/__cafe/screens", JSON.stringify({ screens }));
 }
 
 // Every asset you can place: the built-in sprites, plus your own.

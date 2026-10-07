@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { exportCafe, fileUrl, importCafe, listAssets, resetCafe, saveCafe, storage, writePng } from "./store";
+import { exportCafe, fileUrl, importCafe, listAssets, publishMineToSite, resetCafe, saveCafe, storage, writePng } from "./store";
 import { Stage, assetName, opaqueAt, useCompanions } from "./Stage";
 import { CollisionPanel, changed, collisionFor, setAssetCollision, type CollisionChange } from "./collision";
 import { makeWalk } from "./walk";
@@ -439,6 +439,17 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
       window.alert(String(e instanceof Error ? e.message : e));
     }
   };
+  // (the dev server only) your browser-built café becomes Daniel's real café
+  const publishMine = async () => {
+    if (!window.confirm("Make this design Daniel's café? It replaces the café everyone visits (its layout, screens, collisions and your drawings). Commit and deploy to put it live.")) return;
+    try {
+      await saveCafe(layout, screens);
+      await publishMineToSite(layout, screens);
+      window.alert("Done: this is now Daniel's café. Open /cafe to see it.");
+    } catch (e) {
+      window.alert(`Couldn't copy it over: ${e instanceof Error ? e.message : e}`);
+    }
+  };
   const startOver = async () => {
     if (!window.confirm("Start over from Daniel's café? Your layout and screens go (your drawings stay in the library).")) return;
     await resetCafe();
@@ -524,6 +535,22 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
 
   return (
     <div className="fixed inset-0 flex flex-col bg-[#15131c] font-['Space_Grotesk'] text-[13px] text-[#f3ecdc]">
+      {mine ? (
+        <div className="flex flex-wrap items-center gap-2 bg-[#86a86b] px-3 py-1.5 text-[12px] text-[#1a1512]">
+          <span className="font-['Silkscreen'] text-[11px] uppercase tracking-wider">your own café</span>
+          <span className="opacity-80">a copy kept only in this browser. Changes here don't touch Daniel's café.</span>
+          {import.meta.env.DEV && (
+            <button onClick={publishMine} className="ml-auto rounded bg-[#1a1512] px-2.5 py-1 font-medium text-[#f3ecdc]" title="Dev server only">
+              Make this my café →
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 bg-[#e8b45c] px-3 py-1.5 text-[12px] text-[#1a1512]">
+          <span className="font-['Silkscreen'] text-[11px] uppercase tracking-wider">Daniel's café</span>
+          <span className="opacity-80">the real café: saving changes what every visitor sees (after you commit and deploy).</span>
+        </div>
+      )}
       <header className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-[#1d1a26] px-3 py-2">
         <span className="mr-2 font-['Silkscreen'] text-xs">{mine ? "your café" : "café editor"}</span>
         <button onClick={save} className="rounded bg-[#9bbf7a] px-3 py-1 font-medium text-[#1a1512]" title="⌘S">
