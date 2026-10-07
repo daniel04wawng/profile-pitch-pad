@@ -58,6 +58,7 @@ def main():
     ap.add_argument("--id", required=True)
     ap.add_argument("--label")
     ap.add_argument("--shirt", help="a #RRGGBB for the overshirt")
+    ap.add_argument("--layers", default="", help="layers to wear, comma separated (e.g. beanie,glasses); walk only for now")
     ap.add_argument("--seated-from", default="green", help="avatar whose seated sheets to reuse")
     args = ap.parse_args()
 
@@ -68,7 +69,7 @@ def main():
     manifest["character"] = args.id
 
     for view in ("front", "back"):
-        ch = Character(HERE / "characters" / args.character / view)
+        ch = Character(HERE / "characters" / args.character / view, layers=tuple(x for x in args.layers.split(",") if x))
         if args.shirt:
             for p in (SHIRT_PARTS or set(ch.images)) & set(ch.images):
                 ch.images[p] = recolor(ch.images[p], args.shirt)

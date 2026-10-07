@@ -26,7 +26,8 @@ code{font-size:13px}
  <canvas id="c" width="192" height="260"></canvas>
  <div class="row"><button id="play" class="on">❚❚ pause</button><input id="f" type="range" min="0" max="7" value="0"><span id="fl">1/8</span></div>
  <div class="row"><button data-view="front" class="on">front (SE)</button><button data-view="back">back (NE)</button></div>
- <div class="row"><button data-shirt="green" class="on">green shirt</button><button data-shirt="navy">navy shirt</button><button id="sk" class="on">skeleton</button>
+ <div class="row"><button data-shirt="green" class="on">green shirt</button><button data-shirt="navy">navy shirt</button><button id="sk" class="on">skeleton</button></div>
+ <div class="row"><span>wear:</span><button data-look="none" class="on">nothing</button><button data-look="beanie">beanie</button><button data-look="glasses">glasses</button><button data-look="both">both</button>
  <label>speed <select id="sp"><option value="250">slow</option><option value="125" selected>normal</option><option value="70">fast</option></select></label></div>
  <div class="row legend"><span><i style="background:#dc2828"></i>near leg (right)</span><span><i style="background:#285ae6"></i>far leg (left)</span><span><i style="background:#1e963c"></i>spine, shoulder, elbow</span></div>
 </div>
@@ -36,10 +37,10 @@ code{font-size:13px}
 </div></div>
 <script>
 const D=__DATA__;
-let view="front",shirt="green",i=0,playing=true,skel=true,ms=125,timer=null;
+let view="front",shirt="green",look="none",i=0,playing=true,skel=true,ms=125,timer=null;
 const c=document.getElementById("c"),g=c.getContext("2d");g.imageSmoothingEnabled=false;
 const cache={};const img=s=>cache[s]||(cache[s]=Object.assign(new Image(),{src:s}));
-function draw(){const key=shirt+"-"+view,im=img(D.frames[key][i]);const go=()=>{g.clearRect(0,0,192,260);g.drawImage(im,0,0);
+function draw(){const key=shirt+"-"+look+"-"+view,im=img(D.frames[key][i]);const go=()=>{g.clearRect(0,0,192,260);g.drawImage(im,0,0);
  if(skel){const J=D.joints[key][i];for(const[a,b]of D.bones){g.strokeStyle=(a+b).includes("near")?"#dc2828":(a+b).includes("far")?"#285ae6":"#1e963c";g.lineWidth=1.5;g.beginPath();g.moveTo(J[a][0],J[a][1]);g.lineTo(J[b][0],J[b][1]);g.stroke();}
  for(const k in J){g.fillStyle="#fff";g.strokeStyle="#222";g.lineWidth=1;g.beginPath();g.arc(J[k][0],J[k][1],2.5,0,7);g.fill();g.stroke();}}
  document.getElementById("f").value=i;document.getElementById("fl").textContent=(i+1)+"/8";};im.complete?go():im.onload=go;}
@@ -49,6 +50,7 @@ document.getElementById("play").onclick=e=>{playing=!playing;e.target.textConten
 document.getElementById("f").oninput=e=>{i=+e.target.value;playing=false;const b=document.getElementById("play");b.textContent="▶ play";b.classList.remove("on");loop();draw();};
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{view=b.dataset.view;document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on",x===b));draw();parts();});
 document.querySelectorAll("[data-shirt]").forEach(b=>b.onclick=()=>{shirt=b.dataset.shirt;document.querySelectorAll("[data-shirt]").forEach(x=>x.classList.toggle("on",x===b));draw();});
+document.querySelectorAll("[data-look]").forEach(b=>b.onclick=()=>{look=b.dataset.look;document.querySelectorAll("[data-look]").forEach(x=>x.classList.toggle("on",x===b));draw();});
 document.getElementById("sk").onclick=e=>{skel=!skel;e.target.classList.toggle("on",skel);draw();};
 document.getElementById("sp").onchange=e=>{ms=+e.target.value;loop();};
 draw();parts();loop();

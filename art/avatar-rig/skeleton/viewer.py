@@ -30,18 +30,20 @@ def b64(im):
 
 def build():
     data = {"frames": {}, "parts": {}, "joints": {}, "bones": BONES}
-    for shirt, hexc in (("green", None), ("navy", "#3c5878")):
+    looks = {"none": (), "beanie": ("beanie",), "glasses": ("glasses",), "both": ("beanie", "glasses")}
+    data["looks"] = list(looks)
+    for (shirt, hexc), (look, layers) in [(s, l) for s in (("green", None), ("navy", "#3c5878")) for l in looks.items()]:
         for view in ("front", "back"):
-            ch = Character(HERE / "characters" / "green" / view)
+            ch = Character(HERE / "characters" / "green" / view, layers=layers)
             if hexc:
                 for p in ch.images:
                     ch.images[p] = recolor(ch.images[p], hexc)
-            key = f"{shirt}-{view}"
+            key = f"{shirt}-{look}-{view}"
             data["frames"][key], data["joints"][key] = [], []
             for f in walk(view):
                 data["frames"][key].append(b64(render(ch, view, f).crop(CROP)))
                 data["joints"][key].append({k: [float(v[0]) - CROP[0], float(v[1]) - CROP[1]] for k, v in pose(ch, view, f).items()})
-            if shirt == "green":
+            if shirt == "green" and look == "none":
                 data["parts"][view] = [{"name": p["part"], "kind": p["kind"], "src": b64(Image.fromarray(ch.images[p["part"]]).crop(CROP))} for p in ch.parts]
     OUT.write_text((HERE / "viewer.template.html").read_text().replace("__DATA__", json.dumps(data)))
     print(OUT)

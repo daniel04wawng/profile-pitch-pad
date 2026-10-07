@@ -21,6 +21,10 @@ Part kinds:
            animation's own turn is added on top
   follow   carried along with one joint (the head)
 
+Layers: a character can wear layers (hair, glasses, a hat, a jacket): extra images for a part,
+drawn right over it and moved exactly as it moves. They live in
+characters/<name>/layers/<layer>/<view>/<part>.png, and a bake picks which layers to wear.
+
 Draw order is the order in parts.json, back to front; an animation frame can move a part in
 front of or behind others for that frame ("depth": part -> position in the order).
 """
@@ -39,15 +43,27 @@ MAX_TILT = math.radians(25)  # how far from vertical a bone may be drawn and sti
 
 
 class Character:
-    """One character, one view: its rest joints and its parts (as arrays, full-frame)."""
+    """One character, one view: its rest joints and its parts (as arrays, full-frame), and the
+    layers it's wearing, each drawn over its part (in the order given)."""
 
-    def __init__(self, folder: pathlib.Path):
+    def __init__(self, folder: pathlib.Path, layers: tuple = ()):
         spec = json.load(open(folder / "parts.json"))
         self.size = tuple(spec["frameSize"])
         self.joints = {k: np.array(v, float) for k, v in spec["joints"].items()}
         self.parts = spec["parts"]
         # true lengths for bones not drawn hanging down (bone "a>b" -> px), when a character needs them
         self.lengths = {k: float(v) for k, v in spec.get("lengths", {}).items()}
+        # part -> the layer images over it
+        self.overlays: dict = {}
+        view = folder.name
+        for layer in layers:
+            d = folder.parent / "layers" / layer / view
+            if not (folder.parent / "layers" / layer).is_dir():
+                raise FileNotFoundError(f"no layer {layer!r} for this character")
+            for p in self.parts:  # a layer may skip a view (glasses don't show from behind)
+                f = d / f"{p['part']}.png"
+                if f.exists():
+                    self.overlays.setdefault(p["part"], []).append(np.array(Image.open(f).convert("RGBA")))
         self.images = {p["part"]: np.array(Image.open(folder / f"{p['part']}.png").convert("RGBA")) for p in self.parts}
 
 
@@ -126,22 +142,27 @@ def render(ch: Character, view: str, f: dict) -> Image.Image:
     order = sorted(range(len(ch.parts)), key=lambda i: (depth.get(ch.parts[i]["part"], i), i))
     frame = Image.new("RGBA", ch.size)
     for p in (ch.parts[i] for i in order):
-        arr = ch.images[p["part"]]
-        if p["kind"] == "segment":
-            a, b = p["from"], p["to"]
-            out = _segment(arr, ch.size, J[a], J[b] - J[a], P[a], P[b] - P[a])
-        elif p["kind"] == "rigid":
-            j = p["at"]
-            angle = turns.get(p["part"], 0.0)
-            parent = by_name.get(p.get("inherit", ""))
-            if parent:  # turn with the parent bone as it turns on screen, then the part's own turn
-                a, b = parent["from"], parent["to"]
-                # image y runs down, so a screen turn of +d is a turn of -d for the affine below
-                angle -= _screen_angle(P[b] - P[a]) - _screen_angle(J[b] - J[a])
-            out = _rigid(arr, ch.size, J[j], P[j], angle)
-        else:  # follow
-            j = p["at"]
-            d = P[j] - J[j]
-            out = _affine(arr, ch.size, (1, 0, -d[0], 0, 1, -d[1]))
-        frame.alpha_composite(Image.fromarray(out))
+        for arr in [ch.images[p["part"]], *ch.overlays.get(p["part"], [])]:  # the part, then its layers
+            frame.alpha_composite(Image.fromarray(_place(arr, p, ch, J, P, turns, by_name)))
     return frame
+
+
+def _place(arr, p, ch, J, P, turns, by_name):
+    """One part's image (or a layer over it) moved to where the part goes this frame."""
+    if p["kind"] == "segment":
+        a, b = p["from"], p["to"]
+        out = _segment(arr, ch.size, J[a], J[b] - J[a], P[a], P[b] - P[a])
+    elif p["kind"] == "rigid":
+        j = p["at"]
+        angle = turns.get(p["part"], 0.0)
+        parent = by_name.get(p.get("inherit", ""))
+        if parent:  # turn with the parent bone as it turns on screen, then the part's own turn
+            a, b = parent["from"], parent["to"]
+            # image y runs down, so a screen turn of +d is a turn of -d for the affine below
+            angle -= _screen_angle(P[b] - P[a]) - _screen_angle(J[b] - J[a])
+        out = _rigid(arr, ch.size, J[j], P[j], angle)
+    else:  # follow
+        j = p["at"]
+        d = P[j] - J[j]
+        out = _affine(arr, ch.size, (1, 0, -d[0], 0, 1, -d[1]))
+    return out

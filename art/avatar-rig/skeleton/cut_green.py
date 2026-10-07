@@ -17,7 +17,7 @@ import pathlib
 
 import numpy as np
 from PIL import Image, ImageDraw
-from scipy.ndimage import binary_dilation
+from scipy.ndimage import binary_dilation, distance_transform_edt, label
 
 HERE = pathlib.Path(__file__).parent
 RIG = HERE.parent / "authoring"
@@ -37,6 +37,45 @@ def save(view, parts, joints, spec):
         Image.fromarray(arr).save(d / f"{name}.png")
     json.dump({"frameSize": [256, 280], "joints": joints, "parts": spec}, open(d / "parts.json", "w"), indent=1)
     print(view, sorted(parts))
+
+
+def split_head(body: np.ndarray, neck_y: float):
+    """The head (hair, face, neck) and the torso, cut along the art itself rather than a
+    straight line: every pixel is sorted by colour (hair, skin, the rest); hair and skin regions
+    (joined across 1px outline gaps) that start above the neck are the head, so the hand
+    holding the mug, lower on the chest, stays with the torso; each outline pixel goes with
+    whatever it borders."""
+    rgb = body[:, :, :3].astype(float) / 255
+    mx, mn = rgb.max(2), rgb.min(2)
+    v = mx
+    sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0)
+    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+    hue = np.zeros_like(v)
+    d = np.maximum(mx - mn, 1e-6)
+    hue = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60
+    solid = body[:, :, 3] > 0
+    ink = solid & (v < 0.22)  # the outlines
+    skin = solid & ~ink & (hue < 40) & (r > 0.62) & (sat > 0.15) & (sat < 0.65)
+    hair = solid & ~ink & ~skin & ((hue < 45) | (sat < 0.12)) & (v < 0.72) & ~((sat < 0.12) & (v > 0.6))
+    yy = np.mgrid[: body.shape[0], : body.shape[1]][0]
+    lab, n = label(binary_dilation(hair | skin, iterations=1))
+    head = np.zeros_like(solid)
+    for k in range(1, n + 1):
+        m = lab == k
+        if yy[m].min() < neck_y - 8:  # starts above the neck: hair, face, ears, neck
+            head |= m
+    head &= hair | skin
+    # outlines (and anything left unsorted) go with the nearest sorted pixel
+    sorted_ = solid & ~ink
+    _, (iy, ix) = distance_transform_edt(~sorted_, return_indices=True)
+    head = head | (solid & ~sorted_ & head[iy, ix])
+    # small leftovers up at head height (eye whites, highlights) belong to the face
+    rest, n = label(solid & ~head)
+    for k in range(1, n + 1):
+        m = rest == k
+        if m.sum() < 40 and yy[m].max() < neck_y:
+            head |= m
+    return head, solid & ~head
 
 
 def legs_split(a, leg, knee_y, overlap, shin_bottom=None):
@@ -82,12 +121,13 @@ def front():
     arm = a.copy()
     arm[~am] = 0
     body[am & (yy > 126)] = 0
-    # the head, split off at the collar so the torso can breathe under it
-    NECK_Y = 82
+    # the head, cut along the art (hair, face, neck), so the torso can breathe under it
+    NECK_Y = 82  # the neck joint: where the head turns and rides
+    hm, tm = split_head(body, NECK_Y)
     head = body.copy()
-    head[yy >= NECK_Y] = 0
+    head[~hm] = 0
     torso = body.copy()
-    torso[yy < NECK_Y - 2] = 0  # a 2px overlap, so no gap opens when they move apart a little
+    torso[~tm] = 0
     near, far = cfg["near"], cfg["far"]
     j = {
         "hip.near": near["hip"], "knee.near": near["knee"], "ankle.near": near["ankle"],
@@ -148,10 +188,11 @@ def back():
     arm[~armmask] = 0
     body[armmask & (yy >= 116)] = 0
     NECK_Y = 80
+    hm, tm = split_head(body, NECK_Y)
     head = body.copy()
-    head[yy >= NECK_Y] = 0
+    head[~hm] = 0
     torso = body.copy()
-    torso[yy < NECK_Y - 2] = 0
+    torso[~tm] = 0
     near, far = cfg["near"], cfg["far"]
     j = {
         "hip.near": near["hip"], "knee.near": near["knee"], "ankle.near": near["ankle"],

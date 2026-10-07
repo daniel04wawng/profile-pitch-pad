@@ -27,3 +27,4 @@ dist-ssr
 art/__pycache__/
 .vercel
 .env*
+public/rig-viewer.html
