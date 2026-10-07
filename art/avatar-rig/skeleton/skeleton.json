@@ -1,15 +1,62 @@
 {
-  "about": "The café's avatar skeleton. Character-independent: joints are named here, a character supplies where they sit in its art (parts.json per view), animations move them.",
+  "about": "The caf\u00e9's avatar skeleton: character-independent joint names. A character supplies where they sit in its art (parts.json per view); animations move them. Bones use a 2D projected pseudo-3D swing model (see rig.py).",
   "cameraDegrees": 35,
   "views": {
-    "front": { "forward": [0.70710678, 0.40557979], "note": "facing you, walking down-right (SE); SW is this mirrored" },
-    "back": { "forward": [0.70710678, -0.40557979], "note": "facing away, walking up-right (NE); NW is this mirrored" }
+    "front": {
+      "forward": [
+        0.70710678,
+        0.40557979
+      ],
+      "note": "facing you, walking down-right (SE); SW is this mirrored",
+      "sides": {
+        "near": "right",
+        "far": "left"
+      }
+    },
+    "back": {
+      "forward": [
+        0.70710678,
+        -0.40557979
+      ],
+      "note": "facing away, walking up-right (NE); NW is this mirrored",
+      "sides": {
+        "near": "right",
+        "far": "left"
+      }
+    }
   },
   "joints": {
-    "pelvis": { "parent": null },
-    "neck": { "parent": "pelvis" },
-    "shoulder.free": { "parent": "neck" },
-    "hip.near": { "parent": "pelvis" }, "knee.near": { "parent": "hip.near" }, "ankle.near": { "parent": "knee.near" },
-    "hip.far": { "parent": "pelvis" }, "knee.far": { "parent": "hip.far" }, "ankle.far": { "parent": "knee.far" }
+    "pelvis": {
+      "parent": null
+    },
+    "neck": {
+      "parent": "pelvis"
+    },
+    "shoulder.free": {
+      "parent": "neck"
+    },
+    "hip.near": {
+      "parent": "pelvis"
+    },
+    "knee.near": {
+      "parent": "hip.near"
+    },
+    "ankle.near": {
+      "parent": "knee.near"
+    },
+    "hip.far": {
+      "parent": "pelvis"
+    },
+    "knee.far": {
+      "parent": "hip.far"
+    },
+    "ankle.far": {
+      "parent": "knee.far"
+    }
+  },
+  "legs": {
+    "near": "the leg nearest the camera in a drawn view",
+    "far": "the other leg",
+    "note": "In both drawn views (front = SE, back = NE) the near leg is the character's right leg, so an animation that times the legs by body side stays in step when someone turns. The mirrored views (SW, NW) swap sides, as a mirror does."
   }
 }

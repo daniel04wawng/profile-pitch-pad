@@ -2,19 +2,32 @@
 
 The rig knows nothing about any one character. A character is a folder per view with part
 images and a parts.json saying where its joints are at rest (see cut_green.py); an animation
-(animations.py) says, per frame, how the bones move. Bones swing in 3D, toward and away from
-you as well as sideways, and the fixed isometric camera projects that onto the screen, so one
-animation drives the front and the back views alike.
+(animations.py) says, per frame, how the bones move.
+
+The model is 2D projected pseudo-3D, not true 3D bones. Each bone is its drawn (screen) vector
+at rest. Swinging it forward by an angle shortens the drawn vector by cos(angle) and adds the
+view's projected "forward" direction, scaled by the bone's true length, times sin(angle). For a
+bone drawn hanging straight down, that true length is its drawn length over the camera's
+vertical scale (cos 35 degrees); swing() checks that a bone is close enough to vertical for
+that to hold, or a character can give the length outright (parts.json "lengths"). So one
+animation drives several views, as long as each view defines a consistent projected forward
+direction and the same near/far meaning (skeleton.json).
 
 Part kinds:
   segment  stretched between two joints (a thigh, a shin, the torso): its length follows the
            bone, its width stays, so a leg swinging toward you foreshortens as it should
-  rigid    turned about one joint (a foot, a swinging arm)
+  rigid    turned about one joint (a foot, a swinging arm). With "inherit": a segment part,
+           it also turns as that bone turns on screen (a hand with its forearm), and the
+           animation's own turn is added on top
   follow   carried along with one joint (the head)
+
+Draw order is the order in parts.json, back to front; an animation frame can move a part in
+front of or behind others for that frame ("depth": part -> position in the order).
 """
 import json
 import math
 import pathlib
+from typing import Optional
 
 import numpy as np
 from PIL import Image
@@ -22,6 +35,7 @@ from PIL import Image
 HERE = pathlib.Path(__file__).parent
 SKELETON = json.load(open(HERE / "skeleton.json"))
 VERTICAL = math.cos(math.radians(SKELETON["cameraDegrees"]))  # how much a vertical length shrinks
+MAX_TILT = math.radians(25)  # how far from vertical a bone may be drawn and still swing() by its drawn length
 
 
 class Character:
@@ -32,13 +46,22 @@ class Character:
         self.size = tuple(spec["frameSize"])
         self.joints = {k: np.array(v, float) for k, v in spec["joints"].items()}
         self.parts = spec["parts"]
+        # true lengths for bones not drawn hanging down (bone "a>b" -> px), when a character needs them
+        self.lengths = {k: float(v) for k, v in spec.get("lengths", {}).items()}
         self.images = {p["part"]: np.array(Image.open(folder / f"{p['part']}.png").convert("RGBA")) for p in self.parts}
 
 
-def swing(rest: np.ndarray, angle: float, forward: np.ndarray) -> np.ndarray:
-    """A bone hanging along `rest` (2D, as drawn) swung forward by `angle` radians: the drawn
-    vector shortens by cos, and the forward direction (projected) takes up the rest."""
-    return rest * math.cos(angle) + forward * (np.linalg.norm(rest) / VERTICAL) * math.sin(angle)
+def swing(rest: np.ndarray, angle: float, forward: np.ndarray, name: str = "bone", length: Optional[float] = None) -> np.ndarray:
+    """A bone drawn along `rest` (screen px) swung forward by `angle` radians: the drawn vector
+    shortens by cos, and the view's projected forward direction takes up the rest, scaled by
+    the bone's true length. That length is the drawn length over the camera's vertical scale,
+    which only holds for a bone drawn close to vertical; others must give `length`."""
+    if length is None:
+        tilt = abs(math.atan2(rest[0], rest[1]))
+        if tilt > MAX_TILT:
+            raise ValueError(f"{name} is drawn {math.degrees(tilt):.0f} degrees off vertical: give its true length in parts.json \"lengths\"")
+        length = float(np.linalg.norm(rest)) / VERTICAL
+    return rest * math.cos(angle) + forward * length * math.sin(angle)
 
 
 def pose(ch: Character, view: str, f: dict) -> dict:
@@ -59,8 +82,9 @@ def pose(ch: Character, view: str, f: dict) -> dict:
         hip = a.get(f"hip.{side}", 0.0)
         knee = a.get(f"knee.{side}", 0.0)
         P[f"hip.{side}"] = H + off
-        P[f"knee.{side}"] = P[f"hip.{side}"] + swing(K - H, hip, fwd)
-        P[f"ankle.{side}"] = P[f"knee.{side}"] + swing(A - K, hip - knee, fwd)
+        thigh, shin = f"hip.{side}>knee.{side}", f"knee.{side}>ankle.{side}"
+        P[f"knee.{side}"] = P[f"hip.{side}"] + swing(K - H, hip, fwd, thigh, ch.lengths.get(thigh))
+        P[f"ankle.{side}"] = P[f"knee.{side}"] + swing(A - K, hip - knee, fwd, shin, ch.lengths.get(shin))
     return P
 
 
@@ -86,20 +110,34 @@ def _segment(arr, size, origin, rest, target, posed):
     return _affine(arr, size, (inv[0, 0], inv[0, 1], off[0], inv[1, 0], inv[1, 1], off[1]))
 
 
+def _screen_angle(v: np.ndarray) -> float:
+    return math.atan2(v[1], v[0])
+
+
 def render(ch: Character, view: str, f: dict) -> Image.Image:
-    """One frame: every part on its bone, back to front."""
+    """One frame: every part on its bone, back to front (as parts.json orders them, unless the
+    frame moves a part with "depth")."""
     P = pose(ch, view, f)
     J = ch.joints
     turns = f.get("turns", {})
+    depth = f.get("depth", {})
+    by_name = {p["part"]: p for p in ch.parts}
+    order = sorted(range(len(ch.parts)), key=lambda i: (depth.get(ch.parts[i]["part"], i), i))
     frame = Image.new("RGBA", ch.size)
-    for p in ch.parts:
+    for p in (ch.parts[i] for i in order):
         arr = ch.images[p["part"]]
         if p["kind"] == "segment":
             a, b = p["from"], p["to"]
             out = _segment(arr, ch.size, J[a], J[b] - J[a], P[a], P[b] - P[a])
         elif p["kind"] == "rigid":
             j = p["at"]
-            out = _rigid(arr, ch.size, J[j], P[j], turns.get(p["part"], 0.0))
+            angle = turns.get(p["part"], 0.0)
+            parent = by_name.get(p.get("inherit", ""))
+            if parent:  # turn with the parent bone as it turns on screen, then the part's own turn
+                a, b = parent["from"], parent["to"]
+                # image y runs down, so a screen turn of +d is a turn of -d for the affine below
+                angle -= _screen_angle(P[b] - P[a]) - _screen_angle(J[b] - J[a])
+            out = _rigid(arr, ch.size, J[j], P[j], angle)
         else:  # follow
             j = p["at"]
             d = P[j] - J[j]

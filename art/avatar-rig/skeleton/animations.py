@@ -7,7 +7,13 @@ Each animation is a list of frames. A frame:
   angles  per joint, radians: hip.* swings that thigh forward, knee.* bends that shin back
   turns   per rigid part, radians (a foot rolling, an arm swinging)
 """
+import json
 import math
+import pathlib
+
+# which leg is "near" in each view, by body side (skeleton.json): the legs are timed by side,
+# so the stride stays in step when someone turns between views
+SIDES = json.load(open(pathlib.Path(__file__).with_name("skeleton.json")))["views"]
 
 # the walk, as the first rig tuned it for this café
 WALK = {"hipSwing": 0.30, "kneeFlex": 0.45, "bodyHeight": 78, "bodySway": 1.5}
@@ -22,8 +28,9 @@ def walk(view: str, frames: int = 8):
         bob = WALK["bodyHeight"] * (1 - math.cos(WALK["hipSwing"] * math.cos(2 * math.pi * phase)))
         sway = WALK["bodySway"] * math.sin(2 * math.pi * phase)
         f = {"offset": [sway, bob], "angles": {}, "turns": {"arm.free": ARM_SWING[view] * math.cos(2 * math.pi * phase)}}
-        for k, side in enumerate(("near", "far")):
-            g = (phase + 0.5 * k) % 1  # the legs half a stride apart
+        for side in ("near", "far"):
+            body = SIDES[view]["sides"][side]
+            g = (phase + (0.0 if body == "right" else 0.5)) % 1  # right leg leads, left half a stride behind
             f["angles"][f"hip.{side}"] = WALK["hipSwing"] * math.cos(2 * math.pi * g)
             # the knee bends only while that foot is off the ground
             f["angles"][f"knee.{side}"] = WALK["kneeFlex"] * math.sin(math.pi * (g - 0.5) * 2) if g > 0.5 else 0.0
