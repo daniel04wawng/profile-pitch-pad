@@ -19,6 +19,7 @@ import numpy as np
 from PIL import Image
 from scipy.ndimage import binary_closing, binary_dilation, binary_fill_holes, distance_transform_edt, label
 
+from cut_green import poly
 from materials import IDS, MATERIALS, material_map, profile, recolour, reference_values
 
 HERE = pathlib.Path(__file__).parent
@@ -176,8 +177,21 @@ def under_from(b, w, view, neck_w):
         bm2[bm == IDS["tee"]] = IDS["shirt"]
         refs["shirt"] = reference_values([(bi, bm2)])["shirt"]
     out = recolour(bi, bm2, looks, refs)
-    out[bm == IDS["hair"]] = 0
-    return shift(out, dx, dy)
+    out[hair_of(bi, bm) | (bm == IDS["hair"])] = 0  # her hair and its outline: nobody's underneath
+    # her face is hers: only its plain skin is borrowed, never her eyes, brows or lines
+    out[binary_dilation(face_of(bm), iterations=1) & (bm != IDS["skin"])] = 0
+    return drop_specks(shift(out, dx, dy))
+
+
+# Hair the colour rules can't see, traced by hand: hair drawn as near-black line work over the
+# face's edge (a lock of fringe on the temple, strands beside the cheek), which reads as
+# outline. Everything of her head inside these is hidden with her hair.
+HIDE_TOO = {
+    ("plum-braid", "front"): [
+        [(112, 50), (141, 44), (143, 49), (139, 55), (135, 58), (128, 58), (123, 60), (120, 66), (112, 66)],  # the fringe's lock
+        [(147, 46), (153, 46), (154, 75), (147, 75)],  # strands beside her cheek
+    ],
+}
 
 
 def swap(w, d, view):
@@ -199,6 +213,8 @@ def swap(w, d, view):
     drop_specks(dh)  # stray dots of the donor's outline, away from her hair
     # the wearer's own hair, hidden; what it covered and the new hair doesn't, painted back
     own = hair_of(hw, mhw)
+    for pts in HIDE_TOO.get((w, view), []):
+        own |= poly((256, 280), pts) & (hw[:, :, 3] > 0)
     hide = np.zeros_like(hw)
     hide[own, 3] = 255
     face = mhw == SKIN
@@ -222,8 +238,8 @@ def swap(w, d, view):
         res[on] = layer[on]
     solid = res[:, :, 3] > 0
     holes = binary_fill_holes(solid) & ~solid
-    if holes.any():
-        near = paint_from(res, solid, holes)
+    if holes.any():  # from skin or cloth beside it: copying a dark outline or hair draws squiggles
+        near = paint_from(res, solid & (res[:, :, :3].max(2) >= 110), holes)
         fill[holes] = near[holes]
     Image.fromarray(dh).save(out / "head.png")
     Image.fromarray(hide).save(out / "head.hide.png")
