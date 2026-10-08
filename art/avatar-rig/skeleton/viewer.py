@@ -22,7 +22,9 @@ BONES = [("pelvis", "neck"), ("neck", "shoulder.free"), ("shoulder.free", "elbow
          ("pelvis", "hip.near"), ("hip.near", "knee.near"), ("knee.near", "ankle.near"),
          ("pelvis", "hip.far"), ("hip.far", "knee.far"), ("knee.far", "ankle.far")]
 CROP = (40, 10, 232, 270)
-LOOKS = {"none": (), "beanie": ("beanie",), "glasses": ("glasses",), "both": ("beanie", "glasses")}
+HAIRS = {"natural": (), "tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",)}
+WEARS = {"none": (), "beanie": ("beanie",), "glasses": ("glasses",), "both": ("beanie", "glasses")}
+LOOKS = {f"{h}+{w}": hl + wl for h, hl in HAIRS.items() for w, wl in WEARS.items()}
 
 
 def b64(im):
@@ -53,7 +55,7 @@ def id_character(ch: Character, view: str) -> Character:
 
 
 def build():
-    data = {"frames": {}, "maps": {}, "parts": {}, "joints": {}, "bones": BONES, "looks": list(LOOKS), "materials": MATERIALS}
+    data = {"frames": {}, "maps": {}, "parts": {}, "joints": {}, "bones": BONES, "hairs": list(HAIRS), "wears": list(WEARS), "materials": MATERIALS}
     base = Character(HERE / "characters" / "green" / "front")
     data["refs"] = reference_values([(a, material_map(n, a, HEM["front"])) for n, a in base.images.items()])
     for look, layers in LOOKS.items():
@@ -66,7 +68,7 @@ def build():
                 data["frames"][key].append(b64(render(ch, view, f).crop(CROP)))
                 data["maps"][key].append(b64(render(ids, view, f).crop(CROP)))
                 data["joints"][key].append({k: [float(v[0]) - CROP[0], float(v[1]) - CROP[1]] for k, v in pose(ch, view, f).items()})
-            if look == "none":
+            if look == "natural+none":
                 data["parts"][view] = [{"name": p["part"], "kind": p["kind"], "src": b64(_thumb(Image.fromarray(ch.images[p["part"]])))} for p in ch.parts]
                 data["count"] = len(ch.parts)
     OUT.write_text((HERE / "viewer.template.html").read_text().replace("__DATA__", json.dumps(data)))
