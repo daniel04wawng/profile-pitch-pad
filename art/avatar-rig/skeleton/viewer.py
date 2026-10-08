@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image
 
 from animations import walk
-from materials import MATERIALS, material_map, profile, reference_values
+from materials import IDS, MATERIALS, material_map, profile, reference_values
 from rig import Character, pose, render
 
 HERE = pathlib.Path(__file__).parent
@@ -57,19 +57,27 @@ def id_character(ch: Character, view: str, mats: dict) -> Character:
         m[:, :, 3] = np.where(a[:, :, 3] > 0, 255, 0)
         ids.images[n] = m
     for n, lst in ch.overlays.items():
-        ids.overlays[n] = [np.dstack([np.zeros(o.shape[:2] + (3,), np.uint8), np.where(o[:, :, 3] > 0, 255, 0).astype(np.uint8)]) for o in lst]
+        ids.overlays[n] = []
+        for o, mat in zip(lst, ch.overlay_materials.get(n, [None] * len(lst))):
+            m = np.zeros_like(o)
+            m[:, :, 3] = np.where(o[:, :, 3] > 0, 255, 0)
+            if mat:  # a layer of a material (another woman's hair) recolours with it, outlines aside
+                m[:, :, 0] = np.where((o[:, :, 3] > 0) & (o[:, :, :3].max(2) >= 30), IDS[mat], 0)
+            ids.overlays[n].append(m)
     return ids
 
 
 def build():
-    data = {"frames": {}, "maps": {}, "parts": {}, "joints": {}, "bones": BONES, "materials": MATERIALS, "who": {}, "refs": {}}
+    data = {"frames": {}, "maps": {}, "parts": {}, "joints": {}, "bones": BONES, "materials": MATERIALS, "who": {}, "refs": {}, "hairs": {}}
     for who, name in WHO.items():
         if not (HERE / "characters" / who / "back" / "parts.json").exists():
             continue
         data["who"][who] = name
         base = Character(HERE / "characters" / who / "front")
         data["refs"][who] = reference_values([(a, material_map(n, a, **prof(who, "front"))) for n, a in base.images.items()])
-        looks = LOOKS if who == "green" else {"natural+none": ()}
+        # the women wear each other's hair (hair_swap.py); his hair and wear layers are his
+        looks = LOOKS if who == "green" else {"natural+none": (), **{f"{d}+none": (f"hair-{d}",) for d in WHO if d not in ("green", who) and (HERE / "characters" / who / "layers" / f"hair-{d}").is_dir()}}
+        data["hairs"][who] = [k.split("+")[0] for k in looks if k.endswith("+none")]
         for look, layers in looks.items():
             for view in ("front", "back"):
                 frames(data, who, look, layers, view)

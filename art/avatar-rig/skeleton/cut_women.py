@@ -150,7 +150,9 @@ SPECS["plum-braid"] = {  # the braid hangs over the shoulder: below the head's l
 for cid in ("blue-pixie", "terracotta-curls", "plum-braid"):
     for v in ("front", "back"):
         SPECS[cid][v]["zones"] = {"skin": NECK_AND_MUG_HAND[v]}
-SPECS["plum-braid"]["front"]["zones"]["hair"] = [[103, 62, 122, 132]]
+SPECS["plum-braid"]["front"]["zones"]["hair"] = [[100, 62, 124, 136]]
+SPECS["sage-bob"]["front"]["zones"]["hair"] = [[94, 66, 124, 92]]  # the bob's ends on her shoulder
+SPECS["sage-bob"]["back"]["zones"]["hair"] = [[86, 72, 146, 96]]
 SPECS["plum-braid"]["back"]["zones"]["hair"] = [[96, 50, 124, 148]]
 
 FRONT_ORDER = ["torso", "head", "upper-arm.free", "forearm.free", "thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near"]
