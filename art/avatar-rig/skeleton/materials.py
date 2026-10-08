@@ -43,8 +43,49 @@ def _hsv(arr):
 HEM = {"front": 148, "back": 150}
 
 
-def material_map(part: str, arr: np.ndarray, hem: int = 149) -> np.ndarray:
+def profile(folder) -> dict:
+    """What a character's parts.json says about its materials, as material_map's keywords:
+    its hem line, and for a character with its own palettes (the generated women: their
+    shading runs as dark as the outlines, and skin shadow and hair overlap in hue, so the first
+    character's colour rules can't sort them) those palettes and the boxes never recoloured."""
+    import json
+    import pathlib
+
+    spec = json.load(open(pathlib.Path(folder) / "parts.json"))
+    view = pathlib.Path(folder).name
+    out = {"hem": spec.get("hem", HEM.get(view, 149))}
+    if "palette" in spec:
+        out["palette"] = spec["palette"]
+        out["fixed"] = spec.get("fixed", [])
+    return out
+
+
+def palette_map(part: str, arr: np.ndarray, palette: dict, fixed=(), tol: int = 30) -> np.ndarray:
+    """Per pixel, the material whose sampled colours it's nearest (sum of channel differences,
+    within `tol`), among the materials that can be in this part; 0 for outlines, the mug,
+    anything not close to a material."""
+    rgb = arr[:, :, :3].astype(int).reshape(-1, 3)
+    best = np.full(len(rgb), tol + 1)
+    out = np.zeros(len(rgb), np.uint8)
+    for name, cols in palette.items():
+        if not any(part.startswith(p) for p in WHERE[name]):
+            continue
+        for c in cols:
+            d = np.abs(rgb - np.array(c)).sum(1)
+            hit = d < best
+            best[hit] = d[hit]
+            out[hit] = IDS[name]
+    out = out.reshape(arr.shape[:2])
+    out[arr[:, :, 3] == 0] = 0
+    for x0, y0, x1, y1 in fixed:
+        out[y0:y1, x0:x1] = 0
+    return out
+
+
+def material_map(part: str, arr: np.ndarray, hem: int = 149, palette: dict = None, fixed=()) -> np.ndarray:
     """Per pixel, the material id (0 = leave it)."""
+    if palette:
+        return palette_map(part, arr, palette, fixed)
     hue, sat, v, rgb = _hsv(arr)
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     solid = arr[:, :, 3] > 0

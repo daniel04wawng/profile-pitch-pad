@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image
 
 from animations import walk
-from materials import HEM, MATERIALS, material_map, reference_values
+from materials import MATERIALS, material_map, profile, reference_values
 from rig import Character, pose, render
 
 HERE = pathlib.Path(__file__).parent
@@ -25,6 +25,13 @@ CROP = (40, 10, 232, 270)
 HAIRS = {"natural": (), "tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",), "bun": ("hair-bun",)}
 WEARS = {"none": (), "beanie": ("beanie",), "glasses": ("glasses",), "both": ("beanie", "glasses")}
 LOOKS = {f"{h}+{w}": hl + wl for h, hl in HAIRS.items() for w, wl in WEARS.items()}
+# who to show: the first character with his layers, and every cut woman as drawn (the hair and
+# wear layers are cut from his art, so they're his alone for now)
+WHO = {"green": "Green overshirt", "sage-bob": "Sage bob", "blue-pixie": "Blue pixie", "terracotta-curls": "Terracotta curls", "plum-braid": "Plum braid"}
+
+
+def prof(who: str, view: str) -> dict:
+    return profile(HERE / "characters" / who / view)
 
 
 def b64(im):
@@ -38,7 +45,7 @@ def _thumb(im):
     return im.crop((x0 - 3, y0 - 3, x1 + 3, y1 + 3))
 
 
-def id_character(ch: Character, view: str) -> Character:
+def id_character(ch: Character, view: str, mats: dict) -> Character:
     """The same character with every part replaced by its material ids (R = id), so rendering
     it gives each frame's material map; layers (hats, glasses) are id 0: never recoloured."""
     ids = Character.__new__(Character)
@@ -46,7 +53,7 @@ def id_character(ch: Character, view: str) -> Character:
     ids.images, ids.overlays = {}, {}
     for n, a in ch.images.items():
         m = np.zeros_like(a)
-        m[:, :, 0] = material_map(n, a, HEM[view])
+        m[:, :, 0] = material_map(n, a, **mats)
         m[:, :, 3] = np.where(a[:, :, 3] > 0, 255, 0)
         ids.images[n] = m
     for n, lst in ch.overlays.items():
@@ -55,24 +62,33 @@ def id_character(ch: Character, view: str) -> Character:
 
 
 def build():
-    data = {"frames": {}, "maps": {}, "parts": {}, "joints": {}, "bones": BONES, "hairs": list(HAIRS), "wears": list(WEARS), "materials": MATERIALS}
-    base = Character(HERE / "characters" / "green" / "front")
-    data["refs"] = reference_values([(a, material_map(n, a, HEM["front"])) for n, a in base.images.items()])
-    for look, layers in LOOKS.items():
-        for view in ("front", "back"):
-            ch = Character(HERE / "characters" / "green" / view, layers=layers)
-            ids = id_character(ch, view)
-            key = f"{look}-{view}"
-            data["frames"][key], data["maps"][key], data["joints"][key] = [], [], []
-            for f in walk(view):
-                data["frames"][key].append(b64(render(ch, view, f).crop(CROP)))
-                data["maps"][key].append(b64(render(ids, view, f).crop(CROP)))
-                data["joints"][key].append({k: [float(v[0]) - CROP[0], float(v[1]) - CROP[1]] for k, v in pose(ch, view, f).items()})
-            if look == "natural+none":
-                data["parts"][view] = [{"name": p["part"], "kind": p["kind"], "src": b64(_thumb(Image.fromarray(ch.images[p["part"]])))} for p in ch.parts]
-                data["count"] = len(ch.parts)
+    data = {"frames": {}, "maps": {}, "parts": {}, "joints": {}, "bones": BONES, "materials": MATERIALS, "who": {}, "refs": {}}
+    for who, name in WHO.items():
+        if not (HERE / "characters" / who / "back" / "parts.json").exists():
+            continue
+        data["who"][who] = name
+        base = Character(HERE / "characters" / who / "front")
+        data["refs"][who] = reference_values([(a, material_map(n, a, **prof(who, "front"))) for n, a in base.images.items()])
+        looks = LOOKS if who == "green" else {"natural+none": ()}
+        for look, layers in looks.items():
+            for view in ("front", "back"):
+                frames(data, who, look, layers, view)
     OUT.write_text((HERE / "viewer.template.html").read_text().replace("__DATA__", json.dumps(data)))
     print(OUT)
+
+
+def frames(data, who, look, layers, view):
+    ch = Character(HERE / "characters" / who / view, layers=layers)
+    ids = id_character(ch, view, prof(who, view))
+    key = f"{who}:{look}-{view}"
+    data["frames"][key], data["maps"][key], data["joints"][key] = [], [], []
+    for f in walk(view):
+        data["frames"][key].append(b64(render(ch, view, f).crop(CROP)))
+        data["maps"][key].append(b64(render(ids, view, f).crop(CROP)))
+        data["joints"][key].append({k: [float(v[0]) - CROP[0], float(v[1]) - CROP[1]] for k, v in pose(ch, view, f).items()})
+    if look == "natural+none":
+        data["parts"][f"{who}-{view}"] = [{"name": p["part"], "kind": p["kind"], "src": b64(_thumb(Image.fromarray(ch.images[p["part"]])))} for p in ch.parts]
+        data["count"] = len(ch.parts)
 
 
 if __name__ == "__main__":

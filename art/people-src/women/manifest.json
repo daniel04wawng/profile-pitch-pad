@@ -1,0 +1,337 @@
+{
+  "canvas": [
+    256,
+    352
+  ],
+  "anchor": [
+    128,
+    336
+  ],
+  "type": "flattened 2D source poses, not layered rig parts",
+  "characters": [
+    {
+      "id": "sage-bob",
+      "poses": {
+        "stand-front": {
+          "file": "sage-bob/stand-front.png",
+          "source_crop": [
+            135,
+            7,
+            243,
+            308
+          ],
+          "placement": [
+            74,
+            35
+          ],
+          "bounds": [
+            74,
+            35,
+            182,
+            336
+          ]
+        },
+        "stand-back": {
+          "file": "sage-bob/stand-back.png",
+          "source_crop": [
+            451,
+            8,
+            552,
+            304
+          ],
+          "placement": [
+            78,
+            40
+          ],
+          "bounds": [
+            78,
+            40,
+            179,
+            336
+          ]
+        },
+        "sit-front": {
+          "file": "sage-bob/sit-front.png",
+          "source_crop": [
+            744,
+            57,
+            900,
+            311
+          ],
+          "placement": [
+            50,
+            82
+          ],
+          "bounds": [
+            50,
+            82,
+            206,
+            336
+          ]
+        },
+        "sit-sip": {
+          "file": "sage-bob/sit-sip.png",
+          "source_crop": [
+            1047,
+            56,
+            1201,
+            311
+          ],
+          "placement": [
+            51,
+            81
+          ],
+          "bounds": [
+            51,
+            81,
+            205,
+            336
+          ]
+        }
+      }
+    },
+    {
+      "id": "terracotta-curls",
+      "poses": {
+        "stand-front": {
+          "file": "terracotta-curls/stand-front.png",
+          "source_crop": [
+            148,
+            310,
+            247,
+            606
+          ],
+          "placement": [
+            79,
+            40
+          ],
+          "bounds": [
+            79,
+            40,
+            178,
+            336
+          ]
+        },
+        "stand-back": {
+          "file": "terracotta-curls/stand-back.png",
+          "source_crop": [
+            457,
+            311,
+            553,
+            606
+          ],
+          "placement": [
+            80,
+            41
+          ],
+          "bounds": [
+            80,
+            41,
+            176,
+            336
+          ]
+        },
+        "sit-front": {
+          "file": "terracotta-curls/sit-front.png",
+          "source_crop": [
+            755,
+            349,
+            915,
+            608
+          ],
+          "placement": [
+            48,
+            77
+          ],
+          "bounds": [
+            48,
+            77,
+            208,
+            336
+          ]
+        },
+        "sit-sip": {
+          "file": "terracotta-curls/sit-sip.png",
+          "source_crop": [
+            1060,
+            348,
+            1219,
+            609
+          ],
+          "placement": [
+            49,
+            75
+          ],
+          "bounds": [
+            49,
+            75,
+            208,
+            336
+          ]
+        }
+      }
+    },
+    {
+      "id": "plum-braid",
+      "poses": {
+        "stand-front": {
+          "file": "plum-braid/stand-front.png",
+          "source_crop": [
+            137,
+            610,
+            242,
+            902
+          ],
+          "placement": [
+            76,
+            44
+          ],
+          "bounds": [
+            76,
+            44,
+            181,
+            336
+          ]
+        },
+        "stand-back": {
+          "file": "plum-braid/stand-back.png",
+          "source_crop": [
+            451,
+            615,
+            555,
+            898
+          ],
+          "placement": [
+            76,
+            53
+          ],
+          "bounds": [
+            76,
+            53,
+            180,
+            336
+          ]
+        },
+        "sit-front": {
+          "file": "plum-braid/sit-front.png",
+          "source_crop": [
+            744,
+            649,
+            907,
+            903
+          ],
+          "placement": [
+            47,
+            82
+          ],
+          "bounds": [
+            47,
+            82,
+            210,
+            336
+          ]
+        },
+        "sit-sip": {
+          "file": "plum-braid/sit-sip.png",
+          "source_crop": [
+            1049,
+            649,
+            1213,
+            903
+          ],
+          "placement": [
+            46,
+            82
+          ],
+          "bounds": [
+            46,
+            82,
+            210,
+            336
+          ]
+        }
+      }
+    },
+    {
+      "id": "blue-pixie",
+      "poses": {
+        "stand-front": {
+          "file": "blue-pixie/stand-front.png",
+          "source_crop": [
+            138,
+            903,
+            242,
+            1198
+          ],
+          "placement": [
+            76,
+            41
+          ],
+          "bounds": [
+            76,
+            41,
+            180,
+            336
+          ]
+        },
+        "stand-back": {
+          "file": "blue-pixie/stand-back.png",
+          "source_crop": [
+            452,
+            904,
+            550,
+            1196
+          ],
+          "placement": [
+            79,
+            44
+          ],
+          "bounds": [
+            79,
+            44,
+            177,
+            336
+          ]
+        },
+        "sit-front": {
+          "file": "blue-pixie/sit-front.png",
+          "source_crop": [
+            750,
+            934,
+            919,
+            1193
+          ],
+          "placement": [
+            44,
+            77
+          ],
+          "bounds": [
+            44,
+            77,
+            213,
+            336
+          ]
+        },
+        "sit-sip": {
+          "file": "blue-pixie/sit-sip.png",
+          "source_crop": [
+            1045,
+            937,
+            1213,
+            1197
+          ],
+          "placement": [
+            44,
+            76
+          ],
+          "bounds": [
+            44,
+            76,
+            212,
+            336
+          ]
+        }
+      }
+    }
+  ]
+}
