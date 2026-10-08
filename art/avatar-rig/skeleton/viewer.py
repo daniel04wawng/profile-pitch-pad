@@ -22,7 +22,7 @@ BONES = [("pelvis", "neck"), ("neck", "shoulder.free"), ("shoulder.free", "elbow
          ("pelvis", "hip.near"), ("hip.near", "knee.near"), ("knee.near", "ankle.near"),
          ("pelvis", "hip.far"), ("hip.far", "knee.far"), ("knee.far", "ankle.far")]
 CROP = (40, 10, 232, 270)
-HAIRS = {"natural": (), "tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",)}
+HAIRS = {"natural": (), "tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",), "bun": ("hair-bun",)}
 WEARS = {"none": (), "beanie": ("beanie",), "glasses": ("glasses",), "both": ("beanie", "glasses")}
 LOOKS = {f"{h}+{w}": hl + wl for h, hl in HAIRS.items() for w, wl in WEARS.items()}
 
