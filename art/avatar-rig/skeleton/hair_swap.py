@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image
 from scipy.ndimage import binary_closing, binary_dilation, binary_fill_holes, distance_transform_edt, label
 
-from materials import IDS, material_map, profile
+from materials import IDS, MATERIALS, material_map, profile, recolour, reference_values
 
 HERE = pathlib.Path(__file__).parent
 CH = HERE / "characters"
@@ -50,7 +50,7 @@ def hair_of(arr, m):
     # a fringe lies over the face: big stretches of hair there are hair (brows, small, aren't)
     lab, n = label((m == HAIR) & face)
     for k in range(1, n + 1):
-        if (lab == k).sum() >= 25:
+        if (lab == k).sum() >= 14:  # brows are smaller than this; strands of fringe aren't
             face &= lab != k
     hair = (m == HAIR) & ~face
     lab, n = label(hair)
@@ -113,6 +113,73 @@ def paint_from(arr, src_mask, hole):
     return out
 
 
+# whose neck, collar and shoulders show under a wearer's hair once it's gone: a woman with
+# short hair, so they're drawn (the wearer's own hair hid hers)
+# (in order: where the first has hair too, the next one's is used)
+UNDER = {"sage-bob": ("blue-pixie", "terracotta-curls"), "plum-braid": ("blue-pixie", "terracotta-curls"),
+         "terracotta-curls": ("blue-pixie",), "blue-pixie": ("terracotta-curls", "sage-bob")}
+
+
+def composite(cid, view):
+    """A woman at rest, all parts drawn in order, and its material map."""
+    spec = json.load(open(CH / cid / view / "parts.json"))
+    prof = profile(CH / cid / view)
+    img = np.zeros((280, 256, 4), np.uint8)
+    mat = np.zeros((280, 256), np.uint8)
+    for p in spec["parts"]:
+        a = load(cid, view, p["part"])
+        on = a[:, :, 3] > 0
+        img[on] = a[on]
+        mat[on] = material_map(p["part"], a, **prof)[on]
+    return img, mat
+
+
+def hex_of(rgb):
+    return "#%02x%02x%02x" % tuple(int(c) for c in rgb)
+
+
+def drop_specks(arr, smallest=6):
+    """In place: take away isolated bits (an outline dot with nothing beside it)."""
+    lab, n = label(arr[:, :, 3] > 0)
+    for k in range(1, n + 1):
+        if (lab == k).sum() < smallest:
+            arr[lab == k] = 0
+    return arr
+
+
+def under(w, view, neck_w):
+    """What's under the wearer's hair, from each UNDER woman in turn (see under_from)."""
+    out = np.zeros((280, 256, 4), np.uint8)
+    for b in UNDER[w]:
+        layer = under_from(b, w, view, neck_w)
+        gap = (out[:, :, 3] == 0) & (layer[:, :, 3] > 0)
+        out[gap] = layer[gap]
+    return out
+
+
+def under_from(b, w, view, neck_w):
+    """What's under the wearer's hair: the UNDER woman's neck, collar and shoulders, moved onto
+    the wearer (faces matched) and recoloured to the wearer's own skin, shirt and tee, shading
+    and outlines kept. Her hair isn't anything's underneath, so it's left out."""
+    bi, bm = composite(b, view)
+    wi, wm = composite(w, view)
+    neck_b = json.load(open(CH / b / view / "parts.json"))["joints"]["neck"][1]
+    dx, dy = np.round(face_centre(wi, wm, neck_w) - face_centre(bi, bm, neck_b)).astype(int)
+    looks = {}
+    for name in ("skin", "shirt", "tee"):
+        px = wi[wm == IDS[name]][:, :3]
+        if len(px):
+            looks[name] = hex_of(np.median(px, axis=0))
+    refs = reference_values([(bi, bm)])
+    bm2 = bm.copy()
+    if "tee" not in looks:  # no tee of her own (a tee is her only top): the tee becomes her shirt
+        bm2[bm == IDS["tee"]] = IDS["shirt"]
+        refs["shirt"] = reference_values([(bi, bm2)])["shirt"]
+    out = recolour(bi, bm2, looks, refs)
+    out[bm == IDS["hair"]] = 0
+    return shift(out, dx, dy)
+
+
 def swap(w, d, view):
     pw, pd = profile(CH / w / view), profile(CH / d / view)
     neck_w = json.load(open(CH / w / view / "parts.json"))["joints"]["neck"][1]
@@ -129,6 +196,7 @@ def swap(w, d, view):
     dh = hd.copy()
     dh[~hair_of(hd, mhd)] = 0
     dh = shift(dh, dx, dy)
+    drop_specks(dh)  # stray dots of the donor's outline, away from her hair
     # the wearer's own hair, hidden; what it covered and the new hair doesn't, painted back
     own = hair_of(hw, mhw)
     hide = np.zeros_like(hw)
@@ -137,10 +205,29 @@ def swap(w, d, view):
     yy = np.mgrid[: hw.shape[0], : hw.shape[1]][0]
     fys = np.nonzero(face & (yy < neck_w - 6))[0]
     # (a little way out from the face too: long hair hides the neck and ears, which come back)
-    over_face = own & binary_dilation(face_of(mhw), iterations=7) & (yy >= fys.min() - 2) & ~(dh[:, :, 3] > 0)
-    fill = paint_from(hw, face, over_face)
+    bare = own & ~(dh[:, :, 3] > 0)  # where her hair was and the new hair isn't
+    ub = under(w, view, neck_w)
+    fill = np.zeros_like(hw)
+    fill[bare] = ub[bare]
+    # over the face itself (a fringe on the forehead): her own skin, carried in
+    over_face = bare & binary_dilation(face_of(mhw), iterations=4) & (yy >= fys.min() - 2) & ~(fill[:, :, 3] > 0)
+    painted = paint_from(hw, face, over_face)
+    fill[over_face] = painted[over_face]
+    # anything still open inside the new head (where the borrowed neck had hair too, and the
+    # new hair doesn't reach) takes its nearest neighbour's colour
+    res = hw.copy()
+    res[own] = 0
+    for layer in (fill, dh):
+        on = layer[:, :, 3] > 0
+        res[on] = layer[on]
+    solid = res[:, :, 3] > 0
+    holes = binary_fill_holes(solid) & ~solid
+    if holes.any():
+        near = paint_from(res, solid, holes)
+        fill[holes] = near[holes]
     Image.fromarray(dh).save(out / "head.png")
     Image.fromarray(hide).save(out / "head.hide.png")
+    drop_specks(fill)
     if fill[:, :, 3].any():
         Image.fromarray(fill).save(out / "head.fill.png")
     # the torso: a braid lying on it goes (painted over with the shirt around it), and the
@@ -149,9 +236,11 @@ def swap(w, d, view):
     if own_t.any():
         hide_t = np.zeros_like(tw)
         hide_t[own_t, 3] = 255
-        rest = (mtw == IDS["shirt"]) & ~own_t  # cloth only: copying an outline makes stripes
         Image.fromarray(hide_t).save(out / "torso.hide.png")
-        Image.fromarray(paint_across(tw, rest, own_t)).save(out / "torso.fill.png")
+        fill_t = np.zeros_like(tw)
+        fill_t[own_t] = ub[own_t]
+        drop_specks(fill_t)
+        Image.fromarray(fill_t).save(out / "torso.fill.png")
     dt = td.copy()
     dt[~hair_of(td, mtd)] = 0
     if dt[:, :, 3].any():
