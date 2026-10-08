@@ -113,9 +113,14 @@ def pose(ch: Character, view: str, f: dict) -> dict:
     breath = f.get("breath", 0.0)
     P = {"pelvis": J["pelvis"] + off, "neck": J["neck"] + off + [0, -breath]}
     # the arm rides on the torso: each joint rises with the chest in proportion to its height
-    for k in ("shoulder.free", "elbow.free"):
+    for k in ("shoulder.free", "elbow.free", "shoulder.mug", "elbow.mug"):
+        if k not in J:
+            continue
         t = (J["pelvis"][1] - J[k][1]) / max(1e-6, J["pelvis"][1] - J["neck"][1])
         P[k] = J[k] + off + [0, -breath * t]
+    # a sip (0 to 1): the mug arm's elbow lifts toward where the character says it goes to drink
+    if "elbow.mug" in J and "elbow.mug.sip" in J:
+        P["elbow.mug"] = P["elbow.mug"] + f.get("sip", 0.0) * (J["elbow.mug.sip"] - J["elbow.mug"])
     for side in ("near", "far"):
         H, K, A = J[f"hip.{side}"], J[f"knee.{side}"], J[f"ankle.{side}"]
         hip = a.get(f"hip.{side}", 0.0)

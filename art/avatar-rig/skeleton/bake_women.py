@@ -9,10 +9,11 @@ hair she's wearing, so the changing room can group them.
 
 The actions:
   walk          the walk (animations.walk)
-  idle          standing, breathing
+  idle          standing, a sip of coffee (timed like the first character's)
   sit-down      the thighs swing forward to the seat, the body lowering so the feet stay put
   seated-idle   seated, breathing
-  coffee-sip    seated, a deeper breath (her mug arm is part of the torso, so it can't lift yet)
+  coffee-sip    seated, a sip: the elbow lifts and the forearm turns the mug up to her mouth
+                (from behind, the hand goes up out of sight behind her head)
   stand-up      sit-down backwards
 """
 import json
@@ -45,15 +46,33 @@ def ease(t):
     return 0.5 - 0.5 * math.cos(math.pi * t)
 
 
+def sip_turn(ch):
+    """How far the forearm turns at the top of a sip: from the mug at rest to the mouth, seen
+    from the lifted elbow; from behind, a fixed turn up and in."""
+    J = ch.joints
+    if "mouth" not in J:
+        return -0.5
+    ang = lambda v: math.atan2(v[1], v[0])  # noqa: E731
+    return ang(J["mouth"] - J["elbow.mug.sip"]) - ang(J["hand.mug"] - J["elbow.mug"])
+
+
+def sipping(frame, t, turn):
+    f = dict(frame)
+    f["sip"] = t
+    f["turns"] = {**frame.get("turns", {}), "forearm.mug": t * turn}
+    return f
+
+
 def actions(ch, view):
     sit = [seat(ch, view, SEAT_ANGLE * ease(i / 7)) for i in range(8)]
+    turn = sip_turn(ch)
     return {
         "walk": walk(view),
-        "idle": [{"breath": b} for b in (0, 0, 1, 2, 2, 2, 1, 0)],
+        "idle": [sipping({}, t, turn) for t in (0, 0.3, 0.6, 0.9, 1, 0.7, 0.3, 0)],
         "sit-down": sit,
         "stand-up": sit[::-1],
         "seated-idle": [seat(ch, view, SEAT_ANGLE, b) for b in (0, 0, 1, 1, 1, 1, 0, 0)],
-        "coffee-sip": [seat(ch, view, SEAT_ANGLE, b) for b in (0, 1, 2, 3, 3, 2, 1, 0)],
+        "coffee-sip": [sipping(seat(ch, view, SEAT_ANGLE), t, turn) for t in (0, 0.4, 0.8, 1, 1, 0.8, 0.4, 0)],
     }
 
 

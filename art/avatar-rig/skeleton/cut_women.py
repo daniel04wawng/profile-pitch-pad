@@ -20,9 +20,11 @@ import sys
 
 import numpy as np
 from PIL import Image
-from scipy.ndimage import binary_dilation, distance_transform_edt, label
+from scipy.ndimage import binary_dilation, binary_erosion, binary_fill_holes, distance_transform_edt, label
 
 from cut_green import fill_under, keep_under, legs_split, poly
+from hair_swap import paint_across
+from materials import IDS, palette_map
 
 HERE = pathlib.Path(__file__).parent
 SRC = HERE / "characters" / "women-src"
@@ -155,13 +157,48 @@ SPECS["sage-bob"]["front"]["zones"]["hair"] = [[94, 66, 124, 92]]  # the bob's e
 SPECS["sage-bob"]["back"]["zones"]["hair"] = [[86, 72, 146, 96]]
 SPECS["plum-braid"]["back"]["zones"]["hair"] = [[96, 50, 124, 148]]
 
-FRONT_ORDER = ["torso", "head", "upper-arm.free", "forearm.free", "thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near"]
-BACK_ORDER = ["thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near", "torso", "head", "upper-arm.free", "forearm.free"]
+# The mug arm, traced along the art: from the front, the upper arm (shoulder to the cuff) and the
+# forearm with its hand and the mug; from behind only the hand and mug show. Joints: the
+# shoulder and elbow, the mug's centre, where the elbow lifts to for a sip, and the mouth the mug
+# goes to. (From behind, the sip turns the hand up out of sight behind her head.)
+MUG = {
+    "sage-bob": {
+        "front": {"upper": [(97, 75), (108, 77), (114, 88), (114, 116), (110, 126), (100, 126), (92, 118), (88, 100), (90, 84)],
+                  "fore": [(100, 121), (110, 112), (116, 101), (124, 97), (134, 92), (153, 92), (154, 121), (138, 122), (124, 121), (112, 128), (102, 130)],
+                  "shoulder": [104, 80], "elbow": [104, 122], "mug": [144, 107], "mouth": [138, 66]},
+        "back": {"fore": [(147, 95), (164, 95), (164, 122), (147, 122)], "elbow": [149, 124]},
+    },
+    "blue-pixie": {
+        "front": {"upper": [(96, 77), (108, 78), (113, 90), (113, 116), (110, 125), (100, 125), (92, 117), (88, 100), (90, 84)],
+                  "fore": [(100, 120), (110, 113), (114, 104), (122, 101), (129, 96), (149, 96), (150, 125), (134, 126), (122, 124), (112, 128), (102, 129)],
+                  "shoulder": [103, 80], "elbow": [103, 122], "mug": [139, 111], "mouth": [139, 70]},
+        "back": {"fore": [(146, 97), (163, 97), (163, 122), (146, 122)], "elbow": [148, 124]},
+    },
+    "terracotta-curls": {
+        "front": {"upper": [(96, 82), (106, 83), (111, 95), (111, 118), (107, 124), (98, 124), (92, 116), (90, 100), (92, 88)],
+                  "fore": [(98, 118), (110, 112), (116, 106), (125, 104), (131, 98), (151, 98), (152, 127), (134, 128), (122, 126), (110, 128), (100, 128)],
+                  "shoulder": [102, 84], "elbow": [100, 120], "mug": [141, 113], "mouth": [136, 74]},
+        "back": {"fore": [(146, 98), (164, 98), (164, 124), (146, 124)], "elbow": [148, 128]},
+    },
+    "plum-braid": {
+        "front": {"upper": [(97, 76), (108, 78), (114, 90), (114, 118), (110, 127), (100, 127), (93, 119), (89, 100), (91, 84)],
+                  "fore": [(100, 121), (110, 113), (116, 104), (124, 101), (133, 97), (153, 97), (154, 128), (136, 129), (124, 126), (112, 130), (102, 131)],
+                  "shoulder": [104, 80], "elbow": [104, 124], "mug": [145, 113], "mouth": [140, 70]},
+        "back": {"fore": [(147, 99), (165, 99), (165, 126), (147, 126)], "elbow": [148, 128]},
+    },
+}
+SIP_LIFT = (10, -18)
+SIP_LIFT_BACK = (-8, -28)  # behind: the hand goes up and in, out of sight behind her shoulder and head  # how far the elbow comes up and in for a sip (front)
+
+FRONT_ORDER = ["torso", "head", "upper-arm.free", "forearm.free", "upper-arm.mug", "forearm.mug", "thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near"]
+BACK_ORDER = ["forearm.mug", "thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near", "torso", "head", "upper-arm.free", "forearm.free"]
 KINDS = {
     "torso": {"kind": "segment", "from": "pelvis", "to": "neck"},
     "head": {"kind": "follow", "at": "neck"},
     "upper-arm.free": {"kind": "segment", "from": "shoulder.free", "to": "elbow.free"},
     "forearm.free": {"kind": "rigid", "at": "elbow.free"},
+    "upper-arm.mug": {"kind": "segment", "from": "shoulder.mug", "to": "elbow.mug"},
+    "forearm.mug": {"kind": "rigid", "at": "elbow.mug"},
     **{f"thigh.{s}": {"kind": "segment", "from": f"hip.{s}", "to": f"knee.{s}"} for s in ("near", "far")},
     **{f"shin.{s}": {"kind": "segment", "from": f"knee.{s}", "to": f"ankle.{s}"} for s in ("near", "far")},
     **{f"foot.{s}": {"kind": "rigid", "at": f"ankle.{s}"} for s in ("near", "far")},
@@ -283,6 +320,25 @@ def cut(cid: str, view: str):
     hole = arm_all
     body[hole] = 0
     fill_under(body, hole)
+    # the mug arm: out of the torso; what it covered inside her (the tee and shirt behind the
+    # forearm) is filled with the cloth beside it, row by row
+    mg = MUG[cid][view]
+    pal = palette(a, s["materials"])
+    hair_here = palette_map("torso", a, pal, s["fixed"], s.get("zones", {})) == IDS["hair"]  # a braid stays put
+    taken = solid & ~arm_all & ~legs["near"] & ~legs["far"] & ~hair_here
+    mug_fore = poly(size, mg["fore"]) & taken
+    mug_upper = (poly(size, mg["upper"]) & taken & ~mug_fore) if "upper" in mg else np.zeros_like(solid)
+    mug_all = mug_fore | mug_upper
+    was = body[:, :, 3] > 0
+    body[mug_all] = 0
+    # behind the forearm is all her; behind the upper arm, all but its outer edge (with the arm
+    # up, her side is a little slimmer than the arm made it)
+    behind = (mug_fore | (mug_upper & binary_erosion(was, iterations=5))) if "upper" in mg else np.zeros_like(was)  # behind: the hand was beside her, nothing under it
+    cloth = (body[:, :, 3] > 0) & (body[:, :, :3].max(2) >= 60)
+    patch = paint_across(body, cloth, behind)
+    on = patch[:, :, 3] > 0
+    body[on] = patch[on]
+    fill_under(body, behind & ~on, reach=12)
     keep_under(body, a, (legs["near"] | legs["far"]) & (yy < s["torsoOverlapY"] + 6))
     # below the hem nothing is the torso's: strays (a shoe's top edge, an outline in the crotch)
     # go to the nearest leg or shoe, or they'd stay behind as the legs move
@@ -311,6 +367,7 @@ def cut(cid: str, view: str):
     tm = bsolid & ~hm
 
     parts = {"head": img(hm), "torso": body.copy(), "upper-arm.free": img(sleeve_m), "forearm.free": img(forearm_m),
+             "forearm.mug": img(mug_fore), **({"upper-arm.mug": img(mug_upper)} if "upper" in mg else {}),
              "foot.near": img(feet["near"]), "foot.far": img(feet["far"])}
     parts["torso"][~tm] = 0
     for side in ("near", "far"):
@@ -318,8 +375,14 @@ def cut(cid: str, view: str):
         parts[f"thigh.{side}"], parts[f"shin.{side}"] = t, sh
 
     joints = {k: s[k] for k in ("hip.near", "knee.near", "ankle.near", "hip.far", "knee.far", "ankle.far", "shoulder.free", "elbow.free", "neck")}
+    lift = SIP_LIFT if "upper" in mg else SIP_LIFT_BACK
+    joints["elbow.mug.sip"] = [mg["elbow"][0] + lift[0], mg["elbow"][1] + lift[1]]
+    if "upper" in mg:
+        joints["shoulder.mug"] = mg["shoulder"]
+        joints["hand.mug"], joints["mouth"] = mg["mug"], mg["mouth"]
+    joints["elbow.mug"] = mg["elbow"]
     joints["pelvis"] = [(s["hip.near"][0] + s["hip.far"][0]) / 2, (s["hip.near"][1] + s["hip.far"][1]) / 2]
-    order = FRONT_ORDER if view == "front" else BACK_ORDER
+    order = [p for p in (FRONT_ORDER if view == "front" else BACK_ORDER) if p in parts]
     d = CH / cid / view
     d.mkdir(parents=True, exist_ok=True)
     for name, arr in parts.items():

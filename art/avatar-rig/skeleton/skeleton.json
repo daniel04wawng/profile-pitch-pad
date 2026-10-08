@@ -55,6 +55,12 @@
     },
     "elbow.free": {
       "parent": "shoulder.free"
+    },
+    "shoulder.mug": {
+      "parent": "neck"
+    },
+    "elbow.mug": {
+      "parent": "shoulder.mug"
     }
   },
   "legs": {

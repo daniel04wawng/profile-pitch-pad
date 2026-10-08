@@ -40,6 +40,26 @@
    130,
    80
   ],
+  "elbow.mug.sip": [
+   114,
+   104
+  ],
+  "shoulder.mug": [
+   104,
+   80
+  ],
+  "hand.mug": [
+   144,
+   107
+  ],
+  "mouth": [
+   138,
+   66
+  ],
+  "elbow.mug": [
+   104,
+   122
+  ],
   "pelvis": [
    130.5,
    149.0
@@ -2879,6 +2899,17 @@
    "part": "forearm.free",
    "kind": "rigid",
    "at": "elbow.free"
+  },
+  {
+   "part": "upper-arm.mug",
+   "kind": "segment",
+   "from": "shoulder.mug",
+   "to": "elbow.mug"
+  },
+  {
+   "part": "forearm.mug",
+   "kind": "rigid",
+   "at": "elbow.mug"
   },
   {
    "part": "thigh.far",

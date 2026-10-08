@@ -40,6 +40,14 @@
    130,
    78
   ],
+  "elbow.mug.sip": [
+   140,
+   100
+  ],
+  "elbow.mug": [
+   148,
+   128
+  ],
   "pelvis": [
    123.0,
    160.0
@@ -2086,6 +2094,11 @@
   ]
  },
  "parts": [
+  {
+   "part": "forearm.mug",
+   "kind": "rigid",
+   "at": "elbow.mug"
+  },
   {
    "part": "thigh.far",
    "kind": "segment",
