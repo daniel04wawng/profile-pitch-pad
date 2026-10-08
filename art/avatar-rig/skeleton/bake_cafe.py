@@ -1,19 +1,20 @@
-"""Bake the women into the café: every action from the skeleton rig, for each woman in her own
-hair and in each of the others' (hair_swap.py), so a hairstyle holds in every pose.
+"""Bake every café avatar from the skeleton rig: the first character (his own hair and the
+styles cut from it, and the navy overshirt) and the four women (each in her own hair and in each
+of the others', hair_swap.py), so a hairstyle holds in every pose.
 
-    python3 art/avatar-rig/skeleton/bake_women.py
+    python3 art/avatar-rig/skeleton/bake_cafe.py
 
-Each avatar is public/cafe/avatars/<id>/ (12 sheets + manifest.json, the format the café
-plays, timed like the first character's), listed in the catalog with the woman it is and whose
-hair she's wearing, so the changing room can group them.
+Each avatar is public/cafe/avatars/<id>/ (12 sheets + manifest.json, the format the café plays),
+listed in the catalog with the person it is and whose hair they're wearing, so the changing room
+can group them.
 
 The actions:
   walk          the walk (animations.walk)
-  idle          standing, a sip of coffee (timed like the first character's)
+  idle          standing, a sip of coffee
   sit-down      the thighs swing forward to the seat, the body lowering so the feet stay put
   seated-idle   seated, breathing
-  coffee-sip    seated, a sip: the elbow lifts and the forearm turns the mug up to her mouth
-                (from behind, the hand goes up out of sight behind her head)
+  coffee-sip    seated, a sip: the elbow lifts and the forearm turns the mug up to the mouth
+                (from behind, the hand goes up out of sight behind the head)
   stand-up      sit-down backwards
 """
 import json
@@ -84,15 +85,27 @@ SHEET = {  # action, view -> the café's sheet name (the first character's manif
 }
 
 
+TEMPLATE = json.load(open(SITE / "green" / "manifest.json"))  # read once: green itself is rebaked below
+
+
 def bake(w, d):
     aid = w if d == w else f"{w}-{d}"
+    layers = () if d == w else (f"hair-{d}",)
+    bake_avatar(w, aid, layers)
+    return {"id": aid, "label": f"{WOMEN[w]}" if d == w else f"{WOMEN[w]}, {HAIR[d]}", "manifest": f"{aid}/manifest.json", "person": w, "hair": HAIR[d]}
+
+
+def bake_avatar(character, aid, layers=(), recolor=None):
+    """One avatar: every sheet from the rig, for `character` wearing `layers`, each part passed
+    through `recolor` if given."""
     out = SITE / aid
     out.mkdir(parents=True, exist_ok=True)
-    manifest = json.load(open(SITE / "green" / "manifest.json"))
+    manifest = json.loads(json.dumps(TEMPLATE))
     manifest["character"] = aid
-    layers = () if d == w else (f"hair-{d}",)
     for view in ("front", "back"):
-        ch = Character(HERE / "characters" / w / view, layers=layers)
+        ch = Character(HERE / "characters" / character / view, layers=layers)
+        if recolor:
+            ch.images = {n: recolor(a) for n, a in ch.images.items()}
         for action, frames in actions(ch, view).items():
             name = SHEET[(action, view)]
             sheet = Image.new("RGBA", (GAME[0] * len(frames), GAME[1]))
@@ -107,15 +120,32 @@ def bake(w, d):
         for a in ("sit-down", "stand-up", "seated-idle", "coffee-sip"):
             manifest["attachments"][SHEET[(a, view)]] = {"chairSeat": at}
     json.dump(manifest, open(out / "manifest.json", "w"), indent=2)
-    return {"id": aid, "label": f"{WOMEN[w]}" if d == w else f"{WOMEN[w]}, {HAIR[d]}", "manifest": f"{aid}/manifest.json", "person": w, "hair": HAIR[d]}
+
+
+# the first character: his own hair and the styles cut from it (hairstyles.py), and the navy
+# overshirt (bake.py's recolour)
+GREEN_HAIR = {"natural": (), "tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",), "bun": ("hair-bun",)}
+
+
+def bake_green():
+    from bake import recolor
+
+    entries = []
+    for hair, layers in GREEN_HAIR.items():
+        aid = "green" if hair == "natural" else f"green-{hair}"
+        bake_avatar("green", aid, layers)
+        entries.append({"id": aid, "label": "Green overshirt" if hair == "natural" else f"Green, {hair}", "manifest": f"{aid}/manifest.json", "person": "green", "hair": hair})
+    bake_avatar("green", "green-navy", (), lambda a: recolor(a, "#3c5878"))
+    entries.append({"id": "green-navy", "label": "Navy overshirt", "manifest": "green-navy/manifest.json", "person": "green-navy"})
+    return entries
 
 
 def main():
-    entries = [bake(w, d) for w in WOMEN for d in [w] + [x for x in WOMEN if x != w]]
+    entries = bake_green() + [bake(w, d) for w in WOMEN for d in [w] + [x for x in WOMEN if x != w]]
     cat_path = SITE / "catalog.json"
     cat = json.load(open(cat_path))
     ids = {e["id"] for e in entries}
-    cat["avatars"] = [a for a in cat["avatars"] if a["id"] not in ids] + entries
+    cat["avatars"] = entries + [a for a in cat["avatars"] if a["id"] not in ids]
     json.dump(cat, open(cat_path, "w"), indent=2)
     print("baked", len(entries), "avatars")
 

@@ -17,7 +17,7 @@ import pathlib
 
 import numpy as np
 from PIL import Image, ImageDraw
-from scipy.ndimage import binary_dilation, distance_transform_edt, label
+from scipy.ndimage import binary_dilation, binary_erosion, distance_transform_edt, label
 
 HERE = pathlib.Path(__file__).parent
 RIG = HERE.parent / "authoring"
@@ -83,6 +83,47 @@ def split_head(body: np.ndarray, neck_y: float):
 # tell a sleeve from the shirt it's sewn to, or a seam from a fold.
 SLEEVE_FRONT = [(150, 78), (153, 79), (156, 84), (158, 90), (160, 98), (162, 106), (164, 113), (162, 119), (152, 119), (150, 110), (150, 90)]
 SLEEVE_BACK = [(107, 75), (112, 77), (110, 86), (111, 93), (113, 101), (116, 108), (118, 116), (112, 120), (100, 120), (99, 110), (100, 95), (102, 82)]
+
+
+# His mug arm, traced along the art (as for the women, cut_women.MUG): from the front the upper
+# arm (sleeve, shoulder to cuff) and the forearm with hand and mug; from behind the hand and mug.
+MUG = {
+    "front": {"upper": [(98, 76), (110, 74), (116, 86), (117, 108), (113, 124), (104, 126), (96, 118), (92, 100), (94, 86)],
+              "fore": [(104, 118), (112, 112), (118, 104), (124, 98), (132, 94), (138, 88), (152, 88), (153, 111), (140, 112), (128, 114), (118, 122), (110, 128), (104, 127)],
+              "shoulder": [104, 80], "elbow": [106, 120], "mug": [145, 100], "mouth": [135, 66]},
+    "back": {"fore": [(161, 80), (172, 80), (174, 95), (173, 106), (166, 108), (163, 100), (161, 90)], "elbow": [162, 112]},
+}
+SIP_LIFT = {"front": (10, -18), "back": (-8, -28)}
+
+
+def cut_mug(a: np.ndarray, body: np.ndarray, taken: np.ndarray, mg: dict):
+    """Take the mug arm out of `body` (in place): the forearm (with hand and mug) and, from the
+    front, the upper arm; the cloth behind the forearm and inside the upper arm is filled from
+    the cloth beside it. Returns (forearm, upper arm) masks."""
+    from hair_swap import paint_across  # (hair_swap imports this module)
+
+    size = (a.shape[1], a.shape[0])
+    fore = poly(size, mg["fore"]) & taken
+    upper = (poly(size, mg["upper"]) & taken & ~fore) if "upper" in mg else np.zeros_like(fore)
+    was = body[:, :, 3] > 0
+    body[fore | upper] = 0
+    behind = (fore | (upper & binary_erosion(was, iterations=5))) if "upper" in mg else np.zeros_like(fore)
+    cloth = (body[:, :, 3] > 0) & (body[:, :, :3].max(2) >= 60)
+    patch = paint_across(body, cloth, behind)
+    on = patch[:, :, 3] > 0
+    body[on] = patch[on]
+    fill_under(body, behind & ~on, reach=12)
+    if "upper" not in mg:
+        fill_under(body, fore)
+    return fore, upper
+
+
+def mug_joints(mg: dict, view: str) -> dict:
+    lift = SIP_LIFT[view]
+    j = {"elbow.mug": mg["elbow"], "elbow.mug.sip": [mg["elbow"][0] + lift[0], mg["elbow"][1] + lift[1]]}
+    if "upper" in mg:
+        j.update({"shoulder.mug": mg["shoulder"], "hand.mug": mg["mug"], "mouth": mg["mouth"]})
+    return j
 
 
 def fill_under(body: np.ndarray, hole: np.ndarray, reach: int = 3) -> None:
@@ -158,6 +199,8 @@ def front():
     fill_under(body, hole)
     # under the hem, keep the trouser tops so a swinging leg never shows a gap
     keep_under(body, a, (regions[0] | regions[1]) & (a[:, :, 3] > 0) & (yy >= L["torsoOverlapY"]) & (yy < 175))
+    # the mug arm, out of the torso so it can lift the mug
+    mug_fore, mug_upper = cut_mug(a, body, (a[:, :, 3] > 0) & ~hole & ~(yy >= 140), MUG["front"])
     # the head, cut along the art (hair, face, neck), so the torso can breathe under it
     NECK_Y = 82  # the neck joint: where the head turns and rides
     hm, tm = split_head(body, NECK_Y)
@@ -173,16 +216,22 @@ def front():
         "elbow.free": cfg["freeArm"]["pivot"],  # the forearm swings from here, out of the rolled cuff
         "pelvis": [(near["hip"][0] + far["hip"][0]) / 2, (near["hip"][1] + far["hip"][1]) / 2],
         "neck": [128, NECK_Y],
+        **mug_joints(MUG["front"], "front"),
     }
     tn, sn = legs_split(a, legs[0], near["knee"][1], L["kneeOverlap"], L["nearShinBottom"])
     tf, sf = legs_split(a, legs[1], far["knee"][1], L["kneeOverlap"], L["farShinBottom"])
-    parts = {"head": head, "torso": torso, "upper-arm.free": sleeve, "forearm.free": arm, "thigh.near": tn, "shin.near": sn, "foot.near": feet[0], "thigh.far": tf, "shin.far": sf, "foot.far": feet[1]}
+    mf, mu = a.copy(), a.copy()
+    mf[~mug_fore] = 0
+    mu[~mug_upper] = 0
+    parts = {"head": head, "torso": torso, "upper-arm.free": sleeve, "forearm.free": arm, "upper-arm.mug": mu, "forearm.mug": mf, "thigh.near": tn, "shin.near": sn, "foot.near": feet[0], "thigh.far": tf, "shin.far": sf, "foot.far": feet[1]}
     spec = [  # back to front: the body and its free arm, then the far leg, then the near leg
         # (the legs are drawn over the shirt's hem, as the approved frames have them)
         {"part": "torso", "kind": "segment", "from": "pelvis", "to": "neck"},
         {"part": "head", "kind": "follow", "at": "neck"},
         {"part": "upper-arm.free", "kind": "segment", "from": "shoulder.free", "to": "elbow.free"},
         {"part": "forearm.free", "kind": "rigid", "at": "elbow.free"},
+        {"part": "upper-arm.mug", "kind": "segment", "from": "shoulder.mug", "to": "elbow.mug"},
+        {"part": "forearm.mug", "kind": "rigid", "at": "elbow.mug"},
         {"part": "thigh.far", "kind": "segment", "from": "hip.far", "to": "knee.far"},
         {"part": "shin.far", "kind": "segment", "from": "knee.far", "to": "ankle.far"},
         {"part": "foot.far", "kind": "rigid", "at": "ankle.far"},
@@ -233,6 +282,7 @@ def back():
     body[hole] = 0
     fill_under(body, hole)
     keep_under(body, a, (regions[0] | regions[1] | (yy >= 155)) & (a[:, :, 3] > 0) & (yy < 175) & ~armmask)
+    mug_fore, _ = cut_mug(a, body, (a[:, :, 3] > 0) & ~hole, MUG["back"])
     NECK_Y = 80
     hm, tm = split_head(body, NECK_Y)
     head = body.copy()
@@ -247,11 +297,15 @@ def back():
         "elbow.free": cfg["freeArm"]["pivot"],
         "pelvis": [(near["hip"][0] + far["hip"][0]) / 2, (near["hip"][1] + far["hip"][1]) / 2],
         "neck": [138, NECK_Y],
+        **mug_joints(MUG["back"], "back"),
     }
     tn, sn = legs_split(a, legs[0], near["knee"][1], 5)
     tf, sf = legs_split(a, legs[1], far["knee"][1], 5)
-    parts = {"head": head, "torso": torso, "upper-arm.free": sleeve, "forearm.free": arm, "thigh.near": tn, "shin.near": sn, "foot.near": feet[0], "thigh.far": tf, "shin.far": sf, "foot.far": feet[1]}
-    spec = [  # seen from behind: the legs first, then the body over them, the arm on top
+    mf = a.copy()
+    mf[~mug_fore] = 0
+    parts = {"head": head, "torso": torso, "upper-arm.free": sleeve, "forearm.free": arm, "forearm.mug": mf, "thigh.near": tn, "shin.near": sn, "foot.near": feet[0], "thigh.far": tf, "shin.far": sf, "foot.far": feet[1]}
+    spec = [  # seen from behind: the mug hand (it lifts out of sight behind him), the legs, then the body over them, the arm on top
+        {"part": "forearm.mug", "kind": "rigid", "at": "elbow.mug"},
         {"part": "thigh.far", "kind": "segment", "from": "hip.far", "to": "knee.far"},
         {"part": "shin.far", "kind": "segment", "from": "knee.far", "to": "ankle.far"},
         {"part": "foot.far", "kind": "rigid", "at": "ankle.far"},

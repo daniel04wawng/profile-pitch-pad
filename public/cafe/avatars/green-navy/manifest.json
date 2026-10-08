@@ -259,50 +259,50 @@
   "attachments": {
     "coffee-sip": {
       "chairSeat": [
-        23.65,
-        43.85
+        32.69,
+        40.92
       ]
     },
     "seated-idle": {
       "chairSeat": [
-        23.65,
-        43.85
+        32.69,
+        40.92
       ]
     },
     "sit-down": {
       "chairSeat": [
-        23.65,
-        43.85
+        32.69,
+        40.92
       ]
     },
     "stand-up": {
       "chairSeat": [
-        23.65,
-        43.85
+        32.69,
+        40.92
       ]
     },
     "sit-down-back": {
       "chairSeat": [
-        28,
-        51
+        33.38,
+        53.67
       ]
     },
     "stand-up-back": {
       "chairSeat": [
-        28,
-        51
+        33.38,
+        53.67
       ]
     },
     "coffee-sip-back": {
       "chairSeat": [
-        28,
-        51
+        33.38,
+        53.67
       ]
     },
     "seated-idle-back": {
       "chairSeat": [
-        28,
-        51
+        33.38,
+        53.67
       ]
     }
   },

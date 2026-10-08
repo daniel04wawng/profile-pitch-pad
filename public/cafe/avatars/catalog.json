@@ -4,12 +4,43 @@
     {
       "id": "green",
       "label": "Green overshirt",
-      "manifest": "green/manifest.json"
+      "manifest": "green/manifest.json",
+      "person": "green",
+      "hair": "natural"
+    },
+    {
+      "id": "green-tidy",
+      "label": "Green, tidy",
+      "manifest": "green-tidy/manifest.json",
+      "person": "green",
+      "hair": "tidy"
+    },
+    {
+      "id": "green-short",
+      "label": "Green, short",
+      "manifest": "green-short/manifest.json",
+      "person": "green",
+      "hair": "short"
+    },
+    {
+      "id": "green-cropped",
+      "label": "Green, cropped",
+      "manifest": "green-cropped/manifest.json",
+      "person": "green",
+      "hair": "cropped"
+    },
+    {
+      "id": "green-bun",
+      "label": "Green, bun",
+      "manifest": "green-bun/manifest.json",
+      "person": "green",
+      "hair": "bun"
     },
     {
       "id": "green-navy",
       "label": "Navy overshirt",
-      "manifest": "green-navy/manifest.json"
+      "manifest": "green-navy/manifest.json",
+      "person": "green-navy"
     },
     {
       "id": "sage-bob",

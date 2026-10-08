@@ -43,9 +43,22 @@
   "neck": [
    138,
    80
+  ],
+  "elbow.mug": [
+   162,
+   112
+  ],
+  "elbow.mug.sip": [
+   154,
+   84
   ]
  },
  "parts": [
+  {
+   "part": "forearm.mug",
+   "kind": "rigid",
+   "at": "elbow.mug"
+  },
   {
    "part": "thigh.far",
    "kind": "segment",
