@@ -1,6 +1,6 @@
 import { keyOf, MATERIALS, sheetOf, type Colors, type Look, type Material, type People } from "./avatar";
 import { Frame, PixelButton } from "./Screens";
-import { useCatalog, useRig } from "./rig";
+import { useCatalog, useRig, type Dress } from "./rig";
 import type { ScreenDef } from "./screenData";
 
 // The changing room: pick who you are from the café's avatars (rig.ts catalog), with a front
@@ -30,8 +30,8 @@ function Pose({ people, look, pose, scale }: { people: People; look: Look; pose:
 }
 
 // a rigged avatar standing (or doing `action`, frame 0), drawn crisp at `scale`
-function RigPose({ id, action = "idle-front", scale, colors }: { id: string; action?: string; scale: number; colors?: Colors }) {
-  const rig = useRig(id, colors);
+function RigPose({ id, action = "idle-front", scale, dress }: { id: string; action?: string; scale: number; dress?: Dress }) {
+  const rig = useRig(id, dress);
   if (rig === "failed") return <div className="flex h-[70px] w-16 items-center justify-center text-[12px] opacity-60">couldn't load</div>;
   if (!rig) return <div style={{ width: 64 * scale, height: 70 * scale }} />;
   const [w, h] = rig.base.manifest.frameSize;
@@ -57,27 +57,40 @@ const PALETTES: Record<Material, (string | null)[]> = {
 const MATERIAL_LABEL: Record<Material, string> = { skin: "skin", hair: "hair colour", shirt: "top", tee: "tee", trousers: "trousers", shoes: "shoes" };
 const ring = (on: boolean) => ({ boxShadow: on ? "0 0 0 3px #e8b45c, 0 0 0 5px #2b1d1a" : "0 0 0 2px rgba(243,230,201,0.25)" });
 
-export function Wardrobe({ people, look, barista, onChange, onClose }: { people: People | null; look: Look | null; barista: boolean; onChange: (l: Look) => void; onClose: () => void }) {
+const Heading = ({ children }: { children: string }) => <p className="mb-2 mt-4 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">{children}</p>;
+const Choice = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: string }) => (
+  <button onClick={onClick} className="px-3 py-1 font-['Silkscreen'] text-[10px] uppercase tracking-wider" style={ring(on)}>
+    {children}
+  </button>
+);
+
+// The changing room: who you are (a base model: man or woman, jacket on or off), your
+// hairstyle, what you wear, and your colours. All of it is the rig's layers (rig.ts).
+export function Wardrobe({ people, look, onChange, onClose }: { people: People | null; look: Look | null; barista: boolean; onChange: (l: Look) => void; onClose: () => void }) {
   const catalog = useCatalog();
-  // which rigged avatar you are (null: a classic person); unset means the catalog's first
   const rigId = !catalog || !look ? null : (catalog.find((a) => a.id === look.avatar) ?? catalog[0])?.id ?? null;
-  const rig = useRig(rigId); // (its manifest says each material's own colour, for the "as drawn" swatch)
+  const rig = useRig(rigId, look ?? undefined);
   if (!people || !look) return null;
-  // the base models (one tile each, in their own hair), grouped by body; then hairstyles; then colours
   const all = catalog ?? [];
   const me = all.find((a) => a.id === rigId);
-  const models = all.filter((a, i) => all.findIndex((b) => b.person === a.person) === i);
-  const bodies = [...new Set(models.map((a) => a.body ?? ""))];
-  const hairs = me ? all.filter((a) => a.person === me.person && a.hair) : [];
-  // a new model keeps your hairstyle when it can
-  const pickModel = (person: string) => {
-    const same = all.find((a) => a.person === person && a.hair === me?.hair) ?? all.find((a) => a.person === person);
-    if (same) onChange({ ...look, avatar: same.id });
+  const bodies = [...new Set(all.map((a) => a.body ?? a.id))];
+  const variants = all.filter((a) => (a.body ?? a.id) === (me?.body ?? me?.id));
+  const manifest = rig && rig !== "failed" ? (rig.base.manifest as { materials?: { base?: Partial<Record<Material, string>> }; layers?: { hair?: string[]; defaultHair?: string; wear?: string[] } }) : null;
+  const base = manifest?.materials?.base;
+  const hairs = manifest?.layers?.hair ?? [];
+  const hair = look.hair && hairs.includes(look.hair) ? look.hair : manifest?.layers?.defaultHair;
+  const wearable = manifest?.layers?.wear ?? [];
+  const wearing = new Set(look.wear ?? []);
+  const set = (l: Partial<Look>) => onChange({ ...look, ...l });
+  // a body: its jacket-on model, or whichever it has
+  const pickBody = (body: string) => {
+    const m = all.filter((a) => (a.body ?? a.id) === body);
+    const pick = m.find((a) => a.jacket === me?.jacket) ?? m.find((a) => a.jacket !== "off") ?? m[0];
+    if (pick) set({ avatar: pick.id });
   };
-  const base = rig && rig !== "failed" ? (rig.base.manifest as { materials?: { base?: Partial<Record<Material, string>> } }).materials?.base : undefined;
   const shuffle = () => {
     const pick = all[Math.floor(Math.random() * all.length)];
-    if (pick) onChange({ ...look, avatar: pick.id });
+    if (pick) set({ avatar: pick.id, hair: hairs[Math.floor(Math.random() * hairs.length)] });
   };
 
   return (
@@ -86,8 +99,8 @@ export function Wardrobe({ people, look, barista, onChange, onClose }: { people:
         <div className="flex shrink-0 items-end justify-center gap-2 pt-4">
           {rigId ? (
             <>
-              <RigPose id={rigId} scale={3} colors={look.colors} />
-              <RigPose id={rigId} action="idle-back" scale={3} colors={look.colors} />
+              <RigPose id={rigId} scale={3} dress={look} />
+              <RigPose id={rigId} action="idle-back" scale={3} dress={look} />
             </>
           ) : (
             <>
@@ -97,36 +110,69 @@ export function Wardrobe({ people, look, barista, onChange, onClose }: { people:
           )}
         </div>
         <div className="min-w-0 flex-1">
-          {bodies.map((body) => (
-            <div key={body} className="mb-3">
-              <p className="mb-2 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">{body || "who you are"}</p>
-              <div className="flex flex-wrap gap-2">
-                {models
-                  .filter((a) => (a.body ?? "") === body)
-                  .map((a) => (
-                    <button key={a.id} onClick={() => pickModel(a.person ?? a.id)} className="p-1" style={ring(me?.person === a.person)} aria-label={`${a.body ?? "model"} ${models.indexOf(a) + 1}`}>
-                      <RigPose id={a.id} scale={1} />
-                    </button>
-                  ))}
-              </div>
-            </div>
-          ))}
-          {hairs.length > 1 && (
+          <p className="mb-2 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">who you are</p>
+          <div className="flex flex-wrap gap-2">
+            {bodies.map((b) => {
+              const tile = all.find((a) => (a.body ?? a.id) === b && a.jacket !== "off") ?? all.find((a) => (a.body ?? a.id) === b)!;
+              return (
+                <button key={b} onClick={() => pickBody(b)} className="flex flex-col items-center gap-1 p-1" style={ring((me?.body ?? me?.id) === b)}>
+                  <RigPose id={tile.id} scale={1} />
+                  <span className="font-['Silkscreen'] text-[9px] uppercase tracking-wider opacity-80">{b}</span>
+                </button>
+              );
+            })}
+          </div>
+          {variants.length > 1 && (
             <>
-              <p className="mb-2 mt-4 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">hair</p>
+              <Heading>jacket</Heading>
               <div className="flex flex-wrap gap-2">
-                {hairs.map((a) => (
-                  <button key={a.id} onClick={() => onChange({ ...look, avatar: a.id })} className="px-3 py-1 font-['Silkscreen'] text-[10px] uppercase tracking-wider" style={ring(rigId === a.id)}>
-                    {a.hair}
-                  </button>
+                {variants.map((a) => (
+                  <Choice key={a.id} on={a.id === rigId} onClick={() => set({ avatar: a.id })}>
+                    {a.jacket ?? a.label}
+                  </Choice>
                 ))}
               </div>
             </>
           )}
-          {(catalog?.length ?? 0) < 2 && <p className="mt-2 text-[17px] opacity-60">More people coming soon.</p>}
+          {hairs.length > 1 && (
+            <>
+              <Heading>hair</Heading>
+              <div className="flex flex-wrap gap-2">
+                {hairs.map((h) => (
+                  <Choice key={h} on={h === hair} onClick={() => set({ hair: h })}>
+                    {h}
+                  </Choice>
+                ))}
+              </div>
+            </>
+          )}
+          {wearable.length > 0 && (
+            <>
+              <Heading>wear</Heading>
+              <div className="flex flex-wrap gap-2">
+                <Choice on={!wearing.size} onClick={() => set({ wear: undefined })}>
+                  nothing
+                </Choice>
+                {wearable.map((w) => (
+                  <Choice
+                    key={w}
+                    on={wearing.has(w)}
+                    onClick={() => {
+                      const next = new Set(wearing);
+                      if (next.has(w)) next.delete(w);
+                      else next.add(w);
+                      set({ wear: next.size ? [...next].sort() : undefined });
+                    }}
+                  >
+                    {w}
+                  </Choice>
+                ))}
+              </div>
+            </>
+          )}
           {rigId && (
             <>
-              <p className="mb-2 mt-4 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">colours</p>
+              <Heading>colours</Heading>
               <div className="flex flex-col gap-1.5">
                 {MATERIALS.filter((m) => !base || base[m]).map((m) => (
                   <div key={m} className="flex items-center gap-1.5">
@@ -142,7 +188,7 @@ export function Wardrobe({ people, look, barista, onChange, onClose }: { people:
                             const next: Colors = { ...look.colors };
                             if (c) next[m] = c;
                             else delete next[m];
-                            onChange({ ...look, colors: Object.keys(next).length ? next : undefined });
+                            set({ colors: Object.keys(next).length ? next : undefined });
                           }}
                           className="h-5 w-5 shrink-0"
                           style={{ ...ring(on), background: c ?? base?.[m] ?? "#888" }}

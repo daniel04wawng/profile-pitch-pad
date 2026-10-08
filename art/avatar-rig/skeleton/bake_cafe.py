@@ -1,14 +1,12 @@
-"""Bake every café avatar from the skeleton rig: the first character (his own hair and the
-styles cut from it) and the four women (each in her own hair and in each
-of the others', hair_swap.py), so a hairstyle holds in every pose.
+"""Bake the café's avatars from the skeleton rig, in layers: each base model (the man; the woman,
+jacket on and off) once with no hair, then each hairstyle and each thing to wear on its own, so
+the café stacks whichever someone picks and recolours them (rig.ts). One new hairstyle is one
+more layer per model, not one more avatar per combination.
 
-    python3 art/avatar-rig/skeleton/bake_cafe.py
+    python3 art/avatar-rig/skeleton/bake_cafe.py [model ...]
 
-Each avatar is public/cafe/avatars/<id>/ (12 sheets + manifest.json, the format the café plays,
-and beside each sheet its material map, <sheet>.mat.png: red = which material each pixel is, so
-the café recolours skin, hair and clothes in the browser, keeping the shading),
-listed in the catalog with the person it is and whose hair they're wearing, so the changing room
-can group them.
+Each model is public/cafe/avatars/<model>/ (see bake_model), listed in the catalog with its body
+(man, woman) and jacket (on, off).
 
 The actions:
   walk          the walk (animations.walk)
@@ -36,12 +34,6 @@ HERE = pathlib.Path(__file__).parent
 SITE = HERE.parents[2] / "public" / "cafe" / "avatars"
 GAME = (64, 70)
 SEAT_ANGLE = 1.35  # radians the thighs swing forward to sit
-# the base models (the changing room groups them by body), and the hairstyle each one's own hair
-# is: anyone wears anyone's (hair_swap.py)
-MODELS = {"green": "man", "sage-bob": "woman", "blue-pixie": "woman", "terracotta-curls": "woman", "plum-braid": "woman"}
-HAIR = {"green": "wavy", "sage-bob": "bob", "blue-pixie": "pixie", "terracotta-curls": "curls", "plum-braid": "braid"}
-
-
 def seat(ch, view, a, breath=0.0):
     """A frame with the thighs swung forward by `a` and the shins back to hanging, the body
     lowered so the near foot stays on the ground."""
@@ -93,93 +85,158 @@ SHEET = {  # action, view -> the café's sheet name (the first character's manif
 }
 
 
-TEMPLATE = json.load(open(SITE / "green" / "manifest.json"))  # read once: green itself is rebaked below
+TEMPLATE = json.load(open(HERE / "manifest.template.json"))  # the café's clip names, timings, directions
+
+# The base models, and the hairstyles and things to wear each one can have. A hairstyle is
+# layers on the model (someone's hair, hair_swap.py; his own cut shorter, hairstyles.py); ()
+# is the model's own hair.
+MODELS = {
+    "man": {"character": "green", "body": "man", "jacket": "on", "own": "wavy",
+            "hair": {"wavy": (), "bob": ("hair-sage-bob",), "pixie": ("hair-blue-pixie",), "curls": ("hair-terracotta-curls",),
+                     "braid": ("hair-plum-braid",), "tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",), "bun": ("hair-bun",)}},
+    "woman": {"character": "sage-bob", "body": "woman", "jacket": "on", "own": "bob",
+              "hair": {"bob": (), "wavy": ("hair-green",), "pixie": ("hair-blue-pixie",), "curls": ("hair-terracotta-curls",), "braid": ("hair-plum-braid",)}},
+    "woman-tee": {"character": "woman-tee", "body": "woman", "jacket": "off", "own": "bob",
+                  "hair": {"bob": (), "wavy": ("hair-green",), "pixie": ("hair-blue-pixie",), "curls": ("hair-terracotta-curls",), "braid": ("hair-plum-braid",)}},
+}
+WEAR = {"beanie": ("beanie",), "glasses": ("glasses",)}
+BALD = ("hair-none",)
 
 
-def entry(model, aid, hair):
-    return {"id": aid, "label": f"{MODELS[model]}, {hair}", "manifest": f"{aid}/manifest.json", "person": model, "hair": hair, "body": MODELS[model]}
+def game(im):
+    return im.resize(GAME, Image.Resampling.NEAREST)
 
 
-def bake(w, d):
-    aid = w if d == w else f"{w}-{d}"
-    bake_avatar(w, aid, () if d == w else (f"hair-{d}",))
-    return entry(w, aid, HAIR[d])
+def strip(frames):
+    sheet = Image.new("RGBA", (GAME[0] * len(frames), GAME[1]))
+    for i, fr in enumerate(frames):
+        sheet.alpha_composite(fr, (GAME[0] * i, 0))
+    return sheet
 
 
-def bake_avatar(character, aid, layers=(), recolor=None):
-    """One avatar: every sheet from the rig, for `character` wearing `layers`, each part passed
-    through `recolor` if given."""
-    out = SITE / aid
-    out.mkdir(parents=True, exist_ok=True)
+def only_new(img, base):
+    """The pixels of `img` that aren't the same in `base` (a hair layer: the model in that hair,
+    less the model with no hair)."""
+    a, b = np.array(img), np.array(base)
+    keep = (a[:, :, 3] > 0) & ((a != b).any(2))
+    a[~keep] = 0
+    return Image.fromarray(a)
+
+
+def mask_character(ch, layer_dir, view):
+    """A character whose head is just a layer's hide mask, so rendering it gives that mask where
+    the head is in each frame (what a hat hides of the hair under it)."""
+    m = Character.__new__(Character)
+    m.__dict__.update(ch.__dict__)
+    m.overlays = {}
+    m.images = {n: np.zeros_like(a) for n, a in ch.images.items()}
+    hide = layer_dir / view / "head.hide.png"
+    if hide.exists():
+        h = np.array(Image.open(hide).convert("RGBA"))
+        img = np.zeros_like(h)
+        img[h[:, :, 3] > 0] = (255, 255, 255, 255)
+        m.images["head"] = img
+    return m
+
+
+def bake_model(mid, spec):
+    """One base model in layers: public/cafe/avatars/<mid>/
+         <sheet>.png, .mat.png            the body under the hair (no hair), and its materials
+         <sheet>.over.png, .over.mat.png  the parts drawn in front of the hair (arms, legs)
+         hair/<name>/<sheet>.png, .mat.png  each hairstyle, alone
+         wear/<name>/<sheet>.png, .hide.png each thing to wear, and what of the hair it hides
+    The café stacks body, hair (less what a hat hides), wear, over; then recolours."""
+    out = SITE / mid
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
     manifest = json.loads(json.dumps(TEMPLATE))
-    manifest["character"] = aid
-    refs = None
+    manifest["character"] = mid
+    cdir = HERE / "characters" / spec["character"]
+    refs = base = None
     for view in ("front", "back"):
-        ch = Character(HERE / "characters" / character / view, layers=layers)
-        mats = profile(HERE / "characters" / character / view)
-        ids = id_character(ch, view, mats)  # (the material maps, from the art before any recolour)
-        if refs is None:
-            pairs = [(a, material_map(n, a, **mats)) for n, a in ch.images.items()]
+        mats = profile(cdir / view)
+        own = Character(cdir / view)
+        if refs is None:  # her colours, from her as drawn
+            pairs = [(a, material_map(n, a, **mats)) for n, a in own.images.items()]
             refs = reference_values(pairs)
-            base = {}  # each material's own colour in the art (the changing room's "as drawn" swatch)
+            base = {}
             for k, name in MATERIALS.items():
                 px = np.concatenate([a[m == k][:, :3] for a, m in pairs])
                 if len(px) > 20:
                     base[name] = "#%02x%02x%02x" % tuple(int(c) for c in np.median(px, axis=0))
-        if recolor:
-            ch.images = {n: recolor(a) for n, a in ch.images.items()}
-        for action, frames in actions(ch, view).items():
+        bald = Character(cdir / view, layers=BALD)
+        bald_ids = id_character(bald, view, mats)
+        names = [p["part"] for p in bald.parts]
+        under = set(names[: names.index("head") + 1])
+        over = set(names) - under
+        hairs = {h: Character(cdir / view, layers=layers) for h, layers in spec["hair"].items()}
+        hair_ids = {h: id_character(c, view, mats) for h, c in hairs.items()}
+        wears = {w: Character(cdir / view, layers=BALD + layers) for w, layers in WEAR.items() if (cdir / "layers" / layers[0]).is_dir()}
+        masks = {w: mask_character(bald, cdir / "layers" / WEAR[w][0], view) for w in wears}
+        for action, frames in actions(own, view).items():
             name = SHEET[(action, view)]
-            sheet = Image.new("RGBA", (GAME[0] * len(frames), GAME[1]))
-            mat = Image.new("RGBA", (GAME[0] * len(frames), GAME[1]))
-            for i, f in enumerate(frames):
-                sheet.alpha_composite(render(ch, view, f).resize(GAME, Image.Resampling.NEAREST), (GAME[0] * i, 0))
-                mat.alpha_composite(render(ids, view, f).resize(GAME, Image.Resampling.NEAREST), (GAME[0] * i, 0))
-            sheet.save(out / f"{name}.png")
-            mat.save(out / f"{name}.mat.png")
-            manifest["animations"][name]["materialMap"] = f"{name}.mat.png"
-            assert len(manifest["animations"][name]["durationMs"]) == len(frames), name
-        # where the chair's seat goes: just under and behind her hips, seated
-        p = pose(ch, view, seat(ch, view, SEAT_ANGLE))["pelvis"]
+            body, body_m, front, front_m = [], [], [], []
+            hair = {h: ([], []) for h in hairs}
+            wear = {w: ([], []) for w in wears}
+            for f in frames:
+                b = render(bald, view, f, only=under)
+                body.append(game(b))
+                body_m.append(game(render(bald_ids, view, f, only=under)))
+                front.append(game(render(bald, view, f, only=over)))
+                front_m.append(game(render(bald_ids, view, f, only=over)))
+                for h, c in hairs.items():
+                    img = render(c, view, f, only=under)
+                    keep = only_new(img, b)
+                    hm = np.array(render(hair_ids[h], view, f, only=under))
+                    hm[np.array(keep)[:, :, 3] == 0] = 0
+                    hair[h][0].append(game(keep))
+                    hair[h][1].append(game(Image.fromarray(hm)))
+                for w, c in wears.items():
+                    wear[w][0].append(game(only_new(render(c, view, f, only=under), b)))
+                    wear[w][1].append(game(render(masks[w], view, f, only=under)))
+            strip(body).save(out / f"{name}.png")
+            strip(body_m).save(out / f"{name}.mat.png")
+            strip(front).save(out / f"{name}.over.png")
+            strip(front_m).save(out / f"{name}.over.mat.png")
+            for h, (imgs, ms) in hair.items():
+                (out / "hair" / h).mkdir(parents=True, exist_ok=True)
+                strip(imgs).save(out / "hair" / h / f"{name}.png")
+                strip(ms).save(out / "hair" / h / f"{name}.mat.png")
+            for w, (imgs, ms) in wear.items():
+                (out / "wear" / w).mkdir(parents=True, exist_ok=True)
+                strip(imgs).save(out / "wear" / w / f"{name}.png")
+                strip(ms).save(out / "wear" / w / f"{name}.hide.png")
+            clip = manifest["animations"][name]
+            assert len(clip["durationMs"]) == len(frames), name
+            clip.update({"materialMap": f"{name}.mat.png", "over": f"{name}.over.png", "overMap": f"{name}.over.mat.png"})
+        # where the chair's seat goes: just under and behind the hips, seated
+        p = pose(own, view, seat(own, view, SEAT_ANGLE))["pelvis"]
         back = (-3, 6) if view == "front" else (-3, 7)
         at = [round((p[0] + back[0]) / 4, 2), round((p[1] + back[1]) / 4, 2)]
         for a in ("sit-down", "stand-up", "seated-idle", "coffee-sip"):
             manifest["attachments"][SHEET[(a, view)]] = {"chairSeat": at}
-    # what each material is, and its typical brightness in the art (the recolour's anchor)
     manifest["materials"] = {"ids": {v: k for k, v in MATERIALS.items()}, "refs": {k: round(v, 4) for k, v in refs.items() if k in base}, "base": base}
+    manifest["layers"] = {"hair": list(spec["hair"]), "defaultHair": spec["own"], "wear": list(wears), "wearHides": {w: ["hair"] for w in wears}}
     json.dump(manifest, open(out / "manifest.json", "w"), indent=2)
-
-
-# the first character's own hair, cut to other lengths
-GREEN_HAIR = {"tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",), "bun": ("hair-bun",)}
-
-
-def bake_green_cuts():
-    """His own hair cut shorter (hairstyles.py): his alone, they're made from his art."""
-    entries = []
-    for hair, layers in GREEN_HAIR.items():
-        bake_avatar("green", f"green-{hair}", layers)
-        entries.append(entry("green", f"green-{hair}", hair))
-    return entries
+    print("baked", mid, "hair:", ", ".join(spec["hair"]), "| wear:", ", ".join(wears))
+    return {"id": mid, "label": spec["body"] + ("" if spec["jacket"] == "on" else ", jacket off"), "manifest": f"{mid}/manifest.json",
+            "body": spec["body"], "jacket": spec["jacket"]}
 
 
 def main():
-    entries = []
-    for w in MODELS:  # each model in her (his) own hair first: the changing room's tile
-        entries += [bake(w, d) for d in [w] + [x for x in MODELS if x != w]]
-        if w == "green":
-            entries += bake_green_cuts()
+    import sys
+
+    only = sys.argv[1:]
+    entries = [bake_model(m, s) if not only or m in only else None for m, s in MODELS.items()]
     cat_path = SITE / "catalog.json"
-    cat = json.load(open(cat_path))
+    old = {a["id"]: a for a in json.load(open(cat_path))["avatars"]}
+    entries = [e or old[m] for e, m in zip(entries, MODELS)]
     ids = {e["id"] for e in entries}
-    # the café's avatars are exactly these (anything else, like the old navy recolour, goes:
-    # colours are picked in the changing room now)
-    for a in cat["avatars"]:
-        if a["id"] not in ids and (SITE / a["id"]).is_dir():
-            shutil.rmtree(SITE / a["id"])
-    cat["avatars"] = entries
-    json.dump(cat, open(cat_path, "w"), indent=2)
-    print("baked", len(entries), "avatars")
+    for d in SITE.iterdir():  # the café's avatars are exactly these
+        if d.is_dir() and d.name not in ids:
+            shutil.rmtree(d)
+    json.dump({"version": 2, "avatars": entries}, open(cat_path, "w"), indent=2)
 
 
 if __name__ == "__main__":

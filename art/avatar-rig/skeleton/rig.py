@@ -158,9 +158,10 @@ def _screen_angle(v: np.ndarray) -> float:
     return math.atan2(v[1], v[0])
 
 
-def render(ch: Character, view: str, f: dict) -> Image.Image:
+def render(ch: Character, view: str, f: dict, only=None) -> Image.Image:
     """One frame: every part on its bone, back to front (as parts.json orders them, unless the
-    frame moves a part with "depth")."""
+    frame moves a part with "depth"). `only`: just these parts (and their layers), for baking
+    a character in layers (the body under the hair, the hair, the parts in front of it)."""
     P = pose(ch, view, f)
     J = ch.joints
     turns = f.get("turns", {})
@@ -169,6 +170,8 @@ def render(ch: Character, view: str, f: dict) -> Image.Image:
     order = sorted(range(len(ch.parts)), key=lambda i: (depth.get(ch.parts[i]["part"], i), i))
     frame = Image.new("RGBA", ch.size)
     for p in (ch.parts[i] for i in order):
+        if only is not None and p["part"] not in only:
+            continue
         for arr in [ch.images[p["part"]], *ch.overlays.get(p["part"], [])]:  # the part, then its layers
             frame.alpha_composite(Image.fromarray(_place(arr, p, ch, J, P, turns, by_name)))
     return frame

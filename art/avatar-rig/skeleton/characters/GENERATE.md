@@ -98,3 +98,33 @@ Just the tee (no overshirt):
 
 The images will need a little cleanup (stray pixels, a background halo). Claude handles that
 when it cuts them; it checks every part covers the art and that the walk has no gaps.
+
+## Eight directions (the next art to make)
+
+The rig draws four facings, all along the floor's diagonals: three-quarter front (walking
+down-right, and mirrored for down-left) and three-quarter back (up-right, and mirrored for
+up-left). Walking straight across the screen, or straight up or down it, needs its own drawing,
+or the character slides along facing a diagonal. Three more views per base model make eight
+directions (the fourth is a mirror):
+
+| File | Facing | Needed for |
+|---|---|---|
+| `standing-s.png` | straight toward the viewer (south), body square to the camera | walking down the screen |
+| `standing-n.png` | straight away from the viewer (north), back square to the camera | walking up the screen |
+| `standing-e.png` | side profile facing right (east) | walking right (and, mirrored, left) |
+
+Base models (one each, everything else is hair layers and colours): the man (jacket on and
+off) and the woman (Sage, jacket on and off). That's 3 views x 4 = 12 images, plus the man in
+just his tee for the two existing views (2 more).
+
+Prompt (one per view, attach the character's own standing-front image as the reference):
+
+> Same character, identical outfit, hair, proportions, palette and pixel-art style as the
+> attached image, same elevated orthographic camera (35 degrees) and scale. Standing, [facing
+> straight toward the viewer / facing straight away from the viewer / in side profile facing
+> right], right hand holding the cream mug at the chest, left arm relaxed at the side and
+> clearly separate from the body, legs apart enough to see both. Full body, transparent
+> background, no floor, no shadow, crisp pixels, dark outline.
+
+Jacket off: add "without the overshirt: only the plain white tee, short sleeves, arms bare
+from the sleeve down".

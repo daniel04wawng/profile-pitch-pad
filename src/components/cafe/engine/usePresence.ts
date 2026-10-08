@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase as client } from "./supabase";
-import { cleanAvatar, cleanColors, isLook, keyOf, poseActor, roomSize, sitPose, walkPose, type Look, type People } from "./avatar";
+import { cleanAvatar, cleanColors, cleanHair, cleanWear, isLook, keyOf, poseActor, roomSize, sitPose, walkPose, type Look, type People } from "./avatar";
 import { Body, dirOf, facing, isDirection, loadRigKey, rigKey, useCatalog, type Rig } from "./rig";
 import type { Pt, Walk } from "./walk";
 import type { Actor } from "./Stage";
@@ -67,7 +67,7 @@ function cleanWire(v: unknown, w: number, h: number, people: People | null): Wir
   const seat = s && sp ? { ...sp, lift: num(s.lift, 0, 40) ?? 0, back: !!s.back, flip: !!s.flip, z: num(s.z, 0, 2000) ?? 1 } : null;
   const dir = isDirection(o.dir) ? o.dir : dirOf(!!o.back, !!o.flip);
   const since = num(o.since, 0, Date.now() + 60_000) ?? 0;
-  return { at, seat, look: { person: l.person, outfit: l.outfit, avatar: cleanAvatar((l as Look).avatar), colors: cleanColors((l as Look).colors) }, barista: !!o.barista, back: !!o.back, flip: !!o.flip, dir, since };
+  return { at, seat, look: { person: l.person, outfit: l.outfit, avatar: cleanAvatar((l as Look).avatar), hair: cleanHair((l as Look).hair), wear: cleanWear((l as Look).wear), colors: cleanColors((l as Look).colors) }, barista: !!o.barista, back: !!o.back, flip: !!o.flip, dir, since };
 }
 
 // off (solo) in your own café and in the editor: nobody else is there
@@ -325,7 +325,7 @@ export function usePresence(me: Me, size: { w: number; h: number }, on = true) {
   // (keyed by avatar and colours: the same avatar in other colours is another set of sheets)
   const rigIdOf = (o: Other) => {
     const id = !catalog ? null : (catalog.find((a) => a.id === o.look.avatar) ?? catalog[0])?.id ?? null;
-    return id ? rigKey(id, o.look.colors) : null;
+    return id ? rigKey(id, o.look) : null;
   };
   // load the avatars people are using, once each
   const wanted = [...new Set(Object.values(others).map(rigIdOf).filter(Boolean) as string[])].sort().join();

@@ -25,7 +25,10 @@ from materials import IDS, MATERIALS, material_map, profile, recolour, reference
 HERE = pathlib.Path(__file__).parent
 CH = HERE / "characters"
 WOMEN = ("sage-bob", "blue-pixie", "terracotta-curls", "plum-braid")
-PEOPLE = ("green",) + WOMEN  # anyone wears anyone's hair: his messy crop on them, their long hair on him
+PEOPLE = ("green",) + WOMEN  # whose hair there is: his wavy crop, their bob, pixie, curls, braid
+# who wears it: the base models (the man, the woman, the woman with her jacket off, whose head is
+# the woman's own), each with no hair at all ("hair-none", what the café stacks a hair layer on)
+MODELS = {"green": "green", "sage-bob": "sage-bob", "woman-tee": "sage-bob"}  # model -> whose hair is hers
 HAIR, SKIN = IDS["hair"], IDS["skin"]
 
 
@@ -118,7 +121,7 @@ def paint_from(arr, src_mask, hole):
 # whose neck, collar and shoulders show under a wearer's hair once it's gone: a woman with
 # short hair, so they're drawn (the wearer's own hair hid hers)
 # (in order: where the first has hair too, the next one's is used)
-UNDER = {"green": ("blue-pixie", "terracotta-curls"), "sage-bob": ("blue-pixie", "terracotta-curls"), "plum-braid": ("blue-pixie", "terracotta-curls"),
+UNDER = {"green": ("blue-pixie", "terracotta-curls"), "woman-tee": ("blue-pixie", "terracotta-curls"), "sage-bob": ("blue-pixie", "terracotta-curls"), "plum-braid": ("blue-pixie", "terracotta-curls"),
          "terracotta-curls": ("blue-pixie",), "blue-pixie": ("terracotta-curls", "sage-bob")}
 
 
@@ -195,23 +198,37 @@ HIDE_TOO = {
 }
 
 
-def swap(w, d, view):
-    pw, pd = profile(CH / w / view), profile(CH / d / view)
-    neck_w = json.load(open(CH / w / view / "parts.json"))["joints"]["neck"][1]
-    neck_d = json.load(open(CH / d / view / "parts.json"))["joints"]["neck"][1]
-    hw, hd = load(w, view, "head"), load(d, view, "head")
-    tw, td = load(w, view, "torso"), load(d, view, "torso")
-    mhw, mhd = material_map("head", hw, **pw), material_map("head", hd, **pd)
-    mtw, mtd = material_map("torso", tw, **pw), material_map("torso", td, **pd)
-    dx, dy = np.round(face_centre(hw, mhw, neck_w) - face_centre(hd, mhd, neck_d)).astype(int)
+def offset(w, d, view):
+    """How far to move d's head things so d's face sits on w's."""
+    def centre(c):
+        a = load(c, view, "head")
+        return face_centre(a, material_map("head", a, **profile(CH / c / view)), json.load(open(CH / c / view / "parts.json"))["joints"]["neck"][1])
+    return np.round(centre(w) - centre(d)).astype(int)
 
-    out = CH / w / "layers" / f"hair-{d}" / view
+
+def swap(w, d, view):
+    """w wearing d's hair (d None: no hair at all, her head as a hair layer goes on)."""
+    pw = profile(CH / w / view)
+    neck_w = json.load(open(CH / w / view / "parts.json"))["joints"]["neck"][1]
+    hw, tw = load(w, view, "head"), load(w, view, "torso")
+    mhw, mtw = material_map("head", hw, **pw), material_map("torso", tw, **pw)
+    out = CH / w / "layers" / f"hair-{d or 'none'}" / view
     out.mkdir(parents=True, exist_ok=True)
-    # the donor's hair, on the wearer's face
-    dh = hd.copy()
-    dh[~hair_of(hd, mhd)] = 0
-    dh = shift(dh, dx, dy)
-    drop_specks(dh)  # stray dots of the donor's outline, away from her hair
+    if d:
+        pd = profile(CH / d / view)
+        hd, td = load(d, view, "head"), load(d, view, "torso")
+        mhd, mtd = material_map("head", hd, **pd), material_map("torso", td, **pd)
+        dx, dy = offset(w, d, view)
+        # the donor's hair, on the wearer's face
+        dh = hd.copy()
+        dh[~hair_of(hd, mhd)] = 0
+        dh = shift(dh, dx, dy)
+        drop_specks(dh)  # stray dots of the donor's outline, away from her hair
+    else:
+        dx = dy = 0
+        dh = np.zeros_like(hw)
+        td = np.zeros_like(tw)
+        mtd = np.zeros(tw.shape[:2], np.uint8)
     # the wearer's own hair, hidden; what it covered and the new hair doesn't, painted back
     own = hair_of(hw, mhw)
     for pts in HIDE_TOO.get((w, view), []):
@@ -258,16 +275,38 @@ def swap(w, d, view):
         fill_t[own_t] = ub[own_t]
         drop_specks(fill_t)
         Image.fromarray(fill_t).save(out / "torso.fill.png")
-    dt = td.copy()
-    dt[~hair_of(td, mtd)] = 0
-    if dt[:, :, 3].any():
-        Image.fromarray(shift(dt, dx, dy)).save(out / "torso.png")
-    json.dump({"slot": "hair", "material": "hair", "about": f"{d}'s hair, cut from her art"}, open(out.parent / "layer.json", "w"), indent=1)
-    return dx, dy
+    if d:
+        dt = td.copy()
+        dt[~hair_of(td, mtd)] = 0
+        if dt[:, :, 3].any():
+            Image.fromarray(shift(dt, dx, dy)).save(out / "torso.png")
+    about = f"{d}'s hair, cut from her art" if d else "no hair: her own taken away, what it hid rebuilt"
+    json.dump({"slot": "hair", "material": "hair", "about": about}, open(out.parent / "layer.json", "w"), indent=1)
+    return int(dx), int(dy)
+
+
+def fit_wear(w, view):
+    """The man's beanie and glasses (accessories.py), moved so his face sits on w's."""
+    dx, dy = offset(w, "green", view)
+    for name in ("beanie", "glasses"):
+        src = CH / "green" / "layers" / name / view
+        if not src.is_dir():
+            continue
+        out = CH / w / "layers" / name / view
+        out.mkdir(parents=True, exist_ok=True)
+        for f in src.glob("*.png"):
+            Image.fromarray(shift(np.array(Image.open(f).convert("RGBA")), dx, dy)).save(out / f.name)
+        meta = CH / "green" / "layers" / name / "layer.json"
+        if meta.exists():
+            (CH / w / "layers" / name / "layer.json").write_text(meta.read_text())
 
 
 if __name__ == "__main__":
-    for w in PEOPLE:
+    for w, own in MODELS.items():
+        print(w, "with no hair", [swap(w, None, v) for v in ("front", "back")])
         for d in PEOPLE:
-            if w != d:
+            if d != own:
                 print(w, "wears", d, [swap(w, d, v) for v in ("front", "back")])
+        if w != "green":
+            for v in ("front", "back"):
+                fit_wear(w, v)

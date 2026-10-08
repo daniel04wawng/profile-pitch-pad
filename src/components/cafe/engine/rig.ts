@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CafeAvatar, loadCafeAvatar, type Direction, type Motion } from "./rig/cafe-avatar.mjs";
 import { BASE } from "./types";
-import { cleanColors, MATERIALS, type Colors } from "./avatar";
+import { cleanColors, MATERIALS, type Colors, type Material } from "./avatar";
 import type { Actor } from "./Stage";
 
 // Rigged avatars (the café avatar package): four directions (SE/SW face you, NE/NW face
@@ -12,7 +12,8 @@ import type { Actor } from "./Stage";
 // depth with the furniture. Frames are used exactly as authored: never trimmed or resized.
 
 // person/hair: the same person in other hairstyles share a person (the changing room groups them)
-export type CatalogEntry = { id: string; label: string; manifest: string; person?: string; hair?: string; body?: string };
+// body: which base model it is (man, woman); jacket: "on" or "off" (the same person either way)
+export type CatalogEntry = { id: string; label: string; manifest: string; person?: string; hair?: string; body?: string; jacket?: string };
 const CATALOG_URL = `${BASE}avatars/catalog.json`;
 let catalogLoad: Promise<CatalogEntry[]> | null = null;
 export function loadCatalog(): Promise<CatalogEntry[]> {
@@ -29,6 +30,7 @@ export function loadCatalog(): Promise<CatalogEntry[]> {
           person: typeof a.person === "string" ? a.person.slice(0, 32) : a.id,
           hair: typeof a.hair === "string" ? a.hair.slice(0, 20) : undefined,
           body: typeof a.body === "string" ? a.body.slice(0, 20) : undefined,
+          jacket: a.jacket === "on" || a.jacket === "off" ? a.jacket : undefined,
         })),
     )
     .catch(() => []);
@@ -50,92 +52,157 @@ export function useCatalog() {
 export type Rig = { id: string; base: CafeAvatar; urls: Record<string, string>; manifestUrl: string };
 const rigs = new Map<string, Promise<Rig>>();
 
-// an avatar in someone's colours is its own set of sheets: keyed "id|skin#aabbcc,hair#..."
-export const rigKey = (id: string, colors?: Colors) => {
-  const c = cleanColors(colors);
-  return c ? `${id}|${MATERIALS.filter((m) => c[m]).map((m) => m + c[m]).join(",")}` : id;
+// What someone has on: a hairstyle and things to wear (layers the avatar's manifest lists), and
+// colours. Each different outfit is its own set of sheets, keyed "id|hair|wear|colours".
+export type Dress = { hair?: string; wear?: string[]; colors?: Colors };
+const word = (v: unknown) => (typeof v === "string" && /^[a-z0-9-]{1,24}$/.test(v) ? v : undefined);
+export function cleanDress(d: Partial<Dress> | undefined): Dress {
+  return {
+    hair: word(d?.hair),
+    wear: Array.isArray(d?.wear) ? [...new Set(d.wear.map(word).filter(Boolean) as string[])].sort().slice(0, 4) : undefined,
+    colors: cleanColors(d?.colors),
+  };
+}
+export const rigKey = (id: string, dress?: Dress) => {
+  const d = cleanDress(dress);
+  const c = d.colors ? MATERIALS.filter((m) => d.colors![m]).map((m) => m + d.colors![m]).join(",") : "";
+  return [id, d.hair ?? "", (d.wear ?? []).join("+"), c].join("|");
 };
 export function loadRigKey(key: string): Promise<Rig> {
-  const [id, c] = key.split("|");
+  const [id, hair, wear, c] = key.split("|");
   const colors: Colors = {};
   for (const part of c ? c.split(",") : []) {
     const m = MATERIALS.find((x) => part.startsWith(x + "#"));
     if (m) colors[m] = part.slice(m.length);
   }
-  return loadRig(id, colors);
+  return loadRig(id, { hair: hair || undefined, wear: wear ? wear.split("+") : undefined, colors });
 }
 
-export function loadRig(id: string, colors?: Colors): Promise<Rig> {
-  const key = rigKey(id, colors);
+// the avatar as baked (its body sheets), shared by every outfit
+const plains = new Map<string, Promise<Rig>>();
+function loadPlain(id: string): Promise<Rig> {
+  let p = plains.get(id);
+  if (!p) {
+    p = loadCatalog().then(async (cat) => {
+      const e = cat.find((a) => a.id === id);
+      if (!e) throw new Error(`no avatar "${id}"`);
+      const base = await loadCafeAvatar(e.manifest); // checks every sheet's size and timing
+      const urls = Object.fromEntries(Object.entries(base.manifest.animations).map(([k, c]) => [k, new URL(c.sheet, e.manifest).href]));
+      return { id, base, urls, manifestUrl: e.manifest };
+    });
+    p.catch(() => plains.delete(id));
+    plains.set(id, p);
+  }
+  return p;
+}
+
+export function loadRig(id: string, dress?: Dress): Promise<Rig> {
+  const key = rigKey(id, dress);
   let p = rigs.get(key);
   if (!p) {
-    const c = cleanColors(colors);
-    p = c
-      ? loadRig(id).then((plain) => recolorRig(plain, c, key))
-      : loadCatalog().then(async (cat) => {
-          const e = cat.find((a) => a.id === id);
-          if (!e) throw new Error(`no avatar "${id}"`);
-          const base = await loadCafeAvatar(e.manifest); // checks every sheet's size and timing
-          const urls = Object.fromEntries(Object.entries(base.manifest.animations).map(([k, c]) => [k, new URL(c.sheet, e.manifest).href]));
-          return { id, base, urls, manifestUrl: e.manifest };
-        });
+    p = loadPlain(id).then((plain) => dressRig(plain, cleanDress(dress), key));
     p.catch(() => rigs.delete(key)); // a failed load can be tried again later
     rigs.set(key, p);
   }
   return p;
 }
 
-// The avatar recoloured: each sheet beside its material map (<sheet>.mat.png, red = material),
-// each material taking the new colour's hue and saturation while keeping the art's shading,
-// anchored on the material's typical brightness (manifest.materials.refs). The same rule as the
-// rig's materials.py. An avatar without maps is returned as it is.
-type Manifest = CafeAvatar["manifest"] & { materials?: { ids: Record<string, number>; refs: Record<string, number> } };
-async function recolorRig(plain: Rig, colors: Colors, key: string): Promise<Rig> {
+// An avatar in layers (bake_cafe.py): per clip, the body under the hair, the hair, what's worn
+// (and what of the hair it hides), and the parts in front (arms, legs), each beside its material
+// map (red = material). Stacked here, then recoloured: each material takes the new colour's hue
+// and saturation, keeping the art's shading, anchored on its typical brightness (the rule the
+// rig's materials.py uses). An avatar baked whole (no layers) only recolours.
+type Layers = { hair?: string[]; defaultHair?: string; wear?: string[] };
+type Manifest = CafeAvatar["manifest"] & { materials?: { ids: Record<string, number>; refs: Record<string, number>; base?: Partial<Record<Material, string>> }; layers?: Layers };
+type Clip = { sheet: string; materialMap?: string; over?: string; overMap?: string };
+async function dressRig(plain: Rig, dress: Dress, key: string): Promise<Rig> {
   const manifest = plain.base.manifest as Manifest;
-  if (!manifest.materials) return plain;
+  const layers = manifest.layers;
+  const hair = layers ? (dress.hair && layers.hair?.includes(dress.hair) ? dress.hair : layers.defaultHair) : undefined;
+  const wear = layers ? (dress.wear ?? []).filter((w) => layers.wear?.includes(w)) : [];
+  const colors = manifest.materials ? dress.colors : undefined;
+  if (!layers && !colors) return plain;
+  const at = (path: string) => loadImage(new URL(path, plain.manifestUrl).href);
   const targets = new Map<number, { h: number; s: number; v: number; ref: number }>();
   for (const m of MATERIALS) {
-    const c = colors[m];
-    const id = manifest.materials.ids[m];
+    const c = colors?.[m];
+    const id = manifest.materials?.ids[m];
     if (!c || !id) continue;
     const [h, s, v] = rgb2hsv(parseInt(c.slice(1, 3), 16) / 255, parseInt(c.slice(3, 5), 16) / 255, parseInt(c.slice(5, 7), 16) / 255);
-    targets.set(id, { h, s, v, ref: manifest.materials.refs[m] ?? 0.5 });
+    targets.set(id, { h, s, v, ref: manifest.materials!.refs[m] ?? 0.5 });
   }
   const sheets: Record<string, HTMLCanvasElement> = {};
   const urls: Record<string, string> = {};
-  for (const [name, clip] of Object.entries(manifest.animations) as [string, { sheet: string; materialMap?: string }][]) {
-    const img = plain.base.sheets[name] as HTMLImageElement;
-    const canvas = document.createElement("canvas");
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const g = canvas.getContext("2d", { willReadFrequently: true })!;
-    g.drawImage(img, 0, 0);
-    if (clip.materialMap) {
-      const map = await loadImage(new URL(clip.materialMap, plain.manifestUrl).href);
-      const px = g.getImageData(0, 0, canvas.width, canvas.height);
-      g.clearRect(0, 0, canvas.width, canvas.height);
-      g.drawImage(map, 0, 0);
-      const ids = g.getImageData(0, 0, canvas.width, canvas.height).data;
-      const P = px.data;
-      for (let i = 0; i < P.length; i += 4) {
-        if (!P[i + 3]) continue;
-        const t = targets.get(ids[i]);
-        if (!t) continue;
-        const [, s, v] = rgb2hsv(P[i] / 255, P[i + 1] / 255, P[i + 2] / 255);
-        const pale = t.ref > 0.8; // near-white art (the tee, sneakers): the colour fully, the shading gently
-        const nv = pale ? Math.min(1, Math.max(0, t.v + (v - t.ref) * 0.45)) : Math.min(1, (v * t.v) / Math.max(1e-6, t.ref));
-        const ns = pale ? t.s : Math.min(1, t.s * (0.6 + 0.4 * Math.min(1.5, s / 0.4)));
-        const [r, gg, b] = hsv2rgb(t.h, ns, nv);
-        P[i] = Math.round(r * 255);
-        P[i + 1] = Math.round(gg * 255);
-        P[i + 2] = Math.round(b * 255);
+  await Promise.all(
+    (Object.entries(manifest.animations) as [string, Clip][]).map(async ([name, clip]) => {
+      const body = plain.base.sheets[name] as HTMLImageElement;
+      const w = body.naturalWidth;
+      const h = body.naturalHeight;
+      const [hairImg, hairMap, worn, hides, over, overMap, bodyMap] = await Promise.all([
+        hair && layers ? at(`hair/${hair}/${clip.sheet}`) : null,
+        hair && layers && targets.size ? at(`hair/${hair}/${clip.sheet.replace(/\.png$/, ".mat.png")}`) : null,
+        Promise.all(wear.map((x) => at(`wear/${x}/${clip.sheet}`))),
+        Promise.all(wear.map((x) => at(`wear/${x}/${clip.sheet.replace(/\.png$/, ".hide.png")}`))),
+        clip.over ? at(clip.over) : null,
+        clip.overMap && targets.size ? at(clip.overMap) : null,
+        clip.materialMap && targets.size ? at(clip.materialMap) : null,
+      ]);
+      // the hair, less what's worn over it hides
+      const hairOnly = (img: HTMLImageElement | null) => {
+        if (!img) return null;
+        const c = canvasOf(w, h);
+        const g = c.getContext("2d")!;
+        g.drawImage(img, 0, 0);
+        g.globalCompositeOperation = "destination-out";
+        for (const m of hides) g.drawImage(m, 0, 0);
+        return c;
+      };
+      const stack = (parts: (CanvasImageSource | null)[]) => {
+        const c = canvasOf(w, h);
+        const g = c.getContext("2d", { willReadFrequently: true })!;
+        for (const p of parts) if (p) g.drawImage(p, 0, 0);
+        return c;
+      };
+      // worn things are never recoloured: their pixels go on the map as "not a material"
+      const blank = (img: HTMLImageElement) => {
+        const c = canvasOf(w, h);
+        const g = c.getContext("2d")!;
+        g.drawImage(img, 0, 0);
+        g.globalCompositeOperation = "source-in";
+        g.fillStyle = "#000";
+        g.fillRect(0, 0, w, h);
+        return c;
+      };
+      const canvas = stack([body, hairOnly(hairImg), ...worn, over]);
+      if (targets.size && bodyMap) {
+        const map = stack([bodyMap, hairOnly(hairMap), ...worn.map(blank), overMap]);
+        const g = canvas.getContext("2d", { willReadFrequently: true })!;
+        const px = g.getImageData(0, 0, w, h);
+        const ids = map.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, w, h).data;
+        recolourPixels(px.data, ids, targets);
+        g.putImageData(px, 0, 0);
       }
-      g.putImageData(px, 0, 0);
-    }
-    sheets[name] = canvas;
-    urls[name] = await new Promise<string>((res) => canvas.toBlob((b) => res(b ? URL.createObjectURL(b) : plain.urls[name]), "image/png"));
-  }
+      sheets[name] = canvas;
+      urls[name] = await new Promise<string>((res) => canvas.toBlob((b) => res(b ? URL.createObjectURL(b) : plain.urls[name]), "image/png"));
+    }),
+  );
   return { id: key, base: new CafeAvatar(manifest, sheets), urls, manifestUrl: plain.manifestUrl };
+}
+const canvasOf = (w: number, h: number) => Object.assign(document.createElement("canvas"), { width: w, height: h });
+function recolourPixels(P: Uint8ClampedArray, ids: Uint8ClampedArray, targets: Map<number, { h: number; s: number; v: number; ref: number }>) {
+  for (let i = 0; i < P.length; i += 4) {
+    if (!P[i + 3] || !ids[i + 3]) continue;
+    const t = targets.get(ids[i]);
+    if (!t) continue;
+    const [, s, v] = rgb2hsv(P[i] / 255, P[i + 1] / 255, P[i + 2] / 255);
+    const pale = t.ref > 0.8; // near-white art (the tee, sneakers): the colour fully, the shading gently
+    const nv = pale ? Math.min(1, Math.max(0, t.v + (v - t.ref) * 0.45)) : Math.min(1, (v * t.v) / Math.max(1e-6, t.ref));
+    const ns = pale ? t.s : Math.min(1, t.s * (0.6 + 0.4 * Math.min(1.5, s / 0.4)));
+    const [r, g, b] = hsv2rgb(t.h, ns, nv);
+    P[i] = Math.round(r * 255);
+    P[i + 1] = Math.round(g * 255);
+    P[i + 2] = Math.round(b * 255);
+  }
 }
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement>((res, rej) => {
@@ -165,28 +232,21 @@ function hsv2rgb(h: number, s: number, v: number): [number, number, number] {
   return ([[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]] as [number, number, number][])[((i % 6) + 6) % 6];
 }
 
-// the rig for `id` (in `colors`): null while loading, "failed" if it couldn't load (callers fall back)
-export function useRig(id: string | null | undefined, colors?: Colors) {
+// the rig for `id` dressed as `dress`: null while loading, "failed" if it couldn't load (callers
+// fall back). While a new outfit is being put together, the last one stays up (never a blank).
+export function useRig(id: string | null | undefined, dress?: Dress) {
   const [r, setR] = useState<Rig | "failed" | null>(null);
-  const key = id ? rigKey(id, colors) : null;
+  const key = id ? rigKey(id, dress) : null;
   useEffect(() => {
-    setR(null);
-    if (!key || !id) return;
+    if (!key) return setR(null);
     let alive = true;
-    let done = false;
-    // in colours: the plain avatar meanwhile (recolouring takes a moment), never a blank
-    if (key !== id) loadRig(id).then((x) => alive && !done && setR(x), () => {});
     loadRigKey(key).then(
-      (x) => {
-        done = true;
-        if (alive) setR(x);
-      },
+      (x) => alive && setR(x),
       () => alive && setR("failed"),
     );
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return r;
 }

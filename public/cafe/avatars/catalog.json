@@ -1,237 +1,26 @@
 {
-  "version": 1,
+  "version": 2,
   "avatars": [
     {
-      "id": "green",
-      "label": "man, wavy",
-      "manifest": "green/manifest.json",
-      "person": "green",
-      "hair": "wavy",
-      "body": "man"
+      "id": "man",
+      "label": "man",
+      "manifest": "man/manifest.json",
+      "body": "man",
+      "jacket": "on"
     },
     {
-      "id": "green-sage-bob",
-      "label": "man, bob",
-      "manifest": "green-sage-bob/manifest.json",
-      "person": "green",
-      "hair": "bob",
-      "body": "man"
+      "id": "woman",
+      "label": "woman",
+      "manifest": "woman/manifest.json",
+      "body": "woman",
+      "jacket": "on"
     },
     {
-      "id": "green-blue-pixie",
-      "label": "man, pixie",
-      "manifest": "green-blue-pixie/manifest.json",
-      "person": "green",
-      "hair": "pixie",
-      "body": "man"
-    },
-    {
-      "id": "green-terracotta-curls",
-      "label": "man, curls",
-      "manifest": "green-terracotta-curls/manifest.json",
-      "person": "green",
-      "hair": "curls",
-      "body": "man"
-    },
-    {
-      "id": "green-plum-braid",
-      "label": "man, braid",
-      "manifest": "green-plum-braid/manifest.json",
-      "person": "green",
-      "hair": "braid",
-      "body": "man"
-    },
-    {
-      "id": "green-tidy",
-      "label": "man, tidy",
-      "manifest": "green-tidy/manifest.json",
-      "person": "green",
-      "hair": "tidy",
-      "body": "man"
-    },
-    {
-      "id": "green-short",
-      "label": "man, short",
-      "manifest": "green-short/manifest.json",
-      "person": "green",
-      "hair": "short",
-      "body": "man"
-    },
-    {
-      "id": "green-cropped",
-      "label": "man, cropped",
-      "manifest": "green-cropped/manifest.json",
-      "person": "green",
-      "hair": "cropped",
-      "body": "man"
-    },
-    {
-      "id": "green-bun",
-      "label": "man, bun",
-      "manifest": "green-bun/manifest.json",
-      "person": "green",
-      "hair": "bun",
-      "body": "man"
-    },
-    {
-      "id": "sage-bob",
-      "label": "woman, bob",
-      "manifest": "sage-bob/manifest.json",
-      "person": "sage-bob",
-      "hair": "bob",
-      "body": "woman"
-    },
-    {
-      "id": "sage-bob-green",
-      "label": "woman, wavy",
-      "manifest": "sage-bob-green/manifest.json",
-      "person": "sage-bob",
-      "hair": "wavy",
-      "body": "woman"
-    },
-    {
-      "id": "sage-bob-blue-pixie",
-      "label": "woman, pixie",
-      "manifest": "sage-bob-blue-pixie/manifest.json",
-      "person": "sage-bob",
-      "hair": "pixie",
-      "body": "woman"
-    },
-    {
-      "id": "sage-bob-terracotta-curls",
-      "label": "woman, curls",
-      "manifest": "sage-bob-terracotta-curls/manifest.json",
-      "person": "sage-bob",
-      "hair": "curls",
-      "body": "woman"
-    },
-    {
-      "id": "sage-bob-plum-braid",
-      "label": "woman, braid",
-      "manifest": "sage-bob-plum-braid/manifest.json",
-      "person": "sage-bob",
-      "hair": "braid",
-      "body": "woman"
-    },
-    {
-      "id": "blue-pixie",
-      "label": "woman, pixie",
-      "manifest": "blue-pixie/manifest.json",
-      "person": "blue-pixie",
-      "hair": "pixie",
-      "body": "woman"
-    },
-    {
-      "id": "blue-pixie-green",
-      "label": "woman, wavy",
-      "manifest": "blue-pixie-green/manifest.json",
-      "person": "blue-pixie",
-      "hair": "wavy",
-      "body": "woman"
-    },
-    {
-      "id": "blue-pixie-sage-bob",
-      "label": "woman, bob",
-      "manifest": "blue-pixie-sage-bob/manifest.json",
-      "person": "blue-pixie",
-      "hair": "bob",
-      "body": "woman"
-    },
-    {
-      "id": "blue-pixie-terracotta-curls",
-      "label": "woman, curls",
-      "manifest": "blue-pixie-terracotta-curls/manifest.json",
-      "person": "blue-pixie",
-      "hair": "curls",
-      "body": "woman"
-    },
-    {
-      "id": "blue-pixie-plum-braid",
-      "label": "woman, braid",
-      "manifest": "blue-pixie-plum-braid/manifest.json",
-      "person": "blue-pixie",
-      "hair": "braid",
-      "body": "woman"
-    },
-    {
-      "id": "terracotta-curls",
-      "label": "woman, curls",
-      "manifest": "terracotta-curls/manifest.json",
-      "person": "terracotta-curls",
-      "hair": "curls",
-      "body": "woman"
-    },
-    {
-      "id": "terracotta-curls-green",
-      "label": "woman, wavy",
-      "manifest": "terracotta-curls-green/manifest.json",
-      "person": "terracotta-curls",
-      "hair": "wavy",
-      "body": "woman"
-    },
-    {
-      "id": "terracotta-curls-sage-bob",
-      "label": "woman, bob",
-      "manifest": "terracotta-curls-sage-bob/manifest.json",
-      "person": "terracotta-curls",
-      "hair": "bob",
-      "body": "woman"
-    },
-    {
-      "id": "terracotta-curls-blue-pixie",
-      "label": "woman, pixie",
-      "manifest": "terracotta-curls-blue-pixie/manifest.json",
-      "person": "terracotta-curls",
-      "hair": "pixie",
-      "body": "woman"
-    },
-    {
-      "id": "terracotta-curls-plum-braid",
-      "label": "woman, braid",
-      "manifest": "terracotta-curls-plum-braid/manifest.json",
-      "person": "terracotta-curls",
-      "hair": "braid",
-      "body": "woman"
-    },
-    {
-      "id": "plum-braid",
-      "label": "woman, braid",
-      "manifest": "plum-braid/manifest.json",
-      "person": "plum-braid",
-      "hair": "braid",
-      "body": "woman"
-    },
-    {
-      "id": "plum-braid-green",
-      "label": "woman, wavy",
-      "manifest": "plum-braid-green/manifest.json",
-      "person": "plum-braid",
-      "hair": "wavy",
-      "body": "woman"
-    },
-    {
-      "id": "plum-braid-sage-bob",
-      "label": "woman, bob",
-      "manifest": "plum-braid-sage-bob/manifest.json",
-      "person": "plum-braid",
-      "hair": "bob",
-      "body": "woman"
-    },
-    {
-      "id": "plum-braid-blue-pixie",
-      "label": "woman, pixie",
-      "manifest": "plum-braid-blue-pixie/manifest.json",
-      "person": "plum-braid",
-      "hair": "pixie",
-      "body": "woman"
-    },
-    {
-      "id": "plum-braid-terracotta-curls",
-      "label": "woman, curls",
-      "manifest": "plum-braid-terracotta-curls/manifest.json",
-      "person": "plum-braid",
-      "hair": "curls",
-      "body": "woman"
+      "id": "woman-tee",
+      "label": "woman, jacket off",
+      "manifest": "woman-tee/manifest.json",
+      "body": "woman",
+      "jacket": "off"
     }
   ]
 }
