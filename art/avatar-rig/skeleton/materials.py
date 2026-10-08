@@ -57,22 +57,41 @@ def profile(folder) -> dict:
     if "palette" in spec:
         out["palette"] = spec["palette"]
         out["fixed"] = spec.get("fixed", [])
+        out["zones"] = spec.get("zones", {})
     return out
 
 
-def palette_map(part: str, arr: np.ndarray, palette: dict, fixed=(), tol: int = 30) -> np.ndarray:
+# with palettes, hair can be in the torso too (a braid over the shoulder), but only inside the
+# zones a character marks for it (parts.json "zones": material -> boxes, in the torso): skin and
+# hair share shades with some clothes (a terracotta tee and deep skin shadow, a plum cardigan's
+# folds and dark hair), so in the torso those two are only looked for where they can be
+PALETTE_WHERE = {**WHERE, "hair": ("head", "torso")}
+ZONED = ("skin", "hair")
+
+
+def palette_map(part: str, arr: np.ndarray, palette: dict, fixed=(), zones=None, tol: int = 30) -> np.ndarray:
     """Per pixel, the material whose sampled colours it's nearest (sum of channel differences,
     within `tol`), among the materials that can be in this part; 0 for outlines, the mug,
     anything not close to a material."""
     rgb = arr[:, :, :3].astype(int).reshape(-1, 3)
+    h, w = arr.shape[:2]
+    allowed = {}
+    if part.startswith("torso"):
+        for name in ZONED:
+            m = np.zeros((h, w), bool)
+            for x0, y0, x1, y1 in (zones or {}).get(name, []):
+                m[y0:y1, x0:x1] = True
+            allowed[name] = m.reshape(-1)
     best = np.full(len(rgb), tol + 1)
     out = np.zeros(len(rgb), np.uint8)
     for name, cols in palette.items():
-        if not any(part.startswith(p) for p in WHERE[name]):
+        if not any(part.startswith(p) for p in PALETTE_WHERE[name]):
             continue
         for c in cols:
             d = np.abs(rgb - np.array(c)).sum(1)
             hit = d < best
+            if name in allowed:
+                hit &= allowed[name]
             best[hit] = d[hit]
             out[hit] = IDS[name]
     out = out.reshape(arr.shape[:2])
@@ -82,10 +101,10 @@ def palette_map(part: str, arr: np.ndarray, palette: dict, fixed=(), tol: int = 
     return out
 
 
-def material_map(part: str, arr: np.ndarray, hem: int = 149, palette: dict = None, fixed=()) -> np.ndarray:
+def material_map(part: str, arr: np.ndarray, hem: int = 149, palette: dict = None, fixed=(), zones=None) -> np.ndarray:
     """Per pixel, the material id (0 = leave it)."""
     if palette:
-        return palette_map(part, arr, palette, fixed)
+        return palette_map(part, arr, palette, fixed, zones)
     hue, sat, v, rgb = _hsv(arr)
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     solid = arr[:, :, 3] > 0

@@ -70,6 +70,89 @@ SPECS = {
     },
 }
 
+def spec(neck, head_max, chin, near, far, shoulder, elbow, leg_top, split, near_side, overlap, legs_only, hem,
+         sleeve, forearm, foot_near, foot_far, skin, hair, shirt, tee, trousers, shoes, fixed):
+    """One view's spec, from the measurements read off the art (see SPECS)."""
+    out = {"neck": neck, "headMaxY": head_max, "chinY": chin, "shoulder.free": shoulder, "elbow.free": elbow,
+           "legTop": leg_top, "split": split, "nearSide": near_side, "torsoOverlapY": overlap, "legsOnlyY": legs_only,
+           "hem": hem, "sleeve": sleeve, "forearm": forearm, "foot.near": foot_near, "foot.far": foot_far,
+           "trouserSample": trousers, "shirtSample": shirt + tee, "fixed": fixed,
+           "materials": {k: v for k, v in {"skin": skin, "hair": hair, "shirt": shirt, "tee": tee, "trousers": trousers, "shoes": shoes}.items() if v}}
+    for j, (h, k, a) in (("near", near), ("far", far)):
+        out[f"hip.{j}"], out[f"knee.{j}"], out[f"ankle.{j}"] = h, k, a
+    return out
+
+
+def box(x0, y0, x1, y1):
+    return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+
+
+# in the torso, skin and hair are only looked for in these boxes (materials.py ZONED)
+NECK_AND_MUG_HAND = {"front": [[105, 68, 145, 95], [96, 96, 140, 135]], "back": [[115, 60, 150, 90], [138, 96, 166, 145]]}
+for v in ("front", "back"):
+    SPECS["sage-bob"][v]["zones"] = {"skin": NECK_AND_MUG_HAND[v]}
+
+SPECS["blue-pixie"] = {
+    "front": spec([128, 80], 82, 70, ([114, 152], [112, 190], [110, 221]), ([138, 150], [137, 186], [138, 212]), [149, 76], [157, 123],
+                  138, 129, "left", 150, 158, 133,
+                  [(145, 72), (150, 72), (155, 85), (159, 100), (162, 112), (163, 124), (153, 125), (152, 112), (150, 100), (147, 88)],
+                  [(153, 120), (163, 119), (166, 140), (167, 166), (155, 166), (155, 145), (154, 132)],
+                  box(96, 218, 128, 254), box(130, 209, 166, 242),
+                  [[132, 58, 142, 68], [108, 108, 122, 120], [156, 130, 163, 150]], [[108, 35, 140, 50]],
+                  [[92, 95, 110, 120], [95, 130, 112, 145]], [[120, 85, 135, 98]],
+                  [[105, 170, 125, 210], [132, 170, 145, 205]], [[102, 232, 118, 246], [135, 218, 155, 232]], [[130, 100, 152, 128]]),
+    "back": spec([125, 80], 80, 72, ([138, 158], [137, 195], [138, 231]), ([112, 160], [110, 195], [106, 217]), [99, 80], [98, 124],
+                 150, 124, "right", 160, 162, 155,
+                 [(95, 77), (101, 76), (101, 95), (101, 110), (102, 125), (93, 125), (89, 118), (90, 100), (92, 88)],
+                 [(93, 121), (103, 121), (102, 140), (101, 156), (94, 156), (93, 140)],
+                 box(125, 224, 167, 256), box(89, 212, 123, 242),
+                 [[95, 128, 100, 150], [150, 108, 160, 118]], [[105, 40, 140, 65]],
+                 [[110, 95, 140, 140], [92, 95, 99, 115]], [],
+                 [[100, 175, 120, 205], [128, 175, 145, 215]], [[128, 238, 158, 250], [96, 222, 115, 234]], [[148, 99, 163, 108]]),
+}
+SPECS["terracotta-curls"] = {  # no overshirt: the terracotta tee is her "shirt", arms bare below its short sleeves
+    "front": spec([125, 84], 86, 76, ([116, 152], [115, 190], [113, 222]), ([140, 150], [140, 187], [142, 214]), [146, 80], [155, 128],
+                  142, 130, "left", 146, 150, 142,
+                  [(143, 76), (149, 76), (153, 90), (156, 100), (158, 115), (160, 130), (152, 131), (150, 118), (148, 105), (145, 92)],
+                  [(151, 125), (160, 124), (163, 140), (167, 152), (167, 167), (155, 167), (154, 148), (151, 138)],
+                  box(98, 219, 129, 254), box(131, 211, 167, 244),
+                  [[125, 62, 138, 75], [110, 110, 125, 120], [96, 110, 104, 130], [153, 130, 160, 155]], [[100, 35, 140, 55]],
+                  [[105, 85, 125, 100], [130, 120, 145, 135]], [],
+                  [[105, 170, 125, 210], [133, 170, 148, 205]], [[103, 232, 120, 246], [138, 222, 158, 234]], [[130, 100, 150, 123]]),
+    "back": spec([125, 84], 86, 76, ([138, 150], [137, 190], [140, 233]), ([112, 152], [110, 190], [108, 219]), [99, 82], [103, 126],
+                 140, 125, "right", 146, 147, 141,
+                 [(97, 78), (101, 78), (102, 100), (108, 106), (110, 118), (108, 130), (98, 131), (95, 118), (92, 104), (94, 90)],
+                 [(99, 125), (109, 125), (108, 132), (99, 132)],
+                 box(126, 227, 168, 256), box(92, 212, 124, 242),
+                 [[97, 105, 107, 125], [143, 110, 152, 135]], [[100, 40, 140, 70]],
+                 [[110, 90, 140, 130]], [],
+                 [[100, 170, 120, 205], [128, 170, 145, 215]], [[130, 238, 158, 250], [98, 220, 118, 233]], [[148, 100, 162, 110]]),
+}
+SPECS["plum-braid"] = {  # the braid hangs over the shoulder: below the head's line it rides with the torso
+    "front": spec([130, 80], 82, 70, ([115, 155], [114, 192], [113, 226]), ([140, 153], [140, 189], [142, 216]), [148, 76], [160, 126],
+                  142, 130, "left", 152, 156, 140,
+                  [(144, 72), (150, 72), (155, 84), (160, 100), (163, 114), (165, 128), (155, 129), (153, 114), (150, 100), (147, 86)],
+                  [(155, 124), (165, 123), (167, 140), (170, 152), (170, 168), (157, 168), (157, 150), (156, 135)],
+                  box(98, 224, 129, 256), box(131, 214, 164, 247),
+                  [[132, 58, 142, 70], [112, 108, 125, 120], [158, 130, 165, 150]], [[115, 35, 140, 50], [105, 80, 115, 110]],
+                  [[92, 100, 105, 125], [150, 95, 157, 115]], [[122, 85, 135, 98], [122, 130, 138, 140]],
+                  [[105, 170, 125, 210], [133, 170, 148, 205]], [[103, 234, 120, 248], [136, 222, 156, 236]], [[130, 100, 152, 125]]),
+    "back": spec([130, 78], 80, 70, ([136, 160], [135, 195], [136, 231]), ([110, 160], [108, 195], [105, 219]), [98, 85], [97, 128],
+                 152, 122, "right", 162, 165, 158,
+                 [(96, 82), (100, 82), (100, 100), (100, 128), (92, 129), (90, 115), (91, 98), (93, 88)],
+                 [(93, 125), (102, 125), (102, 145), (101, 163), (94, 163), (93, 145)],
+                 box(123, 223, 166, 256), box(89, 211, 121, 242),
+                 [[94, 132, 100, 155], [150, 110, 160, 125]], [[100, 45, 140, 62], [103, 90, 113, 130]],
+                 [[120, 100, 145, 145], [91, 95, 99, 120]], [],
+                 [[100, 175, 118, 205], [127, 175, 145, 215]], [[130, 238, 158, 250], [96, 222, 115, 234]], [[148, 102, 163, 110]]),
+}
+
+for cid in ("blue-pixie", "terracotta-curls", "plum-braid"):
+    for v in ("front", "back"):
+        SPECS[cid][v]["zones"] = {"skin": NECK_AND_MUG_HAND[v]}
+SPECS["plum-braid"]["front"]["zones"]["hair"] = [[103, 62, 122, 132]]
+SPECS["plum-braid"]["back"]["zones"]["hair"] = [[96, 50, 124, 148]]
+
 FRONT_ORDER = ["torso", "head", "upper-arm.free", "forearm.free", "thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near"]
 BACK_ORDER = ["thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near", "torso", "head", "upper-arm.free", "forearm.free"]
 KINDS = {
@@ -105,6 +188,24 @@ def with_outlines(a: np.ndarray, mask: np.ndarray, others: np.ndarray) -> np.nda
     return (mask & ~ink) | (ink & mask[iy, ix] & ~others[iy, ix]) | (ink & mask & ~others & sorted_)
 
 
+def _hsv(px: np.ndarray):
+    rgb = px / 255
+    mx, mn = rgb.max(1), rgb.min(1)
+    d = np.maximum(mx - mn, 1e-6)
+    r, g, b = rgb[:, 0], rgb[:, 1], rgb[:, 2]
+    hue = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60
+    return hue, (mx - mn) / np.maximum(mx, 1e-6), mx
+
+
+# what each material can look like at all, so a box's edge that catches a lapel or a sleeve
+# can't put blue in the tee or olive in the skin
+LOOKS_LIKE = {
+    "tee": lambda h, s, v: (s < 0.25) & (v > 0.5),  # the cream tees
+    "skin": lambda h, s, v: ((h < 45) | (h > 340)) & (s > 0.15) & (v > 0.2),
+    "shoes": lambda h, s, v: s < 0.25,  # the white sneakers, and their grey shading
+}
+
+
 def palette(a: np.ndarray, boxes: dict) -> dict:
     """Each material's colours, from boxes of mostly that material in the art. A box's edge
     can catch a neighbour (a sleeve's edge in a box of forearm), so a colour seen in several
@@ -114,6 +215,7 @@ def palette(a: np.ndarray, boxes: dict) -> dict:
     for name, bs in boxes.items():
         px = np.concatenate([a[y0:y1, x0:x1][a[y0:y1, x0:x1, 3] > 0][:, :3] for x0, y0, x1, y1 in bs]).astype(int)
         px = px[px.max(1) >= 30]
+        px = px[LOOKS_LIKE.get(name, lambda h, sat, v: np.ones_like(v, bool))(*_hsv(px))]
         cols, n = np.unique(px // 3 * 3 + 1, axis=0, return_counts=True)
         for c, k in zip(map(tuple, cols.tolist()), n.tolist()):
             share.setdefault(c, {})[name] = k / len(px)
@@ -220,7 +322,7 @@ def cut(cid: str, view: str):
     d.mkdir(parents=True, exist_ok=True)
     for name, arr in parts.items():
         Image.fromarray(arr).save(d / f"{name}.png")
-    json.dump({"frameSize": [256, 280], "joints": joints, "hem": s["hem"], "palette": palette(a, s["materials"]), "fixed": s["fixed"], "parts": [{"part": p, **KINDS[p]} for p in order]}, open(d / "parts.json", "w"), indent=1)
+    json.dump({"frameSize": [256, 280], "joints": joints, "hem": s["hem"], "palette": palette(a, s["materials"]), "fixed": s["fixed"], "zones": s.get("zones", {}), "parts": [{"part": p, **KINDS[p]} for p in order]}, open(d / "parts.json", "w"), indent=1)
     # coverage: every pixel of the art is in some part
     covered = np.zeros_like(solid)
     for arr in parts.values():
