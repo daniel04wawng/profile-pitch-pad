@@ -377,9 +377,15 @@
       "skin": 0.6863,
       "hair": 0.1451,
       "shirt": 0.7098,
-      "tee": 0.5,
       "trousers": 0.2863,
       "shoes": 0.8824
+    },
+    "base": {
+      "skin": "#af5f33",
+      "hair": "#25100f",
+      "shirt": "#b56956",
+      "trousers": "#423c49",
+      "shoes": "#e1d4c8"
     }
   }
 }

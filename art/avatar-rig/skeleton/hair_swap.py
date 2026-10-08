@@ -25,6 +25,7 @@ from materials import IDS, MATERIALS, material_map, profile, recolour, reference
 HERE = pathlib.Path(__file__).parent
 CH = HERE / "characters"
 WOMEN = ("sage-bob", "blue-pixie", "terracotta-curls", "plum-braid")
+PEOPLE = ("green",) + WOMEN  # anyone wears anyone's hair: his messy crop on them, their long hair on him
 HAIR, SKIN = IDS["hair"], IDS["skin"]
 
 
@@ -117,7 +118,7 @@ def paint_from(arr, src_mask, hole):
 # whose neck, collar and shoulders show under a wearer's hair once it's gone: a woman with
 # short hair, so they're drawn (the wearer's own hair hid hers)
 # (in order: where the first has hair too, the next one's is used)
-UNDER = {"sage-bob": ("blue-pixie", "terracotta-curls"), "plum-braid": ("blue-pixie", "terracotta-curls"),
+UNDER = {"green": ("blue-pixie", "terracotta-curls"), "sage-bob": ("blue-pixie", "terracotta-curls"), "plum-braid": ("blue-pixie", "terracotta-curls"),
          "terracotta-curls": ("blue-pixie",), "blue-pixie": ("terracotta-curls", "sage-bob")}
 
 
@@ -266,7 +267,7 @@ def swap(w, d, view):
 
 
 if __name__ == "__main__":
-    for w in WOMEN:
-        for d in WOMEN:
+    for w in PEOPLE:
+        for d in PEOPLE:
             if w != d:
                 print(w, "wears", d, [swap(w, d, v) for v in ("front", "back")])

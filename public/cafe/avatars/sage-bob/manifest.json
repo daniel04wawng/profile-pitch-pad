@@ -380,6 +380,14 @@
       "tee": 0.9569,
       "trousers": 0.2706,
       "shoes": 0.8549
+    },
+    "base": {
+      "skin": "#f8b275",
+      "hair": "#3b2d2d",
+      "shirt": "#767145",
+      "tee": "#f4e0c7",
+      "trousers": "#433c45",
+      "shoes": "#dacec3"
     }
   }
 }

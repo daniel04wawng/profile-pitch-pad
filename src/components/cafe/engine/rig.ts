@@ -12,7 +12,7 @@ import type { Actor } from "./Stage";
 // depth with the furniture. Frames are used exactly as authored: never trimmed or resized.
 
 // person/hair: the same person in other hairstyles share a person (the changing room groups them)
-export type CatalogEntry = { id: string; label: string; manifest: string; person?: string; hair?: string };
+export type CatalogEntry = { id: string; label: string; manifest: string; person?: string; hair?: string; body?: string };
 const CATALOG_URL = `${BASE}avatars/catalog.json`;
 let catalogLoad: Promise<CatalogEntry[]> | null = null;
 export function loadCatalog(): Promise<CatalogEntry[]> {
@@ -28,6 +28,7 @@ export function loadCatalog(): Promise<CatalogEntry[]> {
           manifest: new URL(a.manifest, new URL(CATALOG_URL, location.href)).href,
           person: typeof a.person === "string" ? a.person.slice(0, 32) : a.id,
           hair: typeof a.hair === "string" ? a.hair.slice(0, 20) : undefined,
+          body: typeof a.body === "string" ? a.body.slice(0, 20) : undefined,
         })),
     )
     .catch(() => []);

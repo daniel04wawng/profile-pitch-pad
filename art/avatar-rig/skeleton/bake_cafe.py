@@ -1,5 +1,5 @@
 """Bake every café avatar from the skeleton rig: the first character (his own hair and the
-styles cut from it, and the navy overshirt) and the four women (each in her own hair and in each
+styles cut from it) and the four women (each in her own hair and in each
 of the others', hair_swap.py), so a hairstyle holds in every pose.
 
     python3 art/avatar-rig/skeleton/bake_cafe.py
@@ -20,9 +20,11 @@ The actions:
   stand-up      sit-down backwards
 """
 import json
+import shutil
 import math
 import pathlib
 
+import numpy as np
 from PIL import Image
 
 from animations import walk
@@ -34,8 +36,10 @@ HERE = pathlib.Path(__file__).parent
 SITE = HERE.parents[2] / "public" / "cafe" / "avatars"
 GAME = (64, 70)
 SEAT_ANGLE = 1.35  # radians the thighs swing forward to sit
-WOMEN = {"sage-bob": "Sage", "blue-pixie": "Blue", "terracotta-curls": "Terracotta", "plum-braid": "Plum"}
-HAIR = {"sage-bob": "bob", "blue-pixie": "pixie", "terracotta-curls": "curls", "plum-braid": "braid"}
+# the base models (the changing room groups them by body), and the hairstyle each one's own hair
+# is: anyone wears anyone's (hair_swap.py)
+MODELS = {"green": "man", "sage-bob": "woman", "blue-pixie": "woman", "terracotta-curls": "woman", "plum-braid": "woman"}
+HAIR = {"green": "wavy", "sage-bob": "bob", "blue-pixie": "pixie", "terracotta-curls": "curls", "plum-braid": "braid"}
 
 
 def seat(ch, view, a, breath=0.0):
@@ -92,11 +96,14 @@ SHEET = {  # action, view -> the café's sheet name (the first character's manif
 TEMPLATE = json.load(open(SITE / "green" / "manifest.json"))  # read once: green itself is rebaked below
 
 
+def entry(model, aid, hair):
+    return {"id": aid, "label": f"{MODELS[model]}, {hair}", "manifest": f"{aid}/manifest.json", "person": model, "hair": hair, "body": MODELS[model]}
+
+
 def bake(w, d):
     aid = w if d == w else f"{w}-{d}"
-    layers = () if d == w else (f"hair-{d}",)
-    bake_avatar(w, aid, layers)
-    return {"id": aid, "label": f"{WOMEN[w]}" if d == w else f"{WOMEN[w]}, {HAIR[d]}", "manifest": f"{aid}/manifest.json", "person": w, "hair": HAIR[d]}
+    bake_avatar(w, aid, () if d == w else (f"hair-{d}",))
+    return entry(w, aid, HAIR[d])
 
 
 def bake_avatar(character, aid, layers=(), recolor=None):
@@ -112,7 +119,13 @@ def bake_avatar(character, aid, layers=(), recolor=None):
         mats = profile(HERE / "characters" / character / view)
         ids = id_character(ch, view, mats)  # (the material maps, from the art before any recolour)
         if refs is None:
-            refs = reference_values([(a, material_map(n, a, **mats)) for n, a in ch.images.items()])
+            pairs = [(a, material_map(n, a, **mats)) for n, a in ch.images.items()]
+            refs = reference_values(pairs)
+            base = {}  # each material's own colour in the art (the changing room's "as drawn" swatch)
+            for k, name in MATERIALS.items():
+                px = np.concatenate([a[m == k][:, :3] for a, m in pairs])
+                if len(px) > 20:
+                    base[name] = "#%02x%02x%02x" % tuple(int(c) for c in np.median(px, axis=0))
         if recolor:
             ch.images = {n: recolor(a) for n, a in ch.images.items()}
         for action, frames in actions(ch, view).items():
@@ -133,34 +146,38 @@ def bake_avatar(character, aid, layers=(), recolor=None):
         for a in ("sit-down", "stand-up", "seated-idle", "coffee-sip"):
             manifest["attachments"][SHEET[(a, view)]] = {"chairSeat": at}
     # what each material is, and its typical brightness in the art (the recolour's anchor)
-    manifest["materials"] = {"ids": {v: k for k, v in MATERIALS.items()}, "refs": {k: round(v, 4) for k, v in refs.items()}}
+    manifest["materials"] = {"ids": {v: k for k, v in MATERIALS.items()}, "refs": {k: round(v, 4) for k, v in refs.items() if k in base}, "base": base}
     json.dump(manifest, open(out / "manifest.json", "w"), indent=2)
 
 
-# the first character: his own hair and the styles cut from it (hairstyles.py), and the navy
-# overshirt (bake.py's recolour)
-GREEN_HAIR = {"natural": (), "tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",), "bun": ("hair-bun",)}
+# the first character's own hair, cut to other lengths
+GREEN_HAIR = {"tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",), "bun": ("hair-bun",)}
 
 
-def bake_green():
-    from bake import recolor
-
+def bake_green_cuts():
+    """His own hair cut shorter (hairstyles.py): his alone, they're made from his art."""
     entries = []
     for hair, layers in GREEN_HAIR.items():
-        aid = "green" if hair == "natural" else f"green-{hair}"
-        bake_avatar("green", aid, layers)
-        entries.append({"id": aid, "label": "Green overshirt" if hair == "natural" else f"Green, {hair}", "manifest": f"{aid}/manifest.json", "person": "green", "hair": hair})
-    bake_avatar("green", "green-navy", (), lambda a: recolor(a, "#3c5878"))
-    entries.append({"id": "green-navy", "label": "Navy overshirt", "manifest": "green-navy/manifest.json", "person": "green-navy"})
+        bake_avatar("green", f"green-{hair}", layers)
+        entries.append(entry("green", f"green-{hair}", hair))
     return entries
 
 
 def main():
-    entries = bake_green() + [bake(w, d) for w in WOMEN for d in [w] + [x for x in WOMEN if x != w]]
+    entries = []
+    for w in MODELS:  # each model in her (his) own hair first: the changing room's tile
+        entries += [bake(w, d) for d in [w] + [x for x in MODELS if x != w]]
+        if w == "green":
+            entries += bake_green_cuts()
     cat_path = SITE / "catalog.json"
     cat = json.load(open(cat_path))
     ids = {e["id"] for e in entries}
-    cat["avatars"] = entries + [a for a in cat["avatars"] if a["id"] not in ids]
+    # the café's avatars are exactly these (anything else, like the old navy recolour, goes:
+    # colours are picked in the changing room now)
+    for a in cat["avatars"]:
+        if a["id"] not in ids and (SITE / a["id"]).is_dir():
+            shutil.rmtree(SITE / a["id"])
+    cat["avatars"] = entries
     json.dump(cat, open(cat_path, "w"), indent=2)
     print("baked", len(entries), "avatars")
 
