@@ -22,8 +22,22 @@ export const BARISTA_PERSON = "olive";
 
 // who you are (skin, hair: the person) and what you're wearing. `avatar` picks a rigged avatar
 // from the catalog (rig.ts) instead: unset = the default one, "" = this classic person.
-export type Look = { person: string; outfit: string; avatar?: string };
+export type Look = { person: string; outfit: string; avatar?: string; colors?: Colors };
 export const cleanAvatar = (v: unknown): string | undefined => (typeof v === "string" && /^[a-z0-9-]{0,32}$/.test(v) ? v : undefined);
+// your colours (the changing room): a #rrggbb per material, recoloured onto the avatar in the
+// browser (rig.ts), the art's own shading kept
+export const MATERIALS = ["skin", "hair", "shirt", "tee", "trousers", "shoes"] as const;
+export type Material = (typeof MATERIALS)[number];
+export type Colors = Partial<Record<Material, string>>;
+export function cleanColors(v: unknown): Colors | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const out: Colors = {};
+  for (const m of MATERIALS) {
+    const c = (v as Record<string, unknown>)[m];
+    if (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c)) out[m] = c.toLowerCase();
+  }
+  return Object.keys(out).length ? out : undefined;
+}
 export const keyOf = (l: Look) => `${l.person}/${l.outfit}`;
 
 let peopleLoad: Promise<People> | null = null;
@@ -89,8 +103,9 @@ export function savedLook(p: People, barista: boolean): Look {
     // private window or blocked storage: a fresh look each visit is fine
   }
   const avatar = cleanAvatar(l?.avatar);
-  if (barista) return isLook(p, l) && l.person === BARISTA_PERSON ? { person: l.person, outfit: l.outfit, avatar } : { person: BARISTA_PERSON, outfit: firstOutfit(p, BARISTA_PERSON), avatar };
-  if (isLook(p, l) && l.person !== BARISTA_PERSON) return { person: l.person, outfit: l.outfit, avatar };
+  const colors = cleanColors(l?.colors);
+  if (barista) return isLook(p, l) && l.person === BARISTA_PERSON ? { person: l.person, outfit: l.outfit, avatar, colors } : { person: BARISTA_PERSON, outfit: firstOutfit(p, BARISTA_PERSON), avatar, colors };
+  if (isLook(p, l) && l.person !== BARISTA_PERSON) return { person: l.person, outfit: l.outfit, avatar, colors };
   const all = visitorPeople(p);
   const person = all[Math.floor(Math.random() * all.length)] ?? BARISTA_PERSON;
   const pick = p.people[person] ?? ["original"];

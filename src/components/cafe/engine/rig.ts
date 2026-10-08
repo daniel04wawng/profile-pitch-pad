@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CafeAvatar, loadCafeAvatar, type Direction, type Motion } from "./rig/cafe-avatar.mjs";
 import { BASE } from "./types";
+import { cleanColors, MATERIALS, type Colors } from "./avatar";
 import type { Actor } from "./Stage";
 
 // Rigged avatars (the café avatar package): four directions (SE/SW face you, NE/NW face
@@ -45,38 +46,147 @@ export function useCatalog() {
 }
 
 // one loaded avatar: its runtime (whose sheets every Body shares) and each clip's sheet URL
-export type Rig = { id: string; base: CafeAvatar; urls: Record<string, string> };
+export type Rig = { id: string; base: CafeAvatar; urls: Record<string, string>; manifestUrl: string };
 const rigs = new Map<string, Promise<Rig>>();
-export function loadRig(id: string): Promise<Rig> {
-  let p = rigs.get(id);
+
+// an avatar in someone's colours is its own set of sheets: keyed "id|skin#aabbcc,hair#..."
+export const rigKey = (id: string, colors?: Colors) => {
+  const c = cleanColors(colors);
+  return c ? `${id}|${MATERIALS.filter((m) => c[m]).map((m) => m + c[m]).join(",")}` : id;
+};
+export function loadRigKey(key: string): Promise<Rig> {
+  const [id, c] = key.split("|");
+  const colors: Colors = {};
+  for (const part of c ? c.split(",") : []) {
+    const m = MATERIALS.find((x) => part.startsWith(x + "#"));
+    if (m) colors[m] = part.slice(m.length);
+  }
+  return loadRig(id, colors);
+}
+
+export function loadRig(id: string, colors?: Colors): Promise<Rig> {
+  const key = rigKey(id, colors);
+  let p = rigs.get(key);
   if (!p) {
-    p = loadCatalog().then(async (cat) => {
-      const e = cat.find((a) => a.id === id);
-      if (!e) throw new Error(`no avatar "${id}"`);
-      const base = await loadCafeAvatar(e.manifest); // checks every sheet's size and timing
-      const urls = Object.fromEntries(Object.entries(base.manifest.animations).map(([k, c]) => [k, new URL(c.sheet, e.manifest).href]));
-      return { id, base, urls };
-    });
-    p.catch(() => rigs.delete(id)); // a failed load can be tried again later
-    rigs.set(id, p);
+    const c = cleanColors(colors);
+    p = c
+      ? loadRig(id).then((plain) => recolorRig(plain, c, key))
+      : loadCatalog().then(async (cat) => {
+          const e = cat.find((a) => a.id === id);
+          if (!e) throw new Error(`no avatar "${id}"`);
+          const base = await loadCafeAvatar(e.manifest); // checks every sheet's size and timing
+          const urls = Object.fromEntries(Object.entries(base.manifest.animations).map(([k, c]) => [k, new URL(c.sheet, e.manifest).href]));
+          return { id, base, urls, manifestUrl: e.manifest };
+        });
+    p.catch(() => rigs.delete(key)); // a failed load can be tried again later
+    rigs.set(key, p);
   }
   return p;
 }
-// the rig for `id`: null while loading, "failed" if it couldn't load (callers fall back)
-export function useRig(id: string | null | undefined) {
+
+// The avatar recoloured: each sheet beside its material map (<sheet>.mat.png, red = material),
+// each material taking the new colour's hue and saturation while keeping the art's shading,
+// anchored on the material's typical brightness (manifest.materials.refs). The same rule as the
+// rig's materials.py. An avatar without maps is returned as it is.
+type Manifest = CafeAvatar["manifest"] & { materials?: { ids: Record<string, number>; refs: Record<string, number> } };
+async function recolorRig(plain: Rig, colors: Colors, key: string): Promise<Rig> {
+  const manifest = plain.base.manifest as Manifest;
+  if (!manifest.materials) return plain;
+  const targets = new Map<number, { h: number; s: number; v: number; ref: number }>();
+  for (const m of MATERIALS) {
+    const c = colors[m];
+    const id = manifest.materials.ids[m];
+    if (!c || !id) continue;
+    const [h, s, v] = rgb2hsv(parseInt(c.slice(1, 3), 16) / 255, parseInt(c.slice(3, 5), 16) / 255, parseInt(c.slice(5, 7), 16) / 255);
+    targets.set(id, { h, s, v, ref: manifest.materials.refs[m] ?? 0.5 });
+  }
+  const sheets: Record<string, HTMLCanvasElement> = {};
+  const urls: Record<string, string> = {};
+  for (const [name, clip] of Object.entries(manifest.animations) as [string, { sheet: string; materialMap?: string }][]) {
+    const img = plain.base.sheets[name] as HTMLImageElement;
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const g = canvas.getContext("2d", { willReadFrequently: true })!;
+    g.drawImage(img, 0, 0);
+    if (clip.materialMap) {
+      const map = await loadImage(new URL(clip.materialMap, plain.manifestUrl).href);
+      const px = g.getImageData(0, 0, canvas.width, canvas.height);
+      g.clearRect(0, 0, canvas.width, canvas.height);
+      g.drawImage(map, 0, 0);
+      const ids = g.getImageData(0, 0, canvas.width, canvas.height).data;
+      const P = px.data;
+      for (let i = 0; i < P.length; i += 4) {
+        if (!P[i + 3]) continue;
+        const t = targets.get(ids[i]);
+        if (!t) continue;
+        const [, s, v] = rgb2hsv(P[i] / 255, P[i + 1] / 255, P[i + 2] / 255);
+        const pale = t.ref > 0.8; // near-white art (the tee, sneakers): the colour fully, the shading gently
+        const nv = pale ? Math.min(1, Math.max(0, t.v + (v - t.ref) * 0.45)) : Math.min(1, (v * t.v) / Math.max(1e-6, t.ref));
+        const ns = pale ? t.s : Math.min(1, t.s * (0.6 + 0.4 * Math.min(1.5, s / 0.4)));
+        const [r, gg, b] = hsv2rgb(t.h, ns, nv);
+        P[i] = Math.round(r * 255);
+        P[i + 1] = Math.round(gg * 255);
+        P[i + 2] = Math.round(b * 255);
+      }
+      g.putImageData(px, 0, 0);
+    }
+    sheets[name] = canvas;
+    urls[name] = await new Promise<string>((res) => canvas.toBlob((b) => res(b ? URL.createObjectURL(b) : plain.urls[name]), "image/png"));
+  }
+  return { id: key, base: new CafeAvatar(manifest, sheets), urls, manifestUrl: plain.manifestUrl };
+}
+const loadImage = (src: string) =>
+  new Promise<HTMLImageElement>((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error(`couldn't load ${src}`));
+    im.src = src;
+  });
+function rgb2hsv(r: number, g: number, b: number): [number, number, number] {
+  const mx = Math.max(r, g, b),
+    mn = Math.min(r, g, b),
+    d = mx - mn;
+  let h = 0;
+  if (d) {
+    h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+    if (h < 0) h += 1;
+  }
+  return [h, mx ? d / mx : 0, mx];
+}
+function hsv2rgb(h: number, s: number, v: number): [number, number, number] {
+  const i = Math.floor(h * 6),
+    f = h * 6 - i,
+    p = v * (1 - s),
+    q = v * (1 - f * s),
+    t = v * (1 - (1 - f) * s);
+  return ([[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]] as [number, number, number][])[((i % 6) + 6) % 6];
+}
+
+// the rig for `id` (in `colors`): null while loading, "failed" if it couldn't load (callers fall back)
+export function useRig(id: string | null | undefined, colors?: Colors) {
   const [r, setR] = useState<Rig | "failed" | null>(null);
+  const key = id ? rigKey(id, colors) : null;
   useEffect(() => {
     setR(null);
-    if (!id) return;
+    if (!key || !id) return;
     let alive = true;
-    loadRig(id).then(
-      (x) => alive && setR(x),
+    let done = false;
+    // in colours: the plain avatar meanwhile (recolouring takes a moment), never a blank
+    if (key !== id) loadRig(id).then((x) => alive && !done && setR(x), () => {});
+    loadRigKey(key).then(
+      (x) => {
+        done = true;
+        if (alive) setR(x);
+      },
       () => alive && setR("failed"),
     );
     return () => {
       alive = false;
     };
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
   return r;
 }
 

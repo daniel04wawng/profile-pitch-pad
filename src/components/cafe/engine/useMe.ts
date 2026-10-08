@@ -97,7 +97,7 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   const catalog = useCatalog();
   // everyone is a rigged avatar now (the classic people are only a fallback if one won't load)
   const rigId = !look || !catalog ? undefined : (catalog.find((a) => a.id === look.avatar) ?? catalog[0])?.id ?? null;
-  const rig = useRig(rigId);
+  const rig = useRig(rigId, look?.colors);
   const body = useRef<Body | null>(null);
   if (rig && rig !== "failed") {
     if (body.current?.rig !== rig) {

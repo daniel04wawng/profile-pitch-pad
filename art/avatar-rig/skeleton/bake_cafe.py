@@ -4,7 +4,9 @@ of the others', hair_swap.py), so a hairstyle holds in every pose.
 
     python3 art/avatar-rig/skeleton/bake_cafe.py
 
-Each avatar is public/cafe/avatars/<id>/ (12 sheets + manifest.json, the format the café plays),
+Each avatar is public/cafe/avatars/<id>/ (12 sheets + manifest.json, the format the café plays,
+and beside each sheet its material map, <sheet>.mat.png: red = which material each pixel is, so
+the café recolours skin, hair and clothes in the browser, keeping the shading),
 listed in the catalog with the person it is and whose hair they're wearing, so the changing room
 can group them.
 
@@ -24,7 +26,9 @@ import pathlib
 from PIL import Image
 
 from animations import walk
+from materials import MATERIALS, material_map, profile, reference_values
 from rig import Character, pose, render
+from viewer import id_character
 
 HERE = pathlib.Path(__file__).parent
 SITE = HERE.parents[2] / "public" / "cafe" / "avatars"
@@ -102,16 +106,25 @@ def bake_avatar(character, aid, layers=(), recolor=None):
     out.mkdir(parents=True, exist_ok=True)
     manifest = json.loads(json.dumps(TEMPLATE))
     manifest["character"] = aid
+    refs = None
     for view in ("front", "back"):
         ch = Character(HERE / "characters" / character / view, layers=layers)
+        mats = profile(HERE / "characters" / character / view)
+        ids = id_character(ch, view, mats)  # (the material maps, from the art before any recolour)
+        if refs is None:
+            refs = reference_values([(a, material_map(n, a, **mats)) for n, a in ch.images.items()])
         if recolor:
             ch.images = {n: recolor(a) for n, a in ch.images.items()}
         for action, frames in actions(ch, view).items():
             name = SHEET[(action, view)]
             sheet = Image.new("RGBA", (GAME[0] * len(frames), GAME[1]))
+            mat = Image.new("RGBA", (GAME[0] * len(frames), GAME[1]))
             for i, f in enumerate(frames):
                 sheet.alpha_composite(render(ch, view, f).resize(GAME, Image.Resampling.NEAREST), (GAME[0] * i, 0))
+                mat.alpha_composite(render(ids, view, f).resize(GAME, Image.Resampling.NEAREST), (GAME[0] * i, 0))
             sheet.save(out / f"{name}.png")
+            mat.save(out / f"{name}.mat.png")
+            manifest["animations"][name]["materialMap"] = f"{name}.mat.png"
             assert len(manifest["animations"][name]["durationMs"]) == len(frames), name
         # where the chair's seat goes: just under and behind her hips, seated
         p = pose(ch, view, seat(ch, view, SEAT_ANGLE))["pelvis"]
@@ -119,6 +132,8 @@ def bake_avatar(character, aid, layers=(), recolor=None):
         at = [round((p[0] + back[0]) / 4, 2), round((p[1] + back[1]) / 4, 2)]
         for a in ("sit-down", "stand-up", "seated-idle", "coffee-sip"):
             manifest["attachments"][SHEET[(a, view)]] = {"chairSeat": at}
+    # what each material is, and its typical brightness in the art (the recolour's anchor)
+    manifest["materials"] = {"ids": {v: k for k, v in MATERIALS.items()}, "refs": {k: round(v, 4) for k, v in refs.items()}}
     json.dump(manifest, open(out / "manifest.json", "w"), indent=2)
 
 

@@ -61,7 +61,8 @@
           19.136306188335233,
           10.976134308427792
         ]
-      ]
+      ],
+      "materialMap": "walk-front.mat.png"
     },
     "coffee-sip": {
       "sheet": "coffee-sip.png",
@@ -75,7 +76,8 @@
         150,
         750
       ],
-      "loop": true
+      "loop": true,
+      "materialMap": "coffee-sip.mat.png"
     },
     "seated-idle": {
       "sheet": "seated-idle.png",
@@ -89,7 +91,8 @@
         350,
         1500
       ],
-      "loop": true
+      "loop": true,
+      "materialMap": "seated-idle.mat.png"
     },
     "sit-down": {
       "sheet": "sit-down.png",
@@ -103,7 +106,8 @@
         125,
         125
       ],
-      "loop": false
+      "loop": false,
+      "materialMap": "sit-down.mat.png"
     },
     "stand-up": {
       "sheet": "stand-up.png",
@@ -117,7 +121,8 @@
         125,
         125
       ],
-      "loop": false
+      "loop": false,
+      "materialMap": "stand-up.mat.png"
     },
     "idle-front": {
       "sheet": "idle-front.png",
@@ -131,7 +136,8 @@
         350,
         1500
       ],
-      "loop": true
+      "loop": true,
+      "materialMap": "idle-front.mat.png"
     },
     "walk-back": {
       "sheet": "walk-back.png",
@@ -183,7 +189,8 @@
           20.295422320488974,
           -11.64097609515953
         ]
-      ]
+      ],
+      "materialMap": "walk-back.mat.png"
     },
     "idle-back": {
       "sheet": "idle-back.png",
@@ -197,7 +204,8 @@
         350,
         1500
       ],
-      "loop": true
+      "loop": true,
+      "materialMap": "idle-back.mat.png"
     },
     "sit-down-back": {
       "sheet": "sit-down-back.png",
@@ -211,7 +219,8 @@
         125,
         125
       ],
-      "loop": false
+      "loop": false,
+      "materialMap": "sit-down-back.mat.png"
     },
     "stand-up-back": {
       "sheet": "stand-up-back.png",
@@ -225,7 +234,8 @@
         125,
         125
       ],
-      "loop": false
+      "loop": false,
+      "materialMap": "stand-up-back.mat.png"
     },
     "coffee-sip-back": {
       "sheet": "coffee-sip-back.png",
@@ -239,7 +249,8 @@
         150,
         750
       ],
-      "loop": true
+      "loop": true,
+      "materialMap": "coffee-sip-back.mat.png"
     },
     "seated-idle-back": {
       "sheet": "seated-idle-back.png",
@@ -253,7 +264,8 @@
         350,
         1500
       ],
-      "loop": true
+      "loop": true,
+      "materialMap": "seated-idle-back.mat.png"
     }
   },
   "attachments": {
@@ -350,6 +362,24 @@
         "coffee-sip": "coffee-sip-back",
         "seated-idle": "seated-idle-back"
       }
+    }
+  },
+  "materials": {
+    "ids": {
+      "skin": 1,
+      "hair": 2,
+      "shirt": 3,
+      "tee": 4,
+      "trousers": 5,
+      "shoes": 6
+    },
+    "refs": {
+      "skin": 0.8824,
+      "hair": 0.2314,
+      "shirt": 0.5176,
+      "tee": 0.9725,
+      "trousers": 0.3137,
+      "shoes": 0.8667
     }
   }
 }

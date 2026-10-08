@@ -1,4 +1,4 @@
-import { keyOf, sheetOf, type Look, type People } from "./avatar";
+import { keyOf, MATERIALS, sheetOf, type Colors, type Look, type Material, type People } from "./avatar";
 import { Frame, PixelButton } from "./Screens";
 import { useCatalog, useRig } from "./rig";
 import type { ScreenDef } from "./screenData";
@@ -30,8 +30,8 @@ function Pose({ people, look, pose, scale }: { people: People; look: Look; pose:
 }
 
 // a rigged avatar standing (or doing `action`, frame 0), drawn crisp at `scale`
-function RigPose({ id, action = "idle-front", scale }: { id: string; action?: string; scale: number }) {
-  const rig = useRig(id);
+function RigPose({ id, action = "idle-front", scale, colors }: { id: string; action?: string; scale: number; colors?: Colors }) {
+  const rig = useRig(id, colors);
   if (rig === "failed") return <div className="flex h-[70px] w-16 items-center justify-center text-[12px] opacity-60">couldn't load</div>;
   if (!rig) return <div style={{ width: 64 * scale, height: 70 * scale }} />;
   const [w, h] = rig.base.manifest.frameSize;
@@ -45,6 +45,16 @@ function RigPose({ id, action = "idle-front", scale }: { id: string; action?: st
 }
 
 const label = (s: string) => s.replace(/-/g, " ");
+// the colours on offer per material (null: as drawn)
+const PALETTES: Record<Material, (string | null)[]> = {
+  skin: [null, "#f6d2b8", "#eab896", "#d39a72", "#b07650", "#8a5636", "#5e3a24"],
+  hair: [null, "#1c1614", "#5a3a24", "#8a4a2a", "#c88a4a", "#e8c27a", "#9a9a9a", "#d86a8a"],
+  shirt: [null, "#3c5878", "#a8432c", "#e3d6b8", "#2a2a2e", "#7a2a3a", "#4f7a8a", "#6b7f3a"],
+  tee: [null, "#2a2a2e", "#a8c8e0", "#e8b45c", "#c86a5a"],
+  trousers: [null, "#3a5a8a", "#b8a07a", "#1e1e22", "#5a6a4a"],
+  shoes: [null, "#1e1e22", "#c84a3a", "#3a5a8a"],
+};
+const MATERIAL_LABEL: Record<Material, string> = { skin: "skin", hair: "hair colour", shirt: "top", tee: "tee", trousers: "trousers", shoes: "shoes" };
 const ring = (on: boolean) => ({ boxShadow: on ? "0 0 0 3px #e8b45c, 0 0 0 5px #2b1d1a" : "0 0 0 2px rgba(243,230,201,0.25)" });
 
 export function Wardrobe({ people, look, barista, onChange, onClose }: { people: People | null; look: Look | null; barista: boolean; onChange: (l: Look) => void; onClose: () => void }) {
@@ -69,8 +79,8 @@ export function Wardrobe({ people, look, barista, onChange, onClose }: { people:
         <div className="flex shrink-0 items-end justify-center gap-2 pt-4">
           {rigId ? (
             <>
-              <RigPose id={rigId} scale={3} />
-              <RigPose id={rigId} action="idle-back" scale={3} />
+              <RigPose id={rigId} scale={3} colors={look.colors} />
+              <RigPose id={rigId} action="idle-back" scale={3} colors={look.colors} />
             </>
           ) : (
             <>
@@ -102,6 +112,35 @@ export function Wardrobe({ people, look, barista, onChange, onClose }: { people:
             </>
           )}
           {(catalog?.length ?? 0) < 2 && <p className="mt-2 text-[17px] opacity-60">More people coming soon.</p>}
+          {rigId && (
+            <>
+              <p className="mb-2 mt-4 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">colours</p>
+              <div className="flex flex-col gap-1.5">
+                {MATERIALS.map((m) => (
+                  <div key={m} className="flex items-center gap-1.5">
+                    <span className="w-20 shrink-0 font-['Silkscreen'] text-[9px] uppercase tracking-wider opacity-70">{MATERIAL_LABEL[m]}</span>
+                    {PALETTES[m].map((c) => {
+                      const on = (look.colors?.[m] ?? null) === c;
+                      return (
+                        <button
+                          key={c ?? "drawn"}
+                          aria-label={c ? `${MATERIAL_LABEL[m]} ${c}` : `${MATERIAL_LABEL[m]} as drawn`}
+                          onClick={() => {
+                            const next: Colors = { ...look.colors };
+                            if (c) next[m] = c;
+                            else delete next[m];
+                            onChange({ ...look, colors: Object.keys(next).length ? next : undefined });
+                          }}
+                          className="h-5 w-5 shrink-0"
+                          style={{ ...ring(on), background: c ?? "conic-gradient(#ccc 0 25%, #fff 0 50%, #ccc 0 75%, #fff 0)", backgroundSize: c ? undefined : "8px 8px" }}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
           <div className="mt-5 flex gap-3">
             <PixelButton onClick={shuffle} fill="#86a86b">
               shuffle

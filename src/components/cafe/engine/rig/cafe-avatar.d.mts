@@ -16,9 +16,9 @@ export type Manifest = {
   animations: Record<Action, Clip>;
 };
 export class CafeAvatar {
-  constructor(manifest: Manifest, sheets: Record<string, HTMLImageElement>);
+  constructor(manifest: Manifest, sheets: Record<string, HTMLImageElement | HTMLCanvasElement>);
   manifest: Manifest;
-  sheets: Record<string, HTMLImageElement>;
+  sheets: Record<string, HTMLImageElement | HTMLCanvasElement>;
   direction: Direction;
   action: Action; elapsedMs: number; completed: boolean;
   setDirection(direction: Direction): void;
