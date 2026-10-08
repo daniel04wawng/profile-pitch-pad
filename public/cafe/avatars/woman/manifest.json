@@ -416,11 +416,15 @@
   },
   "layers": {
     "hair": [
-      "bob",
       "wavy",
+      "bob",
       "pixie",
       "curls",
-      "braid"
+      "braid",
+      "tidy",
+      "short",
+      "cropped",
+      "bun"
     ],
     "defaultHair": "bob",
     "wear": [

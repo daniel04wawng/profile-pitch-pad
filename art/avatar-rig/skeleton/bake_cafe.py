@@ -90,15 +90,35 @@ TEMPLATE = json.load(open(HERE / "manifest.template.json"))  # the café's clip 
 # The base models, and the hairstyles and things to wear each one can have. A hairstyle is
 # layers on the model (someone's hair, hair_swap.py; his own cut shorter, hairstyles.py); ()
 # is the model's own hair.
+HAIRS = ("wavy", "bob", "pixie", "curls", "braid", "tidy", "short", "cropped", "bun")  # the same for everyone, in this order
+DONOR = {"wavy": "green", "bob": "sage-bob", "pixie": "blue-pixie", "curls": "terracotta-curls", "braid": "plum-braid",
+         "tidy": "green-tidy", "short": "green-short", "cropped": "green-cropped", "bun": "green-bun"}
+
+
+def hair_layers(character, own):
+    """Each hairstyle as layers on `character`: its own hair is (); his cuts on him are his own
+    hair's layers (hairstyles.py); everything else is someone's hair (hair_swap.py)."""
+    out = {}
+    for h in HAIRS:
+        if h == own:
+            out[h] = ()
+        elif character == "green" and DONOR[h].startswith("green-"):
+            out[h] = (f"hair-{h}",)
+        else:
+            out[h] = (f"hair-{DONOR[h]}",)
+    return out
+
+
+# The base models: the man, and the woman with her jacket on or off (her head either way).
 MODELS = {
-    "man": {"character": "green", "body": "man", "jacket": "on", "own": "wavy",
-            "hair": {"wavy": (), "bob": ("hair-sage-bob",), "pixie": ("hair-blue-pixie",), "curls": ("hair-terracotta-curls",),
-                     "braid": ("hair-plum-braid",), "tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",), "bun": ("hair-bun",)}},
-    "woman": {"character": "sage-bob", "body": "woman", "jacket": "on", "own": "bob",
-              "hair": {"bob": (), "wavy": ("hair-green",), "pixie": ("hair-blue-pixie",), "curls": ("hair-terracotta-curls",), "braid": ("hair-plum-braid",)}},
-    "woman-tee": {"character": "woman-tee", "body": "woman", "jacket": "off", "own": "bob",
-                  "hair": {"bob": (), "wavy": ("hair-green",), "pixie": ("hair-blue-pixie",), "curls": ("hair-terracotta-curls",), "braid": ("hair-plum-braid",)}},
+    "man": {"character": "green", "body": "man", "jacket": "on", "own": "wavy"},
+    "woman": {"character": "sage-bob", "body": "woman", "jacket": "on", "own": "bob"},
+    "woman-tee": {"character": "woman-tee", "body": "woman", "jacket": "off", "own": "bob"},
 }
+for _m in MODELS.values():
+    _m["hair"] = hair_layers(_m["character"], _m["own"])
+
+
 WEAR = {"beanie": ("beanie",), "glasses": ("glasses",)}
 BALD = ("hair-none",)
 

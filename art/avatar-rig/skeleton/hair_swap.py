@@ -26,14 +26,31 @@ HERE = pathlib.Path(__file__).parent
 CH = HERE / "characters"
 WOMEN = ("sage-bob", "blue-pixie", "terracotta-curls", "plum-braid")
 PEOPLE = ("green",) + WOMEN  # whose hair there is: his wavy crop, their bob, pixie, curls, braid
+CUTS = ("green:tidy", "green:short", "green:cropped", "green:bun")  # and his hair cut shorter (hairstyles.py)
 # who wears it: the base models (the man, the woman, the woman with her jacket off, whose head is
 # the woman's own), each with no hair at all ("hair-none", what the café stacks a hair layer on)
 MODELS = {"green": "green", "sage-bob": "sage-bob", "woman-tee": "sage-bob"}  # model -> whose hair is hers
 HAIR, SKIN = IDS["hair"], IDS["skin"]
 
 
+def who(c):
+    """A donor can be someone's hair cut another way: "green:tidy" is his hair as
+    hairstyles.py trims it (the hair-tidy layer on his head)."""
+    return c.split(":")[0]
+
+
 def load(cid, view, part):
-    return np.array(Image.open(CH / cid / view / f"{part}.png").convert("RGBA"))
+    base, _, cut = cid.partition(":")
+    a = np.array(Image.open(CH / base / view / f"{part}.png").convert("RGBA"))
+    layer = CH / base / "layers" / f"hair-{cut}" / view
+    if cut and layer.is_dir():
+        hide, fill = layer / f"{part}.hide.png", layer / f"{part}.fill.png"
+        if hide.exists():
+            a[np.array(Image.open(hide).convert("RGBA"))[:, :, 3] > 0] = 0
+        if fill.exists():
+            f = np.array(Image.open(fill).convert("RGBA"))
+            a[f[:, :, 3] > 0] = f[f[:, :, 3] > 0]
+    return a
 
 
 def face_of(m):
@@ -202,7 +219,7 @@ def offset(w, d, view):
     """How far to move d's head things so d's face sits on w's."""
     def centre(c):
         a = load(c, view, "head")
-        return face_centre(a, material_map("head", a, **profile(CH / c / view)), json.load(open(CH / c / view / "parts.json"))["joints"]["neck"][1])
+        return face_centre(a, material_map("head", a, **profile(CH / who(c) / view)), json.load(open(CH / who(c) / view / "parts.json"))["joints"]["neck"][1])
     return np.round(centre(w) - centre(d)).astype(int)
 
 
@@ -212,10 +229,10 @@ def swap(w, d, view):
     neck_w = json.load(open(CH / w / view / "parts.json"))["joints"]["neck"][1]
     hw, tw = load(w, view, "head"), load(w, view, "torso")
     mhw, mtw = material_map("head", hw, **pw), material_map("torso", tw, **pw)
-    out = CH / w / "layers" / f"hair-{d or 'none'}" / view
+    out = CH / w / "layers" / f"hair-{(d or 'none').replace(':', '-')}" / view
     out.mkdir(parents=True, exist_ok=True)
     if d:
-        pd = profile(CH / d / view)
+        pd = profile(CH / who(d) / view)
         hd, td = load(d, view, "head"), load(d, view, "torso")
         mhd, mtd = material_map("head", hd, **pd), material_map("torso", td, **pd)
         dx, dy = offset(w, d, view)
@@ -224,6 +241,11 @@ def swap(w, d, view):
         dh[~hair_of(hd, mhd)] = 0
         dh = shift(dh, dx, dy)
         drop_specks(dh)  # stray dots of the donor's outline, away from her hair
+        # only the hair itself and what touches it (a cut leaves bits of the old outline about)
+        lab, n = label(binary_dilation(dh[:, :, 3] > 0, iterations=1), structure=np.ones((3, 3)))
+        if n > 1:
+            sizes = np.bincount(lab.ravel())[1:]
+            dh[lab != 1 + int(sizes.argmax())] = 0
     else:
         dx = dy = 0
         dh = np.zeros_like(hw)
@@ -233,6 +255,13 @@ def swap(w, d, view):
     own = hair_of(hw, mhw)
     for pts in HIDE_TOO.get((w, view), []):
         own |= poly((256, 280), pts) & (hw[:, :, 3] > 0)
+    # the last bits of her hair's outline (single pixels, too far out to count as hair): small
+    # islands of her head, away from her face, go with it
+    rest = (hw[:, :, 3] > 0) & ~own & ~binary_dilation(face_of(mhw), iterations=2)
+    lab, n = label(rest, structure=np.ones((3, 3)))
+    for k in range(1, n + 1):
+        if (lab == k).sum() < 15:
+            own |= lab == k
     hide = np.zeros_like(hw)
     hide[own, 3] = 255
     face = mhw == SKIN
@@ -304,7 +333,7 @@ def fit_wear(w, view):
 if __name__ == "__main__":
     for w, own in MODELS.items():
         print(w, "with no hair", [swap(w, None, v) for v in ("front", "back")])
-        for d in PEOPLE:
+        for d in PEOPLE + (CUTS if w != "green" else ()):  # (on him the cuts are his own hair's layers)
             if d != own:
                 print(w, "wears", d, [swap(w, d, v) for v in ("front", "back")])
         if w != "green":

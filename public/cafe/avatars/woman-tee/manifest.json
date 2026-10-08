@@ -399,14 +399,14 @@
     },
     "refs": {
       "skin": 0.9765,
-      "hair": 0.2314,
+      "hair": 0.2275,
       "shirt": 0.9529,
       "trousers": 0.2706,
       "shoes": 0.8549
     },
     "base": {
       "skin": "#f9a85d",
-      "hair": "#3b2e2d",
+      "hair": "#3a2d2d",
       "shirt": "#f3dcc0",
       "trousers": "#433e45",
       "shoes": "#dacec3"
@@ -414,11 +414,15 @@
   },
   "layers": {
     "hair": [
-      "bob",
       "wavy",
+      "bob",
       "pixie",
       "curls",
-      "braid"
+      "braid",
+      "tidy",
+      "short",
+      "cropped",
+      "bun"
     ],
     "defaultHair": "bob",
     "wear": [

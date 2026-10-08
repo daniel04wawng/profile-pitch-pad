@@ -77,7 +77,9 @@ def build(view, look):
     # her head on Terracotta's neck
     dx, dy = np.round(np.array(bs["joints"]["neck"]) - np.array(hs["joints"]["neck"])).astype(int)
     head = sage["head"].copy()
-    head[material_map("head", head, **ph) == IDS["shirt"]] = 0  # a bit of her overshirt's collar
+    yy = np.mgrid[: head.shape[0], : head.shape[1]][0]
+    collar = (material_map("head", head, **ph) == IDS["shirt"]) & (yy >= hs["joints"]["neck"][1] - 6)
+    head[collar] = 0  # a bit of her overshirt's collar (not her hair's highlights, higher up)
     moved = np.zeros_like(head)
     ys, xs = np.nonzero(head[:, :, 3] > 0)
     ok = (ys + dy >= 0) & (ys + dy < head.shape[0]) & (xs + dx >= 0) & (xs + dx < head.shape[1])
