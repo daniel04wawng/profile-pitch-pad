@@ -10,7 +10,8 @@ import type { Actor } from "./Stage";
 // timing and direction mapping; the café draws the frames itself (Stage) so people sort in
 // depth with the furniture. Frames are used exactly as authored: never trimmed or resized.
 
-export type CatalogEntry = { id: string; label: string; manifest: string };
+// person/hair: the same person in other hairstyles share a person (the changing room groups them)
+export type CatalogEntry = { id: string; label: string; manifest: string; person?: string; hair?: string };
 const CATALOG_URL = `${BASE}avatars/catalog.json`;
 let catalogLoad: Promise<CatalogEntry[]> | null = null;
 export function loadCatalog(): Promise<CatalogEntry[]> {
@@ -20,7 +21,13 @@ export function loadCatalog(): Promise<CatalogEntry[]> {
       (Array.isArray(d?.avatars) ? d.avatars : [])
         .filter((a: Partial<CatalogEntry>) => typeof a?.id === "string" && /^[a-z0-9-]{1,32}$/.test(a.id) && typeof a.manifest === "string")
         // the manifest's address is relative to the catalog, so the folder can move as a whole
-        .map((a: CatalogEntry) => ({ id: a.id, label: String(a.label ?? a.id).slice(0, 40), manifest: new URL(a.manifest, new URL(CATALOG_URL, location.href)).href })),
+        .map((a: CatalogEntry) => ({
+          id: a.id,
+          label: String(a.label ?? a.id).slice(0, 40),
+          manifest: new URL(a.manifest, new URL(CATALOG_URL, location.href)).href,
+          person: typeof a.person === "string" ? a.person.slice(0, 32) : a.id,
+          hair: typeof a.hair === "string" ? a.hair.slice(0, 20) : undefined,
+        })),
     )
     .catch(() => []);
   return catalogLoad;

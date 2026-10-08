@@ -10,6 +10,118 @@
       "id": "green-navy",
       "label": "Navy overshirt",
       "manifest": "green-navy/manifest.json"
+    },
+    {
+      "id": "sage-bob",
+      "label": "Sage",
+      "manifest": "sage-bob/manifest.json",
+      "person": "sage-bob",
+      "hair": "bob"
+    },
+    {
+      "id": "sage-bob-blue-pixie",
+      "label": "Sage, pixie",
+      "manifest": "sage-bob-blue-pixie/manifest.json",
+      "person": "sage-bob",
+      "hair": "pixie"
+    },
+    {
+      "id": "sage-bob-terracotta-curls",
+      "label": "Sage, curls",
+      "manifest": "sage-bob-terracotta-curls/manifest.json",
+      "person": "sage-bob",
+      "hair": "curls"
+    },
+    {
+      "id": "sage-bob-plum-braid",
+      "label": "Sage, braid",
+      "manifest": "sage-bob-plum-braid/manifest.json",
+      "person": "sage-bob",
+      "hair": "braid"
+    },
+    {
+      "id": "blue-pixie",
+      "label": "Blue",
+      "manifest": "blue-pixie/manifest.json",
+      "person": "blue-pixie",
+      "hair": "pixie"
+    },
+    {
+      "id": "blue-pixie-sage-bob",
+      "label": "Blue, bob",
+      "manifest": "blue-pixie-sage-bob/manifest.json",
+      "person": "blue-pixie",
+      "hair": "bob"
+    },
+    {
+      "id": "blue-pixie-terracotta-curls",
+      "label": "Blue, curls",
+      "manifest": "blue-pixie-terracotta-curls/manifest.json",
+      "person": "blue-pixie",
+      "hair": "curls"
+    },
+    {
+      "id": "blue-pixie-plum-braid",
+      "label": "Blue, braid",
+      "manifest": "blue-pixie-plum-braid/manifest.json",
+      "person": "blue-pixie",
+      "hair": "braid"
+    },
+    {
+      "id": "terracotta-curls",
+      "label": "Terracotta",
+      "manifest": "terracotta-curls/manifest.json",
+      "person": "terracotta-curls",
+      "hair": "curls"
+    },
+    {
+      "id": "terracotta-curls-sage-bob",
+      "label": "Terracotta, bob",
+      "manifest": "terracotta-curls-sage-bob/manifest.json",
+      "person": "terracotta-curls",
+      "hair": "bob"
+    },
+    {
+      "id": "terracotta-curls-blue-pixie",
+      "label": "Terracotta, pixie",
+      "manifest": "terracotta-curls-blue-pixie/manifest.json",
+      "person": "terracotta-curls",
+      "hair": "pixie"
+    },
+    {
+      "id": "terracotta-curls-plum-braid",
+      "label": "Terracotta, braid",
+      "manifest": "terracotta-curls-plum-braid/manifest.json",
+      "person": "terracotta-curls",
+      "hair": "braid"
+    },
+    {
+      "id": "plum-braid",
+      "label": "Plum",
+      "manifest": "plum-braid/manifest.json",
+      "person": "plum-braid",
+      "hair": "braid"
+    },
+    {
+      "id": "plum-braid-sage-bob",
+      "label": "Plum, bob",
+      "manifest": "plum-braid-sage-bob/manifest.json",
+      "person": "plum-braid",
+      "hair": "bob"
+    },
+    {
+      "id": "plum-braid-blue-pixie",
+      "label": "Plum, pixie",
+      "manifest": "plum-braid-blue-pixie/manifest.json",
+      "person": "plum-braid",
+      "hair": "pixie"
+    },
+    {
+      "id": "plum-braid-terracotta-curls",
+      "label": "Plum, curls",
+      "manifest": "plum-braid-terracotta-curls/manifest.json",
+      "person": "plum-braid",
+      "hair": "curls"
     }
   ]
 }

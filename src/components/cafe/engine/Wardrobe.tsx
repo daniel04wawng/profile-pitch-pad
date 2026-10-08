@@ -1,4 +1,4 @@
-import { BARISTA_PERSON, firstOutfit, keyOf, sheetOf, visitorPeople, type Look, type People } from "./avatar";
+import { keyOf, sheetOf, type Look, type People } from "./avatar";
 import { Frame, PixelButton } from "./Screens";
 import { useCatalog, useRig } from "./rig";
 import type { ScreenDef } from "./screenData";
@@ -50,10 +50,13 @@ const ring = (on: boolean) => ({ boxShadow: on ? "0 0 0 3px #e8b45c, 0 0 0 5px #
 export function Wardrobe({ people, look, barista, onChange, onClose }: { people: People | null; look: Look | null; barista: boolean; onChange: (l: Look) => void; onClose: () => void }) {
   const catalog = useCatalog();
   if (!people || !look) return null;
-  const persons = barista ? [BARISTA_PERSON] : visitorPeople(people);
   // which rigged avatar you are (null: a classic person); unset means the catalog's first
   const rigId = !catalog ? null : (catalog.find((a) => a.id === look.avatar) ?? catalog[0])?.id ?? null;
-  const outfits = people.people[look.person] ?? [];
+  // one tile per person (her own hair first in the catalog); her other hairstyles below
+  const all = catalog ?? [];
+  const me = all.find((a) => a.id === rigId);
+  const persons = all.filter((a, i) => all.findIndex((b) => b.person === a.person) === i);
+  const hairs = me ? all.filter((a) => a.person === me.person && a.hair) : [];
   const shuffle = () => {
     const all = catalog ?? [];
     const pick = all[Math.floor(Math.random() * all.length)];
@@ -63,7 +66,7 @@ export function Wardrobe({ people, look, barista, onChange, onClose }: { people:
   return (
     <Frame screen={ROOM} onClose={onClose}>
       <div className="flex flex-col gap-6 sm:flex-row">
-        <div className="flex shrink-0 items-end justify-center gap-2">
+        <div className="flex shrink-0 items-end justify-center gap-2 pt-4">
           {rigId ? (
             <>
               <RigPose id={rigId} scale={3} />
@@ -79,13 +82,25 @@ export function Wardrobe({ people, look, barista, onChange, onClose }: { people:
         <div className="min-w-0 flex-1">
           <p className="mb-2 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">who you are</p>
           <div className="flex flex-wrap gap-2">
-            {(catalog ?? []).map((a) => (
-              <button key={a.id} onClick={() => onChange({ ...look, avatar: a.id })} className="flex flex-col items-center gap-1 p-1" style={ring(rigId === a.id)} title={a.label}>
+            {persons.map((a) => (
+              <button key={a.id} onClick={() => onChange({ ...look, avatar: a.id })} className="flex flex-col items-center gap-1 p-1" style={ring(me?.person === a.person)} title={a.label}>
                 <RigPose id={a.id} scale={1} />
                 <span className="font-['Silkscreen'] text-[9px] uppercase tracking-wider opacity-80">{a.label}</span>
               </button>
             ))}
           </div>
+          {hairs.length > 1 && (
+            <>
+              <p className="mb-2 mt-4 font-['Silkscreen'] text-[11px] uppercase tracking-wider opacity-70">hair</p>
+              <div className="flex flex-wrap gap-2">
+                {hairs.map((a) => (
+                  <button key={a.id} onClick={() => onChange({ ...look, avatar: a.id })} className="px-3 py-1 font-['Silkscreen'] text-[10px] uppercase tracking-wider" style={ring(rigId === a.id)}>
+                    {a.hair}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           {(catalog?.length ?? 0) < 2 && <p className="mt-2 text-[17px] opacity-60">More people coming soon.</p>}
           <div className="mt-5 flex gap-3">
             <PixelButton onClick={shuffle} fill="#86a86b">
