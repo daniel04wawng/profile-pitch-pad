@@ -82,6 +82,7 @@ export function Wardrobe({ people, look, onChange, onClose }: { people: People |
   const wearable = manifest?.layers?.wear ?? [];
   const wearing = new Set(look.wear ?? []);
   const set = (l: Partial<Look>) => onChange({ ...look, ...l });
+  const big = window.innerWidth >= 640 ? 3 : 2; // on a phone, smaller previews so the choices fit
   // a body: its jacket-on model, or whichever it has
   const pickBody = (body: string) => {
     const m = all.filter((a) => (a.body ?? a.id) === body);
@@ -96,11 +97,11 @@ export function Wardrobe({ people, look, onChange, onClose }: { people: People |
   return (
     <Frame screen={ROOM} onClose={onClose}>
       <div className="flex flex-col gap-6 sm:flex-row">
-        <div className="flex shrink-0 items-end justify-center gap-2 pt-4">
+        <div className="flex shrink-0 items-end justify-center gap-2 pt-2 sm:pt-4">
           {rigId ? (
             <>
-              <RigPose id={rigId} scale={3} dress={look} />
-              <RigPose id={rigId} action="idle-back" scale={3} dress={look} />
+              <RigPose id={rigId} scale={big} dress={look} />
+              <RigPose id={rigId} action="idle-back" scale={big} dress={look} />
             </>
           ) : (
             <>

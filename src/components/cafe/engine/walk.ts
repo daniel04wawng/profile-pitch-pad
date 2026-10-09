@@ -195,7 +195,15 @@ export function makeWalk(layout: Layout, companions: Record<string, Companion>, 
     const edge = alongA ? { i: I - 1, j: c.j } : { i: c.i, j: J - 1 };
     const out = alongA ? { i: 1, j: 0 } : { i: 0, j: 1 };
     const onFloor = walkTo(edge, free)?.slice(-1)[0] ?? edge;
-    const steps = walkTo(onFloor, (q) => free(q) && (alongA ? onFloor.i - q.i : onFloor.j - q.j) >= 5) ?? [onFloor];
+    // a few steps in, at a spot of their own (people arriving together don't stand on each other)
+    const spots: Cell[] = [];
+    for (let k = 3; k <= 6; k++)
+      for (let side = -2; side <= 2; side++) {
+        const q = alongA ? { i: onFloor.i - k, j: onFloor.j + side } : { i: onFloor.i + side, j: onFloor.j - k };
+        if (q.i >= 0 && q.j >= 0 && q.i < I && q.j < J && free(q)) spots.push(q);
+      }
+    const pick = spots[Math.floor(Math.random() * spots.length)];
+    const steps = (pick && walkTo(onFloor, (q) => q.i === pick.i && q.j === pick.j)) ?? walkTo(onFloor, (q) => free(q) && (alongA ? onFloor.i - q.i : onFloor.j - q.j) >= 5) ?? [onFloor];
     // start well outside, so there's a proper walk in from the street
     const from = cellCentre({ i: onFloor.i + out.i * 6, j: onFloor.j + out.j * 6 });
     const approach = [4, 2].map((k) => cellCentre({ i: onFloor.i + out.i * k, j: onFloor.j + out.j * k }));
