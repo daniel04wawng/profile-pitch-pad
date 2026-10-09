@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
@@ -8,7 +8,12 @@ import fs from "fs";
 function listSprites() {
   return fs
     .readdirSync(path.resolve(__dirname, "public/cafe/sprites"))
-    .filter((f) => f.endsWith(".png") && !/\.(sky|light)\.png$/.test(f) && f !== "new-asset.png")
+    .filter(
+      (f) =>
+        f.endsWith(".png") &&
+        !/\.(sky|light)\.png$/.test(f) &&
+        f !== "new-asset.png",
+    )
     .sort()
     .map((f) => `sprites/${f}`);
 }
@@ -21,8 +26,14 @@ function cafeEditorSaver(): Plugin {
 
   const handle =
     (write: (body: string) => void) =>
-    (req: import("http").IncomingMessage, res: import("http").ServerResponse) => {
-      if (req.method !== "POST" || !local.includes(req.socket.remoteAddress ?? "")) {
+    (
+      req: import("http").IncomingMessage,
+      res: import("http").ServerResponse,
+    ) => {
+      if (
+        req.method !== "POST" ||
+        !local.includes(req.socket.remoteAddress ?? "")
+      ) {
         res.statusCode = 403;
         res.end();
         return;
@@ -52,16 +63,24 @@ function cafeEditorSaver(): Plugin {
         "/__cafe/layout",
         handle((body) => {
           const layout = JSON.parse(body);
-          if (!Array.isArray(layout.assets)) throw new Error("layout.assets missing");
-          fs.writeFileSync(path.join(root, "layout.json"), JSON.stringify(layout, null, 2) + "\n");
+          if (!Array.isArray(layout.assets))
+            throw new Error("layout.assets missing");
+          fs.writeFileSync(
+            path.join(root, "layout.json"),
+            JSON.stringify(layout, null, 2) + "\n",
+          );
         }),
       );
       server.middlewares.use(
         "/__cafe/screens",
         handle((body) => {
           const data = JSON.parse(body);
-          if (typeof data.screens !== "object" || Array.isArray(data.screens)) throw new Error("screens missing");
-          fs.writeFileSync(path.join(root, "screens.json"), JSON.stringify(data, null, 2) + "\n");
+          if (typeof data.screens !== "object" || Array.isArray(data.screens))
+            throw new Error("screens missing");
+          fs.writeFileSync(
+            path.join(root, "screens.json"),
+            JSON.stringify(data, null, 2) + "\n",
+          );
         }),
       );
       // An asset's collision (set in the editor), kept with the asset in _companions.json under
@@ -70,11 +89,21 @@ function cafeEditorSaver(): Plugin {
         "/__cafe/collision",
         handle((body) => {
           const { name, collision } = JSON.parse(body);
-          if (typeof name !== "string" || !/^[a-z0-9_-]+$/i.test(name)) throw new Error("bad name");
-          const n = (v: unknown) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) < 4096;
+          if (typeof name !== "string" || !/^[a-z0-9_-]+$/i.test(name))
+            throw new Error("bad name");
+          const n = (v: unknown) =>
+            typeof v === "number" && Number.isFinite(v) && Math.abs(v) < 4096;
           if (collision !== null) {
             const c = collision;
-            if (!c || !n(c.foot?.x) || !n(c.foot?.y) || !n(c.size?.a) || !n(c.size?.b) || !["front", "back", "centre"].includes(c.size?.from)) throw new Error("bad collision");
+            if (
+              !c ||
+              !n(c.foot?.x) ||
+              !n(c.foot?.y) ||
+              !n(c.size?.a) ||
+              !n(c.size?.b) ||
+              !["front", "back", "centre"].includes(c.size?.from)
+            )
+              throw new Error("bad collision");
           }
           const file = path.join(root, "sprites", "_companions.json");
           const all = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -83,7 +112,11 @@ function cafeEditorSaver(): Plugin {
           else
             all[name].collision = {
               foot: { x: collision.foot.x, y: collision.foot.y },
-              size: { a: collision.size.a, b: collision.size.b, from: collision.size.from },
+              size: {
+                a: collision.size.a,
+                b: collision.size.b,
+                from: collision.size.from,
+              },
               ...(collision.walkable ? { walkable: true } : {}),
             };
           fs.writeFileSync(file, JSON.stringify(all, null, 1)); // as the art scripts write it
@@ -96,9 +129,17 @@ function cafeEditorSaver(): Plugin {
           res.statusCode = code;
           res.end(msg);
         };
-        if (req.method !== "POST" || !local.includes(req.socket.remoteAddress ?? "")) return fail(403, "");
-        const file = new URL(req.url ?? "", "http://x").searchParams.get("file") ?? "";
-        if (!/^media\/[a-z0-9-]+\.(jpg|jpeg|png|webp|gif|mp4|webm)$/i.test(file)) return fail(400, "bad file name");
+        if (
+          req.method !== "POST" ||
+          !local.includes(req.socket.remoteAddress ?? "")
+        )
+          return fail(403, "");
+        const file =
+          new URL(req.url ?? "", "http://x").searchParams.get("file") ?? "";
+        if (
+          !/^media\/[a-z0-9-]+\.(jpg|jpeg|png|webp|gif|mp4|webm)$/i.test(file)
+        )
+          return fail(400, "bad file name");
         const chunks: Buffer[] = [];
         let size = 0;
         req.on("data", (c: Buffer) => {
@@ -118,7 +159,10 @@ function cafeEditorSaver(): Plugin {
       });
       // Asset library: every PNG in public/cafe/sprites.
       server.middlewares.use("/__cafe/assets", (req, res) => {
-        if (req.method !== "GET" || !local.includes(req.socket.remoteAddress ?? "")) {
+        if (
+          req.method !== "GET" ||
+          !local.includes(req.socket.remoteAddress ?? "")
+        ) {
           res.statusCode = 403;
           res.end();
           return;
@@ -137,11 +181,21 @@ function cafeEditorSaver(): Plugin {
           const { file, data } = JSON.parse(body);
           const prefix = "data:image/png;base64,";
           // PNGs inside public/cafe only; no way to climb out of it.
-          if (typeof file !== "string" || !/^[a-z0-9_\-/]+\.png$/i.test(file) || file.includes("..")) throw new Error("bad file");
-          if (typeof data !== "string" || !data.startsWith(prefix)) throw new Error("bad data");
+          if (
+            typeof file !== "string" ||
+            !/^[a-z0-9_\-/]+\.png$/i.test(file) ||
+            file.includes("..")
+          )
+            throw new Error("bad file");
+          if (typeof data !== "string" || !data.startsWith(prefix))
+            throw new Error("bad data");
           const target = path.resolve(root, file);
-          if (!target.startsWith(root + path.sep)) throw new Error("outside public/cafe");
-          fs.writeFileSync(target, Buffer.from(data.slice(prefix.length), "base64"));
+          if (!target.startsWith(root + path.sep))
+            throw new Error("outside public/cafe");
+          fs.writeFileSync(
+            target,
+            Buffer.from(data.slice(prefix.length), "base64"),
+          );
         }),
       );
     },
@@ -155,21 +209,79 @@ function cafeAssetIndex(): Plugin {
     name: "cafe-asset-index",
     apply: "build",
     generateBundle() {
-      this.emitFile({ type: "asset", fileName: "cafe/assets.json", source: JSON.stringify(listSprites()) });
+      this.emitFile({
+        type: "asset",
+        fileName: "cafe/assets.json",
+        source: JSON.stringify(listSprites()),
+      });
+    },
+  };
+}
+
+// The café's server functions (api/*.ts, Vercel Functions with Web-standard handlers), run by
+// the dev server too, so they work on localhost: /api/<name> calls that file's GET/POST.
+function apiFunctions(): Plugin {
+  return {
+    name: "cafe-api-functions",
+    configureServer(server) {
+      server.middlewares.use("/api", async (req, res) => {
+        const name = (req.url ?? "").split("?")[0].replace(/^\//, "");
+        const file = path.resolve(__dirname, "api", `${name}.ts`);
+        if (!/^[a-z0-9-]+$/.test(name) || !fs.existsSync(file)) {
+          res.statusCode = 404;
+          return res.end();
+        }
+        try {
+          const mod = await server.ssrLoadModule(file);
+          const handler = mod[req.method ?? "GET"];
+          if (typeof handler !== "function") {
+            res.statusCode = 405;
+            return res.end();
+          }
+          const chunks: Buffer[] = [];
+          for await (const c of req) chunks.push(c as Buffer);
+          const headers = new Headers();
+          for (const [k, v] of Object.entries(req.headers))
+            if (typeof v === "string") headers.set(k, v);
+          const request = new Request(
+            `http://localhost${req.originalUrl ?? req.url}`,
+            {
+              method: req.method,
+              headers,
+              body:
+                req.method === "GET" || req.method === "HEAD"
+                  ? undefined
+                  : Buffer.concat(chunks),
+            },
+          );
+          const out: Response = await handler(request);
+          res.statusCode = out.status;
+          out.headers.forEach((v, k) => res.setHeader(k, v));
+          res.end(Buffer.from(await out.arrayBuffer()));
+        } catch (e) {
+          server.config.logger.error(String(e));
+          res.statusCode = 500;
+          res.end();
+        }
+      });
     },
   };
 }
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  plugins: [react(), cafeEditorSaver(), cafeAssetIndex()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(({ mode }) => {
+  // server-side keys (FAL_KEY, CF_*) for the api functions in dev; never exposed to the page
+  Object.assign(process.env, loadEnv(mode, process.cwd(), ""));
+  return {
+    server: {
+      host: "::",
+      port: 8080,
     },
-  },
+    plugins: [react(), cafeEditorSaver(), cafeAssetIndex(), apiFunctions()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+  };
 });

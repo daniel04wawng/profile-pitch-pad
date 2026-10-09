@@ -1,3 +1,4 @@
+import { TuneMaker } from "./TuneMaker";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { BASE } from "./types";
 import { fileUrl } from "./store";
@@ -37,12 +38,13 @@ const TONES: Record<Tone, { fill: string; ink: string; soft: string; accent: str
   wood: { fill: "#3a2219", ink: "#f3e6c9", soft: "rgba(243,230,201,0.22)", accent: "#e8b45c", edge: "#8f5b3e" },
 };
 
-export function PixelButton({ onClick, children, fill = "#86a86b", ink = INK, title }: { onClick: () => void; children: ReactNode; fill?: string; ink?: string; title?: string }) {
+export function PixelButton({ onClick, children, fill = "#86a86b", ink = INK, title, disabled }: { onClick: () => void; children: ReactNode; fill?: string; ink?: string; title?: string; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className="px-3 py-1 font-['Pixelify_Sans'] text-[15px] transition-transform active:translate-y-[2px]"
+      disabled={disabled}
+      className="px-3 py-1 font-['Pixelify_Sans'] text-[15px] transition-transform active:translate-y-[2px] disabled:opacity-60"
       style={{ ...pixelBox(fill, ink, 2, "rgba(0,0,0,0.3)"), color: ink }}
     >
       {children}
@@ -297,6 +299,7 @@ function MusicTemplate({ screen, playing, onMusic, onClose }: Props) {
           </ul>
         </div>
       </div>
+      <TuneMaker onPlay={() => playing && onMusic(false)} />
       <LinkRow links={screen.links} screen={screen} />
     </Frame>
   );
