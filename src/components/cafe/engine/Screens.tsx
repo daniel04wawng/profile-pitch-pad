@@ -299,7 +299,8 @@ function MusicTemplate({ screen, playing, onMusic, onClose }: Props) {
           </ul>
         </div>
       </div>
-      <TuneMaker onPlay={() => playing && onMusic(false)} />
+      {/* make-a-tune (api/music.ts + music-space/): off until the Hugging Face Space is up */}
+      {import.meta.env.VITE_MUSIC_ON === "1" && <TuneMaker onPlay={() => playing && onMusic(false)} />}
       <LinkRow links={screen.links} screen={screen} />
     </Frame>
   );
