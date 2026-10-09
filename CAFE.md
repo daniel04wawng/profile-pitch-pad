@@ -53,7 +53,7 @@ New art: see `art/avatar-rig/skeleton/characters/GENERATE.md` for the prompts an
 |---|---|---|
 | Make a tune at the piano | Create the Hugging Face Space from `music-space/`, then on Vercel set `HF_SPACE` (and optionally `HF_TOKEN`) and `VITE_MUSIC_ON=1` | Free on ZeroGPU once the HF account is 30 days old |
 | Generate assets in the editor | Free Cloudflare account (Workers Free plan), then `CF_ACCOUNT_ID` and `CF_AI_TOKEN` on Vercel | 10,000 free units a day, stops instead of billing on the free plan |
-| The café builder (build your own, publish, share) | A separate deploy with `VITE_BUILD_ON=1`; run `supabase/cafes.sql` and turn on anonymous sign-ins in Supabase | Not part of the portfolio |
+| The café builder (build your own, publish, share) | A second Vercel project from this repo with `VITE_BUILD_ON=1`; run `supabase/cafes.sql` and turn on anonymous sign-ins in Supabase | Its own site: front page `src/pages/Builder.tsx`. Take a café down: set `hidden` on its row in the `cafes` table; reports land in `cafe_reports` |
 
 ## Where things live
 

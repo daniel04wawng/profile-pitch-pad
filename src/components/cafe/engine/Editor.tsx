@@ -712,6 +712,7 @@ export function Editor({
     }
   };
   const startOver = async () => {
+    if (BUILDER) return void (window.location.href = "/"); // (the front page offers the starter café or an empty room)
     if (
       !window.confirm(
         "Start over from Daniel's café? Your layout and screens go (your drawings stay in the library).",
@@ -852,8 +853,9 @@ export function Editor({
             your own café
           </span>
           <span className="opacity-80">
-            a copy kept only in this browser. Changes here don't touch Daniel's
-            café.
+            {BUILDER
+              ? "saved in this browser as you go. Publish it to share a link."
+              : "a copy kept only in this browser. Changes here don't touch Daniel's café."}
           </span>
           <span className="ml-auto" />
           {shared && (
@@ -1001,8 +1003,8 @@ export function Editor({
         <div className="ml-auto flex items-center gap-2">
           {mine ? (
             <>
-              <a href="/cafe" className={btn} title="Back to Daniel's café">
-                Daniel's café
+              <a href={BUILDER ? "/" : "/cafe"} className={btn} title={BUILDER ? "The builder's front page" : "Back to Daniel's café"}>
+                {BUILDER ? "home" : "Daniel's café"}
               </a>
               <button onClick={startOver} className={btn}>
                 Start over

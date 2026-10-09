@@ -260,6 +260,43 @@ export async function publishCafe(layout: Layout, screens: Screens, name: string
   await tx("docs", "readwrite", (st) => st.put(id, "published"));
   return { id, skipped };
 }
+// Start a café of your own in this browser (the builder's front page): a copy of the starter
+// café (Daniel's room and furniture, its screens emptied for you to fill), or an empty room.
+export async function startCafe(kind: "starter" | "empty") {
+  const [layout, screensDoc] = await Promise.all([
+    fetch(BASE + "layout.json", { cache: "no-store" }).then((r) => r.json() as Promise<Layout>),
+    fetch(BASE + "screens.json", { cache: "no-store" }).then((r) => r.json()),
+  ]);
+  const screens: Screens = {};
+  for (const [k, sc] of Object.entries((screensDoc.screens ?? {}) as Screens))
+    screens[k] = { ...sc, title: sc.title, body: ["Write something here."], items: [], links: [] };
+  const mine: Layout = kind === "empty" ? { ...layout, assets: [] } : layout;
+  await resetCafe();
+  await tx("docs", "readwrite", (st) => st.put(mine, "layout"));
+  await tx("docs", "readwrite", (st) => st.put(kind === "empty" ? {} : screens, "screens"));
+}
+export async function hasOwnCafe(): Promise<boolean> {
+  try {
+    return !!(await tx("docs", "readonly", (st) => st.get("layout")));
+  } catch {
+    return false;
+  }
+}
+
+// Published cafés, newest first, for the builder's front page.
+export async function listCafes(limit = 12): Promise<{ id: string; name: string; updated_at: string }[]> {
+  if (!supabase) return [];
+  const { data } = await supabase.from("cafes").select("id, name, updated_at").order("updated_at", { ascending: false }).limit(limit);
+  return (data ?? []) as { id: string; name: string; updated_at: string }[];
+}
+
+// Report a café that shouldn't be up (supabase/cafes.sql: anyone can report; only Daniel reads).
+export async function reportCafe(id: string, reason: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase.from("cafe_reports").insert({ cafe_id: id, reason: reason.trim().slice(0, 300) });
+  return !error;
+}
+
 export async function publishedId(): Promise<string | null> {
   try {
     return ((await tx("docs", "readonly", (st) => st.get("published"))) as string | undefined) ?? null;

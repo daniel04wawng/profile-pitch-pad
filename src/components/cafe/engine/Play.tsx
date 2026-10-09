@@ -1,4 +1,5 @@
 import { BUILDER } from "./release";
+import { reportCafe } from "./store";
 import { useEffect, useRef, useState } from "react";
 import { Stage, useCompanions } from "./Stage";
 import { useMe } from "./useMe";
@@ -202,8 +203,8 @@ export function Play({
         <div className="absolute bottom-4 right-4 z-30 flex gap-2 font-['Silkscreen'] text-[11px]">
           {solo ? (
             <>
-              <a href="/cafe" className="rounded bg-[#f7efe1]/15 px-3 py-2 text-[#f7efe1] backdrop-blur">
-                Daniel's café
+              <a href={BUILDER ? "/" : "/cafe"} className="rounded bg-[#f7efe1]/15 px-3 py-2 text-[#f7efe1] backdrop-blur">
+                {BUILDER ? "home" : "Daniel's café"}
               </a>
               <a href="/cafe?build" className="rounded bg-[#9bbf7a] px-3 py-2 text-[#1a1512]">
                 edit your café
@@ -216,8 +217,20 @@ export function Play({
                   edit café
                 </a>
               )}
+              {BUILDER && space && (
+                <button
+                  onClick={async () => {
+                    const why = window.prompt("What's wrong with this café? (Daniel reads every report.)")?.trim();
+                    if (!why) return;
+                    window.alert((await reportCafe(space.replace(/^v-/, ""), why)) ? "Thanks, reported." : "Couldn't send that just now.");
+                  }}
+                  className="rounded bg-[#f7efe1]/15 px-3 py-2 text-[#f7efe1] backdrop-blur"
+                >
+                  report
+                </button>
+              )}
               {BUILDER && (
-                <a href="/cafe?build" className="rounded bg-[#9bbf7a] px-3 py-2 text-[#1a1512]">
+                <a href="/" className="rounded bg-[#9bbf7a] px-3 py-2 text-[#1a1512]">
                   build your own café
                 </a>
               )}
