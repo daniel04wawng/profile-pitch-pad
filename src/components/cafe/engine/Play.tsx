@@ -8,7 +8,7 @@ import { CafeScreen } from "./Screens";
 import { NOTES, WARDROBE, type Layout, type SpriteDef } from "./types";
 import { NotesBoard } from "./NotesBoard";
 import { Wardrobe } from "./Wardrobe";
-import type { Screens } from "./screenData";
+import type { ScreenDef, Screens } from "./screenData";
 import { formatHour, lightAt, pacificHour, phaseName } from "./lighting";
 import { LofiPlayer } from "../lofi";
 
@@ -53,6 +53,23 @@ export function Play({
   const player = useRef<LofiPlayer | null>(null);
   const companions = useCompanions();
   const me = useMe(layout, companions, !focus);
+  // Daniel edits a screen right where it is (dev server, his own café): saved to disk as he goes
+  const canEdit = import.meta.env.DEV && !solo && !space && !onExit;
+  const [liveScreens, setLiveScreens] = useState(screens);
+  useEffect(() => setLiveScreens(screens), [screens]);
+  const saveTimer = useRef<number>();
+  const editScreen = (key: string, sc: ScreenDef) => {
+    setLiveScreens((all) => {
+      const next = { ...all, [key]: sc };
+      window.clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(() => {
+        fetch("/__cafe/screens", { method: "POST", body: JSON.stringify({ screens: next }) }).then((r) => {
+          if (!r.ok) window.alert("Couldn't save that change to the screen.");
+        });
+      }, 500);
+      return next;
+    });
+  };
   const room = usePresence(me, { w: layout.width, h: layout.height }, !solo, space);
   const timer = useRef<number>();
 
@@ -158,7 +175,15 @@ export function Play({
             <Wardrobe people={me.people} look={me.look} barista={me.barista} onChange={me.setLook} onClose={close} />
           ) : (
             focus?.hotspot &&
-            screens[focus.hotspot] && <CafeScreen screen={screens[focus.hotspot]} playing={playing} onMusic={setMusic} onClose={close} />
+            liveScreens[focus.hotspot] && (
+              <CafeScreen
+                screen={liveScreens[focus.hotspot]}
+                playing={playing}
+                onMusic={setMusic}
+                onClose={close}
+                onEdit={canEdit ? (sc) => editScreen(focus.hotspot!, sc) : undefined}
+              />
+            )
           )}
         </div>
       </div>
