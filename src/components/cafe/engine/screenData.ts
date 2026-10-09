@@ -12,6 +12,7 @@ export type ScreenItem = {
   media?: Media[];
   links?: { label: string; href: string }[]; // more buttons for the item (demo, code, write-up)
   tags?: string; // a project's stack or kind, comma separated
+  recipe?: string; // a bake's recipe (ingredients, then the steps), under its story
 };
 export type Media = { src: string; kind: "image" | "video" };
 

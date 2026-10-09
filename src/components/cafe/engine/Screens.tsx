@@ -1,5 +1,5 @@
 import { TuneMaker } from "./TuneMaker";
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Ed, EditButton, EditCtx, LinksEdit, MediaEdit, useEdit, withItem } from "./screenEdit";
 import { BASE } from "./types";
 import { fileUrl } from "./store";
@@ -222,34 +222,179 @@ function ItemDetail({ screen, item, index, onBack, onClose }: { screen: ScreenDe
 
 // ---------------------------------------------------------------- templates
 
+// The pastry case, as the case itself: the bakes on trays on top of it and on two glass
+// shelves inside, each with a little label card, a dark wood base on legs, the title above in
+// big pixel letters. Click a bake and it zooms in to its story (BakeStory).
+const ON_TOP = 3;
+const PER_SHELF = 4;
+const WOOD = "#5b3523";
+
+function Bake({ it, onOpen, onRemove, big = false }: { it: ScreenItem; onOpen: () => void; onRemove?: () => void; big?: boolean }) {
+  const photo = it.media?.find((m) => m.kind === "image") ?? it.media?.[0];
+  return (
+    <button onClick={onOpen} className="group relative flex min-w-0 flex-col items-center">
+      {/* the tray, a little white slab, with the bake on it */}
+      <span className="relative flex w-full items-end justify-center transition-transform duration-200 group-hover:-translate-y-1.5" style={{ height: big ? 82 : 76 }}>
+        <span className="absolute bottom-0 h-3 w-[92%]" style={{ background: "#f4f1ea", boxShadow: "0 3px 0 #b9b2a4, inset 0 1px 0 #fff" }} />
+        {photo ? (
+          <span className="relative mb-2 h-[85%] w-[80%] overflow-hidden" style={{ borderRadius: "35% 35% 18% 18%", boxShadow: "0 3px 0 rgba(43,29,26,0.35)" }}>
+            <MediaView m={photo} className="h-full w-full" fit="cover" />
+          </span>
+        ) : (
+          <img src={sprite(it.sprite || "pastry-croissant")} alt="" className="relative mb-2 h-[70%] w-auto" />
+        )}
+      </span>
+      {/* the label card */}
+      <span className="relative z-10 -mt-1 max-w-[95%] truncate px-1.5 font-['Silkscreen'] text-[9px] uppercase text-[#2b1d1a]" style={{ background: "#fbf8f2", boxShadow: "0 0 0 2px #2b1d1a, 0 3px 0 rgba(0,0,0,0.3)" }}>
+        {it.title}
+      </span>
+      {onRemove && (
+        <span className="absolute right-0 top-0 z-20">
+          <EditButton onClick={onRemove}>✕</EditButton>
+        </span>
+      )}
+    </button>
+  );
+}
+
 function CaseTemplate({ screen, onClose }: Props) {
   const e = useEdit();
   const [open, setOpen] = useState<number | null>(null);
-  if (open !== null && screen.items[open]) return <ItemDetail screen={screen} item={screen.items[open]} index={open} onBack={() => setOpen(null)} onClose={onClose} />;
+  if (open !== null && screen.items[open]) return <BakeStory screen={screen} index={open} onBack={() => setOpen(null)} onClose={onClose} />;
+  // the glass shelves fill first; once they're full, bakes go on top of the case, then a third shelf
+  const items = screen.items.map((it, i) => ({ it, i }));
+  const shelves = [items.slice(0, PER_SHELF), items.slice(PER_SHELF, 2 * PER_SHELF)];
+  const top = items.slice(2 * PER_SHELF, 2 * PER_SHELF + ON_TOP);
+  const more = items.slice(2 * PER_SHELF + ON_TOP);
+  if (more.length) shelves.push(more);
+  const bake = (it: ScreenItem, i: number, big = false) => (
+    <Bake key={i} it={it} big={big} onOpen={() => setOpen(i)} onRemove={e?.on ? () => e.set(withItem(screen, i, null)) : undefined} />
+  );
   return (
-    <Frame screen={screen} onClose={onClose}>
-      <div className="mb-6">
-        <Body lines={screen.body} onChange={(l) => e?.set({ ...screen, body: l })} />
-      </div>
-      <div className="p-4" style={pixelBox("#d6eef1", "#c98f3c", 4, "rgba(0,0,0,0.25)")}>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
-          {screen.items.map((it, i) => (
-            <button key={i} onClick={() => setOpen(i)} className="group flex flex-col items-center">
-              <span className="flex h-20 items-end transition-transform group-hover:-translate-y-1.5">
-                <img src={sprite(it.sprite || "pastry-croissant")} alt="" className="h-14 w-auto" />
-              </span>
-              <span className="mt-1 h-1 w-20 bg-[#9fcbd3]" />
-              <span className="mt-2 px-2 font-['Silkscreen'] text-[10px] text-[#2b1d1a]" style={pixelBox("#fdf8ef", INK, 2, "transparent")}>
-                {it.title}
-              </span>
-              {e?.on && <EditButton onClick={() => e.set(withItem(screen, i, null))}>✕</EditButton>}
-            </button>
-          ))}
+    <div className="relative m-2 flex w-[min(760px,94vw)] flex-col items-center px-4 pb-4 pt-5 sm:px-8 [&_img]:[image-rendering:pixelated]" style={pixelBox("#d98c4c", INK, 4, "rgba(0,0,0,0.35)")} onClick={(ev) => ev.stopPropagation()}>
+      {/* the sign above the case */}
+      <div className="mb-4 flex w-full items-start justify-between gap-3">
+        <span className="w-16" />
+        <div className="min-w-0 text-center text-[#fff8ec]" style={{ textShadow: "3px 3px 0 #2b1d1a" }}>
+          <p className="font-['Silkscreen'] text-[11px] uppercase tracking-widest text-[#f6d58a]">
+            <Ed value={screen.kicker} placeholder="kicker" onChange={(v) => e?.set({ ...screen, kicker: v })} />
+          </p>
+          <h2 className="font-['Pixelify_Sans'] text-4xl font-semibold uppercase leading-none tracking-wide sm:text-5xl">
+            <Ed value={screen.title} placeholder="title" onChange={(v) => e?.set({ ...screen, title: v })} />
+          </h2>
         </div>
-        {e?.on && <AddItem />}
+        <div className="flex w-16 justify-end gap-2">
+          <EditToggle />
+          <PixelButton onClick={onClose} title="Close (Esc)">
+            x
+          </PixelButton>
+        </div>
       </div>
-      <LinkRow links={screen.links} screen={screen} onChange={(l) => e?.set({ ...screen, links: l })} />
-    </Frame>
+
+      <div className="max-h-[calc(84dvh-90px)] w-full overflow-y-auto overflow-x-hidden px-1 pb-2">
+        {/* on top of the case */}
+        <div className="grid min-h-6 grid-cols-3 gap-3 px-[8%]">{top.map(({ it, i }) => bake(it, i, true))}</div>
+        {/* the case: a wooden top, glass sides, two glass shelves */}
+        <div className="h-3" style={{ background: WOOD, boxShadow: "0 -3px 0 #2b1d1a, 0 3px 0 #2b1d1a" }} />
+        <div className="relative mx-[3%] px-3 pt-1" style={{ background: "linear-gradient(#f2b673, #e8a35f)", boxShadow: `-6px 0 0 ${WOOD}, 6px 0 0 ${WOOD}, -8px 0 0 #2b1d1a, 8px 0 0 #2b1d1a` }}>
+          {shelves.map((row, s) => (
+            <div key={s}>
+              <div className="grid min-h-[96px] grid-cols-4 items-end gap-2 pt-3">{row.map(({ it, i }) => bake(it, i))}</div>
+              {/* the glass shelf, seen a little from above */}
+              <div className="mx-[-4px] mt-1 h-3.5" style={{ background: "linear-gradient(#dfeaee, #a9bec8)", boxShadow: "0 3px 0 #6f8590" }} />
+            </div>
+          ))}
+          {/* the glass front's shine */}
+          <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(120deg, transparent 18%, rgba(255,255,255,0.32) 22%, transparent 27%, transparent 55%, rgba(255,255,255,0.22) 59%, transparent 63%)" }} />
+        </div>
+        {/* the base, dark wood on two feet */}
+        <div className="h-3" style={{ background: "#6e4128", boxShadow: "0 -3px 0 #2b1d1a" }} />
+        <div className="mx-[1%] h-14" style={{ background: "#4a2a1b", boxShadow: "-3px 0 0 #2b1d1a, 3px 0 0 #2b1d1a, 0 3px 0 #2b1d1a" }} />
+        <div className="flex justify-between px-[6%]">
+          <span className="h-4 w-8" style={{ background: "#3a2015" }} />
+          <span className="h-4 w-8" style={{ background: "#3a2015" }} />
+        </div>
+        {e?.on && (
+          <div className="mt-3 flex justify-center">
+            <AddItem />
+          </div>
+        )}
+        {(screen.body.some((l) => l.trim()) || e?.on) && (
+          <div className="mx-auto mt-4 max-w-lg px-4 py-3 font-['VT323'] text-[20px] text-[#2b1d1a]" style={pixelBox("#fbf3e4", INK, 3, "rgba(0,0,0,0.3)")}>
+            <Body lines={screen.body} onChange={(l) => e?.set({ ...screen, body: l })} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// One bake, zoomed in: its photos large, its name and when, and the story behind it, on a
+// recipe card.
+function BakeStory({ screen, index, onBack, onClose }: { screen: ScreenDef; index: number; onBack: () => void; onClose: () => void }) {
+  const e = useEdit();
+  const item = screen.items[index];
+  const put = (it: ScreenItem) => e?.set(withItem(screen, index, it));
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
+  return (
+    <div
+      className="relative m-2 flex max-h-[min(680px,86dvh)] w-[min(680px,92vw)] flex-col text-[#2b1d1a] transition-all duration-300 ease-out [&_img]:[image-rendering:pixelated]"
+      style={{ ...pixelBox("#fbf3e4", INK, 4), transform: shown ? "scale(1)" : "scale(0.6)", opacity: shown ? 1 : 0 }}
+      onClick={(ev) => ev.stopPropagation()}
+    >
+      <header className="flex items-center gap-2 px-5 pb-3 pt-4" style={{ borderBottom: "3px dashed rgba(43,29,26,0.25)" }}>
+        <PixelButton onClick={onBack} fill="#fbf3e4">
+          ← the case
+        </PixelButton>
+        <span className="flex-1" />
+        <EditToggle />
+        <PixelButton onClick={onClose} fill="#fbf3e4" title="Close (Esc)">
+          x
+        </PixelButton>
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-4">
+        {item.media?.length ? <Gallery media={item.media} frame="#5b3523" /> : null}
+        {e?.on && <MediaEdit media={item.media ?? []} onChange={(m) => put({ ...item, media: m })} />}
+        <p className="mt-4 font-['Silkscreen'] text-[10px] uppercase tracking-wider opacity-60">
+          <Ed value={item.meta ?? ""} placeholder="when you made it" onChange={(v) => put({ ...item, meta: v })} />
+        </p>
+        <h2 className="mt-1 font-['Instrument_Serif'] text-4xl italic leading-tight">
+          <Ed value={item.title} placeholder="what you baked" onChange={(v) => put({ ...item, title: v })} />
+        </h2>
+        <div className="mt-3 font-['Space_Grotesk'] text-[16px] leading-relaxed">
+          {e?.on ? (
+            <Ed multi value={item.note ?? ""} placeholder="the story: who it was for, how it went, what you'd change…" onChange={(v) => put({ ...item, note: v })} />
+          ) : (
+            (item.note ?? "").split("\n").filter((l) => l.trim()).map((l, k) => (
+              <p key={k} className="mt-2">
+                {l}
+              </p>
+            ))
+          )}
+        </div>
+        {(item.recipe?.trim() || e?.on) && (
+          <section className="mt-6 px-5 py-4" style={{ background: "#fffdf8", boxShadow: "0 0 0 2px rgba(43,29,26,0.2), 3px 3px 0 rgba(43,29,26,0.15)", backgroundImage: "repeating-linear-gradient(transparent 0 27px, rgba(120,160,200,0.25) 27px 28px)" }}>
+            <p className="font-['Silkscreen'] text-[11px] uppercase tracking-widest text-[#a8432c]">the recipe</p>
+            <div className="mt-2 font-['VT323'] text-[21px] leading-[28px]">
+              {e?.on ? (
+                <Ed multi value={item.recipe ?? ""} placeholder={"ingredients, one per line\n\nthen the steps"} onChange={(v) => put({ ...item, recipe: v })} />
+              ) : (
+                <p className="whitespace-pre-wrap">{item.recipe}</p>
+              )}
+            </div>
+          </section>
+        )}
+        {e?.on ? (
+          <LinksEdit links={item.links ?? []} onChange={(l) => put({ ...item, links: l })} />
+        ) : (
+          <LinkRow links={item.links ?? []} screen={{ ...screen, tone: "cream" }} />
+        )}
+      </div>
+    </div>
   );
 }
 
