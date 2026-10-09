@@ -17,8 +17,8 @@ SIDES = json.load(open(pathlib.Path(__file__).with_name("skeleton.json")))["view
 
 # the walk, as the first rig tuned it for this café
 WALK = {"hipSwing": 0.30, "kneeFlex": 0.45, "bodyHeight": 78, "bodySway": 1.5}
-ARM_SWING = {"front": 0.15, "back": 0.12}
-FOOT_ROLL = {"front": -0.10, "back": -0.08}
+ARM_SWING = {"front": 0.15, "back": 0.12, "south": 0.12, "north": 0.10, "east": 0.30}
+FOOT_ROLL = {"front": -0.10, "back": -0.08, "south": -0.04, "north": -0.04, "east": -0.25}
 
 
 def walk(view: str, frames: int = 8):

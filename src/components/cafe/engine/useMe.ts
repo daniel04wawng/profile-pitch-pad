@@ -45,13 +45,19 @@ export function useMe(layout: Layout, companions: Record<string, Companion>, ena
   const walkRef = useRef(walk);
   walkRef.current = walk;
   const heldKeys = useRef(new Set<string>());
-  // the step: the most recently pressed key held (not the keys added up: two together would walk
-  // straight across the screen, a way the avatar has no drawing for, so it would slide along
-  // facing a diagonal). The rig draws four facings, all along the floor's diagonals.
+  // the step the held keys add up to (each part kept to -1..1): two together walk straight
+  // across or up the screen, which the avatars have drawings for (rig.ts facing)
   const held = {
     get current(): Cell | null {
-      const last = [...heldKeys.current].pop();
-      return last ? { ...KEYS[last] } : null;
+      let i = 0;
+      let j = 0;
+      for (const k of heldKeys.current) {
+        i += KEYS[k].i;
+        j += KEYS[k].j;
+      }
+      i = Math.max(-1, Math.min(1, i));
+      j = Math.max(-1, Math.min(1, j));
+      return i || j ? { i, j } : null;
     },
   };
   const enabledRef = useRef(enabled);

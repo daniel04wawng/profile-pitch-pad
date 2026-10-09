@@ -2,7 +2,7 @@
 // cafe-avatar.d.ts; this adds the members the café uses to share one loaded avatar between
 // visitors (manifest, sheets, the constructor) and to read the current clip.
 export type Action = 'walk-front'|'idle-front'|'sit-down'|'stand-up'|'coffee-sip'|'seated-idle'|'walk-back'|'idle-back'|'sit-down-back'|'stand-up-back'|'coffee-sip-back'|'seated-idle-back';
-export type Direction = 'SE'|'SW'|'NE'|'NW';
+export type Direction = 'SE'|'SW'|'NE'|'NW'|'S'|'N'|'E'|'W';
 export type Motion = 'walk'|'idle'|'sit-down'|'stand-up'|'coffee-sip'|'seated-idle';
 export type Clip = { sheet: string; durationMs: number[]; loop: boolean; rootMotion?: [number, number][] };
 export type Manifest = {

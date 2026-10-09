@@ -248,7 +248,161 @@ MUG["woman-tee"] = {
     "back": {"fore": [(147, 98), (166, 98), (167, 125), (158, 138), (150, 138), (148, 118)], "elbow": [153, 132]},
 }
 
+# --- the views for eight directions: facing you (south), facing away (north), side (east;
+# west is it mirrored), for the four base models, from their own art (cafe16) ---
+KIND = {"front": "front", "south": "front", "back": "back", "north": "back", "east": "east"}
+SPECS.setdefault("green", {})
+SOURCE["green"] = {"south": C16 / "05-man-jacket-south.png", "north": C16 / "06-man-jacket-north.png", "east": C16 / "07-man-jacket-east.png"}
+SOURCE["man-tee"].update({"south": C16 / "08-man-tee-south.png", "north": C16 / "09-man-tee-north.png", "east": C16 / "10-man-tee-east.png"})
+SOURCE["sage-bob"] = {"south": C16 / "11-woman-jacket-south.png", "north": C16 / "12-woman-jacket-north.png", "east": C16 / "13-woman-jacket-east.png"}
+SOURCE["woman-tee"].update({"south": C16 / "14-woman-tee-south.png", "north": C16 / "15-woman-tee-north.png", "east": C16 / "16-woman-tee-east.png"})
+SOUTH_ZONES = {"skin": [[104, 66, 150, 98], [88, 96, 140, 135]]}
+
+SPECS["green"]["south"] = spec([124, 74], 76, 70, ([114, 152], [113, 190], [110, 222]), ([140, 152], [141, 190], [146, 222]), [155, 74], [160, 124],
+    145, 128, "left", 152, 155, 148,
+    [(149, 70), (160, 72), (167, 84), (170, 104), (170, 126), (152, 128), (149, 110)],
+    [(150, 120), (167, 120), (170, 140), (170, 166), (154, 166), (151, 145)],
+    box(94, 222, 127, 254), box(130, 222, 166, 254),
+    [[118, 55, 132, 66], [100, 105, 112, 118], [156, 145, 166, 160]], [[106, 30, 140, 45]],
+    [[90, 85, 100, 105], [155, 85, 168, 105]], [[118, 75, 135, 90], [118, 122, 135, 140]],
+    [[105, 170, 122, 205], [133, 170, 150, 205]], [[100, 232, 115, 248], [145, 232, 160, 248]], [[119, 94, 139, 118]])
+SPECS["man-tee"]["south"] = spec([125, 74], 76, 70, ([115, 145], [114, 185], [112, 224]), ([140, 145], [141, 185], [146, 224]), [152, 76], [157, 122],
+    138, 128, "left", 144, 146, 140,
+    [(148, 74), (158, 74), (163, 86), (165, 104), (165, 124), (150, 126), (148, 108)],
+    [(149, 120), (165, 120), (168, 140), (168, 168), (152, 168), (150, 145)],
+    box(96, 222, 127, 254), box(130, 222, 166, 254),
+    [[118, 55, 132, 66], [93, 105, 101, 118], [152, 110, 160, 140]], [[105, 30, 140, 45]],
+    [[110, 80, 125, 95], [130, 120, 150, 135]], [],
+    [[106, 165, 122, 205], [133, 165, 148, 205]], [[102, 232, 118, 248], [144, 232, 160, 248]], [[120, 96, 141, 119]])
+SPECS["sage-bob"]["south"] = spec([127, 80], 82, 74, ([115, 155], [115, 192], [112, 230]), ([141, 155], [142, 192], [147, 230]), [154, 82], [159, 124],
+    147, 130, "left", 155, 158, 145,
+    [(150, 80), (160, 81), (166, 94), (168, 112), (168, 128), (152, 130), (150, 112)],
+    [(151, 122), (167, 122), (170, 142), (170, 172), (154, 172), (152, 148)],
+    box(96, 226, 129, 254), box(131, 226, 166, 254),
+    [[122, 60, 135, 70], [103, 105, 115, 118], [156, 150, 165, 165]], [[105, 35, 140, 48], [100, 60, 112, 80]],
+    [[93, 90, 104, 108], [152, 90, 163, 110]], [[122, 86, 132, 96], [122, 124, 134, 140]],
+    [[106, 170, 124, 210], [133, 170, 150, 210]], [[103, 236, 117, 248], [143, 236, 158, 248]], [[119, 98, 139, 121]])
+SPECS["woman-tee"]["south"] = spec([127, 80], 82, 74, ([113, 148], [112, 188], [110, 228]), ([138, 148], [139, 188], [143, 228]), [150, 82], [155, 124],
+    136, 126, "left", 144, 146, 138,
+    [(145, 80), (154, 80), (159, 92), (162, 108), (163, 126), (148, 128), (146, 108)],
+    [(147, 120), (162, 120), (166, 140), (167, 172), (151, 172), (148, 148)],
+    box(96, 224, 125, 254), box(127, 224, 164, 254),
+    [[122, 60, 135, 70], [92, 108, 100, 120], [150, 112, 158, 140]], [[105, 35, 140, 48], [98, 60, 108, 80]],
+    [[110, 86, 122, 98], [132, 120, 148, 132]], [],
+    [[104, 165, 122, 205], [130, 165, 146, 205]], [[101, 236, 115, 248], [145, 236, 157, 248]], [[117, 97, 136, 121]])
+for cid in ("green", "man-tee", "sage-bob", "woman-tee"):
+    SPECS[cid]["south"]["zones"] = SOUTH_ZONES
+MUG.setdefault("green", {})
+MUG["green"]["south"] = {"upper": [(86, 72), (100, 70), (104, 82), (104, 120), (98, 124), (86, 124), (84, 100)],
+                         "fore": [(90, 116), (98, 104), (108, 98), (118, 92), (140, 92), (140, 118), (124, 120), (110, 124), (96, 126)],
+                         "shoulder": [97, 74], "elbow": [96, 120], "mug": [128, 105], "mouth": [126, 64]}
+MUG["man-tee"]["south"] = {"upper": [(89, 74), (101, 72), (106, 86), (106, 122), (100, 128), (90, 128), (88, 104)],
+                           "fore": [(94, 118), (102, 106), (112, 100), (120, 95), (142, 95), (142, 120), (124, 122), (110, 126), (98, 129)],
+                           "shoulder": [97, 76], "elbow": [97, 124], "mug": [130, 107], "mouth": [126, 64]}
+MUG["sage-bob"]["south"] = {"upper": [(89, 80), (102, 79), (106, 90), (106, 122), (100, 126), (89, 126), (87, 104)],
+                            "fore": [(93, 118), (100, 106), (110, 100), (119, 96), (140, 96), (140, 121), (124, 123), (110, 126), (96, 128)],
+                            "shoulder": [97, 82], "elbow": [96, 122], "mug": [129, 109], "mouth": [128, 71]}
+MUG["woman-tee"]["south"] = {"upper": [(89, 82), (101, 81), (105, 92), (105, 122), (99, 127), (89, 127), (87, 104)],
+                             "fore": [(92, 118), (100, 106), (108, 101), (117, 96), (138, 96), (138, 121), (122, 123), (108, 127), (95, 129)],
+                             "shoulder": [96, 84], "elbow": [96, 123], "mug": [127, 109], "mouth": [128, 71]}
+
+# facing away: the mug arm is the near arm, bent forward out of sight; it lifts at the shoulder
+NO_FIX = [[0, 0, 1, 1]]
+SPECS["green"]["north"] = spec([126, 76], 78, 72, ([138, 152], [138, 190], [140, 225]), ([110, 152], [108, 190], [104, 225]), [100, 86], [96, 128],
+    148, 124, "right", 158, 162, 150,
+    [(88, 84), (108, 82), (112, 100), (110, 130), (90, 132), (86, 110)],
+    [(88, 126), (104, 126), (104, 145), (102, 162), (88, 162), (87, 140)],
+    box(126, 224, 168, 256), box(86, 226, 122, 256),
+    [[118, 72, 130, 78], [90, 142, 100, 156]], [[100, 40, 140, 65]],
+    [[110, 95, 140, 140]], [],
+    [[100, 170, 120, 210], [130, 170, 148, 210]], [[95, 236, 115, 248], [135, 236, 155, 248]], NO_FIX)
+SPECS["man-tee"]["north"] = spec([126, 80], 82, 76, ([138, 150], [138, 190], [142, 226]), ([112, 150], [110, 190], [104, 226]), [98, 84], [96, 118],
+    142, 124, "right", 150, 155, 145,
+    [(86, 80), (106, 78), (110, 92), (108, 112), (88, 114), (85, 96)],
+    [(86, 108), (106, 108), (106, 130), (104, 162), (86, 162), (85, 130)],
+    box(128, 222, 170, 256), box(86, 224, 124, 256),
+    [[118, 76, 132, 82], [90, 125, 100, 150]], [[100, 35, 145, 65]],
+    [[110, 95, 140, 135]], [],
+    [[100, 165, 120, 205], [130, 165, 148, 205]], [[92, 234, 112, 248], [138, 236, 158, 248]], NO_FIX)
+SPECS["sage-bob"]["north"] = spec([128, 90], 96, 90, ([140, 165], [140, 198], [142, 228]), ([114, 165], [112, 198], [110, 228]), [96, 98], [94, 136],
+    160, 127, "right", 170, 175, 162,
+    [(84, 94), (104, 92), (108, 110), (106, 140), (86, 142), (82, 118)],
+    [(84, 134), (104, 134), (104, 152), (102, 172), (84, 172), (83, 150)],
+    box(128, 226, 168, 256), box(86, 226, 126, 256),
+    [[88, 145, 98, 165]], [[105, 45, 145, 85]],
+    [[110, 110, 140, 150]], [],
+    [[100, 180, 120, 215], [132, 180, 148, 215]], [[92, 236, 110, 248], [140, 236, 158, 248]], NO_FIX)
+SPECS["woman-tee"]["north"] = spec([128, 88], 96, 90, ([140, 152], [140, 192], [143, 228]), ([114, 152], [112, 192], [108, 228]), [96, 92], [94, 118],
+    145, 127, "right", 155, 160, 150,
+    [(84, 88), (104, 86), (108, 100), (106, 116), (86, 118), (82, 102)],
+    [(82, 110), (104, 110), (104, 135), (102, 164), (82, 164), (81, 135)],
+    box(130, 226, 170, 256), box(86, 226, 124, 256),
+    [[86, 125, 98, 150]], [[105, 40, 145, 85]],
+    [[110, 100, 140, 140]], [],
+    [[100, 170, 120, 210], [132, 170, 148, 210]], [[92, 236, 110, 248], [140, 236, 158, 248]], NO_FIX)
+NORTH_ARM = {
+    "green": [(138, 82), (158, 84), (164, 104), (162, 128), (150, 130), (140, 110)],
+    "man-tee": [(138, 80), (158, 82), (164, 100), (164, 130), (152, 132), (142, 112)],
+    "sage-bob": [(144, 92), (164, 94), (170, 112), (168, 140), (154, 142), (146, 120)],
+    "woman-tee": [(144, 88), (164, 90), (172, 108), (172, 136), (156, 138), (148, 116)],
+}
+for cid, arm in NORTH_ARM.items():
+    SPECS[cid]["north"]["zones"] = {"skin": [[108, 60, 150, 100]]}
+    x0, y0 = arm[0]
+    MUG[cid]["north"] = {"fore": arm, "elbow": [x0 + 6, y0 + 4], "lift": (0, -3)}
+
+# side on (east): the mug arm is the near arm, all of it showing; the free arm hangs behind the
+# body with only its hand showing. The legs overlap, so they're split at the knee-to-foot line
+# (the near leg's shoe is the lower one).
+SPECS["green"]["east"] = spec([112, 78], 80, 72, ([108, 152], [106, 190], [108, 226]), ([116, 150], [120, 188], [126, 212]), [112, 92], [118, 132],
+    148, 115, "left", 156, 160, 150,
+    [(110, 124), (124, 124), (125, 138), (111, 138)],
+    [(111, 136), (127, 136), (127, 162), (111, 162)],
+    box(96, 228, 150, 254), box(118, 210, 162, 234),
+    [[124, 58, 134, 70], [116, 142, 122, 156]], [[85, 38, 120, 55]],
+    [[88, 95, 100, 130]], [[112, 82, 116, 98]],
+    [[102, 165, 118, 200]], [[102, 238, 128, 246], [130, 218, 148, 228]], [[126, 94, 142, 122]])
+SPECS["man-tee"]["east"] = spec([116, 78], 80, 72, ([112, 150], [110, 190], [110, 228]), ([122, 148], [126, 188], [134, 214]), [120, 95], [124, 135],
+    145, 120, "left", 152, 156, 146,
+    [(119, 126), (131, 126), (132, 140), (120, 140)],
+    [(120, 138), (134, 138), (134, 166), (120, 166)],
+    box(100, 228, 150, 254), box(124, 210, 172, 236),
+    [[130, 58, 138, 68], [124, 145, 130, 160]], [[90, 35, 125, 55]],
+    [[108, 85, 125, 140]], [],
+    [[108, 165, 122, 200]], [[105, 238, 130, 248], [135, 218, 160, 228]], [[132, 94, 150, 122]])
+SPECS["sage-bob"]["east"] = spec([122, 84], 86, 78, ([116, 160], [114, 195], [112, 230]), ([126, 158], [130, 192], [138, 214]), [112, 100], [112, 136],
+    155, 124, "left", 165, 170, 158,
+    [(105, 126), (119, 126), (119, 140), (105, 140)],
+    [(104, 138), (121, 138), (121, 164), (104, 164)],
+    box(100, 230, 146, 254), box(128, 210, 172, 238),
+    [[132, 60, 142, 72], [108, 145, 116, 158]], [[95, 35, 130, 60]],
+    [[108, 100, 122, 140]], [[136, 92, 142, 110]],
+    [[110, 170, 124, 205]], [[105, 240, 128, 248], [138, 220, 160, 230]], [[140, 96, 158, 124]])
+SPECS["woman-tee"]["east"] = spec([122, 82], 84, 76, ([116, 152], [114, 190], [112, 230]), ([128, 150], [132, 190], [140, 214]), [110, 98], [110, 128],
+    146, 124, "left", 155, 160, 148,
+    [(103, 118), (117, 118), (117, 132), (103, 132)],
+    [(102, 130), (119, 130), (119, 164), (102, 164)],
+    box(100, 230, 146, 254), box(128, 208, 172, 238),
+    [[132, 58, 142, 70], [106, 140, 114, 156], [118, 110, 126, 122]], [[95, 30, 130, 60]],
+    [[115, 95, 135, 140]], [],
+    [[110, 165, 124, 200]], [[105, 240, 128, 248], [138, 220, 160, 230]], [[140, 96, 158, 124]])
+MUG["green"]["east"] = {"upper": [(102, 84), (118, 84), (122, 100), (120, 122), (108, 124), (100, 110)],
+                        "fore": [(110, 112), (118, 100), (126, 94), (142, 92), (143, 124), (126, 125), (114, 125)],
+                        "shoulder": [110, 88], "elbow": [112, 118], "mug": [134, 108], "mouth": [133, 64]}
+MUG["man-tee"]["east"] = {"upper": [(108, 82), (122, 82), (126, 96), (126, 118), (114, 122), (106, 108)],
+                          "fore": [(116, 110), (124, 100), (134, 94), (150, 92), (150, 124), (132, 125), (120, 125)],
+                          "shoulder": [116, 86], "elbow": [118, 118], "mug": [140, 108], "mouth": [138, 64]}
+MUG["sage-bob"]["east"] = {"upper": [(118, 90), (132, 92), (136, 106), (134, 128), (120, 130), (114, 112)],
+                           "fore": [(124, 116), (132, 104), (142, 96), (159, 94), (159, 126), (140, 127), (128, 129)],
+                           "shoulder": [124, 94], "elbow": [126, 124], "mug": [150, 110], "mouth": [146, 72]}
+MUG["woman-tee"]["east"] = {"upper": [(114, 86), (130, 88), (134, 100), (130, 124), (118, 126), (110, 108)],
+                            "fore": [(122, 112), (130, 104), (140, 96), (159, 94), (159, 126), (140, 127), (126, 129)],
+                            "shoulder": [120, 90], "elbow": [122, 120], "mug": [150, 110], "mouth": [146, 70]}
+for cid in ("green", "man-tee", "sage-bob", "woman-tee"):
+    SPECS[cid]["east"]["zones"] = {"skin": [[100, 60, 160, 135]]}
+
 FRONT_ORDER = ["torso", "head", "upper-arm.free", "forearm.free", "upper-arm.mug", "forearm.mug", "thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near"]
+EAST_ORDER = ["upper-arm.free", "forearm.free", "thigh.far", "shin.far", "foot.far", "torso", "head", "thigh.near", "shin.near", "foot.near", "upper-arm.mug", "forearm.mug"]  # side on: his far arm behind him
 BACK_ORDER = ["forearm.mug", "thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near", "torso", "head", "upper-arm.free", "forearm.free"]
 KINDS = {
     "torso": {"kind": "segment", "from": "pelvis", "to": "neck"},
@@ -326,7 +480,7 @@ def palette(a: np.ndarray, boxes: dict) -> dict:
 
 def cut(cid: str, view: str):
     s = SPECS[cid][view]
-    im = Image.open(SOURCE[cid][view] if cid in SOURCE else SRC / cid / f"stand-{view}.png").convert("RGBA")
+    im = Image.open(SOURCE.get(cid, {}).get(view) or SRC / cid / f"stand-{view}.png").convert("RGBA")
     a = np.array(im)
     solid = a[:, :, 3] > 0
     yy, xx = np.mgrid[: a.shape[0], : a.shape[1]]
@@ -354,7 +508,33 @@ def cut(cid: str, view: str):
     trousers = keep
     leftside = xx < s["split"]
     sides = {"near": leftside if s["nearSide"] == "left" else ~leftside}
-    sides["far"] = ~sides["near"]
+    if KIND[view] == "east":
+        # side on, the joints' x is read off the trousers themselves (rows across the hips and
+        # knees: the near leg is the front-left third, the far one the back-right third)
+        for j in ("hip", "knee"):
+            y = int(s[f"{j}.near"][1])
+            xs = np.nonzero(trousers[y])[0]
+            if len(xs):
+                w = xs.max() - xs.min()
+                s[f"{j}.near"] = [float(xs.min() + 0.3 * w), s[f"{j}.near"][1]]
+                s[f"{j}.far"] = [float(xs.min() + 0.7 * w), s[f"{j}.far"][1]]
+        # side on, the legs overlap: each pixel goes to the nearer leg bone (hip-knee-ankle);
+        # where they're about as near, the near leg (it's in front)
+        def dist(side):
+            d = np.full(xx.shape, 1e9)
+            pts = [np.array(s[f"{j}.{side}"], float) for j in ("hip", "knee", "ankle")]
+            for p0, p1 in zip(pts, pts[1:]):
+                v = p1 - p0
+                t = np.clip(((xx - p0[0]) * v[0] + (yy - p0[1]) * v[1]) / (v @ v), 0, 1)
+                d = np.minimum(d, np.hypot(xx - (p0[0] + t * v[0]), yy - (p0[1] + t * v[1])))
+            return d
+        dn, df = dist("near"), dist("far")
+        # a leg's own width round its bone goes to it even where the other leg hides it, so a
+        # leg swinging out from behind the other isn't a sliver (the near leg is drawn over it)
+        sides["near"] = (dn <= df + 2) | (dn <= 6)
+        sides["far"] = (df < dn + 2) | (df <= 7)
+    else:
+        sides["far"] = ~sides["near"]
     rest = solid & ~trousers & ~allfeet & ~arm_all & ~(a[:, :, :3].max(2) < 60)
     legs = {}
     for side in ("near", "far"):
@@ -431,14 +611,14 @@ def cut(cid: str, view: str):
         parts[f"thigh.{side}"], parts[f"shin.{side}"] = t, sh
 
     joints = {k: s[k] for k in ("hip.near", "knee.near", "ankle.near", "hip.far", "knee.far", "ankle.far", "shoulder.free", "elbow.free", "neck")}
-    lift = SIP_LIFT if "upper" in mg else SIP_LIFT_BACK
+    lift = mg.get("lift") or (SIP_LIFT if "upper" in mg else SIP_LIFT_BACK)
     joints["elbow.mug.sip"] = [mg["elbow"][0] + lift[0], mg["elbow"][1] + lift[1]]
     if "upper" in mg:
         joints["shoulder.mug"] = mg["shoulder"]
         joints["hand.mug"], joints["mouth"] = mg["mug"], mg["mouth"]
     joints["elbow.mug"] = mg["elbow"]
     joints["pelvis"] = [(s["hip.near"][0] + s["hip.far"][0]) / 2, (s["hip.near"][1] + s["hip.far"][1]) / 2]
-    order = [p for p in (FRONT_ORDER if view == "front" else BACK_ORDER) if p in parts]
+    order = [p for p in {"front": FRONT_ORDER, "back": BACK_ORDER, "east": EAST_ORDER}[KIND[view]] if p in parts]
     d = CH / cid / view
     d.mkdir(parents=True, exist_ok=True)
     for name, arr in parts.items():
@@ -452,6 +632,8 @@ def cut(cid: str, view: str):
 
 
 if __name__ == "__main__":
-    for cid in sys.argv[1:] or SPECS:
-        for view in ("front", "back"):
+    # cut_women.py [id | id:view ...]: every view of each, or just that one
+    for arg in sys.argv[1:] or SPECS:
+        cid, _, only = arg.partition(":")
+        for view in [only] if only else SPECS[cid]:
             cut(cid, view)

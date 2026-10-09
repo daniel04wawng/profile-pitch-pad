@@ -112,7 +112,7 @@ export function loadRig(id: string, dress?: Dress): Promise<Rig> {
 // map (red = material). Stacked here, then recoloured: each material takes the new colour's hue
 // and saturation, keeping the art's shading, anchored on its typical brightness (the rule the
 // rig's materials.py uses). An avatar baked whole (no layers) only recolours.
-type Layers = { hair?: string[]; defaultHair?: string; wear?: string[] };
+type Layers = { hair?: string[]; defaultHair?: string; wear?: string[]; cardinalOnly?: { hair: string[]; wear: string[] } | null };
 type Manifest = CafeAvatar["manifest"] & { materials?: { ids: Record<string, number>; refs: Record<string, number>; base?: Partial<Record<Material, string>> }; layers?: Layers };
 type Clip = { sheet: string; materialMap?: string; over?: string; overMap?: string };
 async function dressRig(plain: Rig, dress: Dress, key: string): Promise<Rig> {
@@ -122,6 +122,14 @@ async function dressRig(plain: Rig, dress: Dress, key: string): Promise<Rig> {
   const wear = layers ? (dress.wear ?? []).filter((w) => layers.wear?.includes(w)) : [];
   const colors = manifest.materials ? dress.colors : undefined;
   if (!layers && !colors) return plain;
+  // the straight-on directions are drawn in the model's own hair only: in another hairstyle, or
+  // with something on, those go and the diagonals stand in (Body.face)
+  let dressed = manifest;
+  const only = layers?.cardinalOnly;
+  if (only && ((hair && !only.hair.includes(hair)) || wear.some((w) => !only.wear.includes(w)))) {
+    const directions = Object.fromEntries(Object.entries(manifest.directions).filter(([d]) => d.length === 2));
+    dressed = { ...manifest, directions } as Manifest;
+  }
   const at = (path: string) => loadImage(new URL(path, plain.manifestUrl).href);
   const targets = new Map<number, { h: number; s: number; v: number; ref: number }>();
   for (const m of MATERIALS) {
@@ -186,7 +194,7 @@ async function dressRig(plain: Rig, dress: Dress, key: string): Promise<Rig> {
       urls[name] = await new Promise<string>((res) => canvas.toBlob((b) => res(b ? URL.createObjectURL(b) : plain.urls[name]), "image/png"));
     }),
   );
-  return { id: key, base: new CafeAvatar(manifest, sheets), urls, manifestUrl: plain.manifestUrl };
+  return { id: key, base: new CafeAvatar(dressed, sheets), urls, manifestUrl: plain.manifestUrl };
 }
 const canvasOf = (w: number, h: number) => Object.assign(document.createElement("canvas"), { width: w, height: h });
 function recolourPixels(P: Uint8ClampedArray, ids: Uint8ClampedArray, targets: Map<number, { h: number; s: number; v: number; ref: number }>) {
@@ -254,13 +262,21 @@ export function useRig(id: string | null | undefined, dress?: Dress) {
 // Which way someone faces, from how they move ON SCREEN: down = toward you (S), up = away (N),
 // right = E. A purely sideways or purely vertical step keeps the other half as it was.
 export function facing(prev: Direction, dx: number, dy: number): Direction {
-  const ns = dy > 0.01 ? "S" : dy < -0.01 ? "N" : prev[0];
-  const ew = dx > 0.01 ? "E" : dx < -0.01 ? "W" : prev[1];
-  return (ns + ew) as Direction;
+  if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return prev;
+  // eight ways, by the screen angle of the step; the floor's diagonals run at about 26.6 degrees
+  // (2:1), so a step along one is SE/SW/NE/NW and two arrows together are straight E/W/N/S
+  const a = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const DIRS: [Direction, number][] = [["E", 0], ["SE", 26.57], ["S", 90], ["SW", 153.43], ["W", 180], ["W", -180], ["NW", -153.43], ["N", -90], ["NE", -26.57]];
+  let best = DIRS[0];
+  for (const d of DIRS) if (Math.abs(a - d[1]) < Math.abs(a - best[1])) best = d;
+  return best[0];
 }
+// the nearest of the four diagonals (every avatar has those; not every one, or every outfit,
+// has the straight ones)
+const DIAGONAL: Record<Direction, Direction> = { SE: "SE", SW: "SW", NE: "NE", NW: "NW", S: "SE", N: "NW", E: "SE", W: "SW" };
 // the café's older facing flags (back = away from you, flip = mirrored legacy art) as a direction
 export const dirOf = (back: boolean, flip: boolean): Direction => `${back ? "N" : "S"}${(back ? !flip : flip) ? "E" : "W"}` as Direction;
-export const isDirection = (v: unknown): v is Direction => v === "SE" || v === "SW" || v === "NE" || v === "NW";
+export const isDirection = (v: unknown): v is Direction => typeof v === "string" && ["SE", "SW", "NE", "NW", "S", "N", "E", "W"].includes(v);
 
 // seated: a couple of quiet breaths, then a sip of coffee, round and round
 const SIP_EVERY = 2; // seated-idle cycles between sips
@@ -275,13 +291,14 @@ export class Body {
   private onUp: (() => void) | null = null;
   constructor(public rig: Rig, dir: Direction = "SE") {
     this.av = new CafeAvatar(rig.base.manifest, rig.base.sheets);
-    this.av.setDirection(dir);
+    this.av.setDirection(this.av.manifest.directions?.[dir] ? dir : DIAGONAL[dir]);
     this.av.play("idle");
   }
   get dir() {
     return this.av.direction;
   }
   face(d: Direction) {
+    if (!this.av.manifest.directions?.[d]) d = DIAGONAL[d];
     if (d !== this.av.direction) this.av.setDirection(d); // keeps the phase (mid-stride stays mid-stride)
   }
   private to(m: Motion, restart = false) {

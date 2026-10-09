@@ -290,6 +290,312 @@
       "materialMap": "seated-idle-back.mat.png",
       "over": "seated-idle-back.over.png",
       "overMap": "seated-idle-back.over.mat.png"
+    },
+    "walk-south": {
+      "sheet": "walk-south.png",
+      "durationMs": [
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125
+      ],
+      "loop": true,
+      "materialMap": "walk-south.mat.png",
+      "over": "walk-south.over.png",
+      "overMap": "walk-south.over.mat.png"
+    },
+    "idle-south": {
+      "sheet": "idle-south.png",
+      "durationMs": [
+        1500,
+        100,
+        100,
+        350,
+        800,
+        350,
+        350,
+        1500
+      ],
+      "loop": true,
+      "materialMap": "idle-south.mat.png",
+      "over": "idle-south.over.png",
+      "overMap": "idle-south.over.mat.png"
+    },
+    "sit-down-south": {
+      "sheet": "sit-down-south.png",
+      "durationMs": [
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125
+      ],
+      "loop": false,
+      "materialMap": "sit-down-south.mat.png",
+      "over": "sit-down-south.over.png",
+      "overMap": "sit-down-south.over.mat.png"
+    },
+    "stand-up-south": {
+      "sheet": "stand-up-south.png",
+      "durationMs": [
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125
+      ],
+      "loop": false,
+      "materialMap": "stand-up-south.mat.png",
+      "over": "stand-up-south.over.png",
+      "overMap": "stand-up-south.over.mat.png"
+    },
+    "seated-idle-south": {
+      "sheet": "seated-idle-south.png",
+      "durationMs": [
+        1500,
+        100,
+        100,
+        350,
+        800,
+        350,
+        350,
+        1500
+      ],
+      "loop": true,
+      "materialMap": "seated-idle-south.mat.png",
+      "over": "seated-idle-south.over.png",
+      "overMap": "seated-idle-south.over.mat.png"
+    },
+    "coffee-sip-south": {
+      "sheet": "coffee-sip-south.png",
+      "durationMs": [
+        250,
+        150,
+        150,
+        500,
+        500,
+        150,
+        150,
+        750
+      ],
+      "loop": true,
+      "materialMap": "coffee-sip-south.mat.png",
+      "over": "coffee-sip-south.over.png",
+      "overMap": "coffee-sip-south.over.mat.png"
+    },
+    "walk-north": {
+      "sheet": "walk-north.png",
+      "durationMs": [
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125
+      ],
+      "loop": true,
+      "materialMap": "walk-north.mat.png",
+      "over": "walk-north.over.png",
+      "overMap": "walk-north.over.mat.png"
+    },
+    "idle-north": {
+      "sheet": "idle-north.png",
+      "durationMs": [
+        1500,
+        100,
+        100,
+        350,
+        800,
+        350,
+        350,
+        1500
+      ],
+      "loop": true,
+      "materialMap": "idle-north.mat.png",
+      "over": "idle-north.over.png",
+      "overMap": "idle-north.over.mat.png"
+    },
+    "sit-down-north": {
+      "sheet": "sit-down-north.png",
+      "durationMs": [
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125
+      ],
+      "loop": false,
+      "materialMap": "sit-down-north.mat.png",
+      "over": "sit-down-north.over.png",
+      "overMap": "sit-down-north.over.mat.png"
+    },
+    "stand-up-north": {
+      "sheet": "stand-up-north.png",
+      "durationMs": [
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125
+      ],
+      "loop": false,
+      "materialMap": "stand-up-north.mat.png",
+      "over": "stand-up-north.over.png",
+      "overMap": "stand-up-north.over.mat.png"
+    },
+    "seated-idle-north": {
+      "sheet": "seated-idle-north.png",
+      "durationMs": [
+        1500,
+        100,
+        100,
+        350,
+        800,
+        350,
+        350,
+        1500
+      ],
+      "loop": true,
+      "materialMap": "seated-idle-north.mat.png",
+      "over": "seated-idle-north.over.png",
+      "overMap": "seated-idle-north.over.mat.png"
+    },
+    "coffee-sip-north": {
+      "sheet": "coffee-sip-north.png",
+      "durationMs": [
+        250,
+        150,
+        150,
+        500,
+        500,
+        150,
+        150,
+        750
+      ],
+      "loop": true,
+      "materialMap": "coffee-sip-north.mat.png",
+      "over": "coffee-sip-north.over.png",
+      "overMap": "coffee-sip-north.over.mat.png"
+    },
+    "walk-east": {
+      "sheet": "walk-east.png",
+      "durationMs": [
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125
+      ],
+      "loop": true,
+      "materialMap": "walk-east.mat.png",
+      "over": "walk-east.over.png",
+      "overMap": "walk-east.over.mat.png"
+    },
+    "idle-east": {
+      "sheet": "idle-east.png",
+      "durationMs": [
+        1500,
+        100,
+        100,
+        350,
+        800,
+        350,
+        350,
+        1500
+      ],
+      "loop": true,
+      "materialMap": "idle-east.mat.png",
+      "over": "idle-east.over.png",
+      "overMap": "idle-east.over.mat.png"
+    },
+    "sit-down-east": {
+      "sheet": "sit-down-east.png",
+      "durationMs": [
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125
+      ],
+      "loop": false,
+      "materialMap": "sit-down-east.mat.png",
+      "over": "sit-down-east.over.png",
+      "overMap": "sit-down-east.over.mat.png"
+    },
+    "stand-up-east": {
+      "sheet": "stand-up-east.png",
+      "durationMs": [
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125,
+        125
+      ],
+      "loop": false,
+      "materialMap": "stand-up-east.mat.png",
+      "over": "stand-up-east.over.png",
+      "overMap": "stand-up-east.over.mat.png"
+    },
+    "seated-idle-east": {
+      "sheet": "seated-idle-east.png",
+      "durationMs": [
+        1500,
+        100,
+        100,
+        350,
+        800,
+        350,
+        350,
+        1500
+      ],
+      "loop": true,
+      "materialMap": "seated-idle-east.mat.png",
+      "over": "seated-idle-east.over.png",
+      "overMap": "seated-idle-east.over.mat.png"
+    },
+    "coffee-sip-east": {
+      "sheet": "coffee-sip-east.png",
+      "durationMs": [
+        250,
+        150,
+        150,
+        500,
+        500,
+        150,
+        150,
+        750
+      ],
+      "loop": true,
+      "materialMap": "coffee-sip-east.mat.png",
+      "over": "coffee-sip-east.over.png",
+      "overMap": "coffee-sip-east.over.mat.png"
     }
   },
   "attachments": {
@@ -340,6 +646,78 @@
         30.88,
         52.94
       ]
+    },
+    "sit-down-south": {
+      "chairSeat": [
+        30.62,
+        39.73
+      ]
+    },
+    "stand-up-south": {
+      "chairSeat": [
+        30.62,
+        39.73
+      ]
+    },
+    "seated-idle-south": {
+      "chairSeat": [
+        30.62,
+        39.73
+      ]
+    },
+    "coffee-sip-south": {
+      "chairSeat": [
+        30.62,
+        39.73
+      ]
+    },
+    "sit-down-north": {
+      "chairSeat": [
+        31.0,
+        54.39
+      ]
+    },
+    "stand-up-north": {
+      "chairSeat": [
+        31.0,
+        54.39
+      ]
+    },
+    "seated-idle-north": {
+      "chairSeat": [
+        31.0,
+        54.39
+      ]
+    },
+    "coffee-sip-north": {
+      "chairSeat": [
+        31.0,
+        54.39
+      ]
+    },
+    "sit-down-east": {
+      "chairSeat": [
+        32.62,
+        46.92
+      ]
+    },
+    "stand-up-east": {
+      "chairSeat": [
+        32.62,
+        46.92
+      ]
+    },
+    "seated-idle-east": {
+      "chairSeat": [
+        32.62,
+        46.92
+      ]
+    },
+    "coffee-sip-east": {
+      "chairSeat": [
+        32.62,
+        46.92
+      ]
     }
   },
   "directions": {
@@ -385,6 +763,50 @@
         "stand-up": "stand-up-back",
         "coffee-sip": "coffee-sip-back",
         "seated-idle": "seated-idle-back"
+      }
+    },
+    "S": {
+      "flipX": false,
+      "actions": {
+        "walk": "walk-south",
+        "idle": "idle-south",
+        "sit-down": "sit-down-south",
+        "stand-up": "stand-up-south",
+        "seated-idle": "seated-idle-south",
+        "coffee-sip": "coffee-sip-south"
+      }
+    },
+    "N": {
+      "flipX": false,
+      "actions": {
+        "walk": "walk-north",
+        "idle": "idle-north",
+        "sit-down": "sit-down-north",
+        "stand-up": "stand-up-north",
+        "seated-idle": "seated-idle-north",
+        "coffee-sip": "coffee-sip-north"
+      }
+    },
+    "E": {
+      "flipX": false,
+      "actions": {
+        "walk": "walk-east",
+        "idle": "idle-east",
+        "sit-down": "sit-down-east",
+        "stand-up": "stand-up-east",
+        "seated-idle": "seated-idle-east",
+        "coffee-sip": "coffee-sip-east"
+      }
+    },
+    "W": {
+      "flipX": true,
+      "actions": {
+        "walk": "walk-east",
+        "idle": "idle-east",
+        "sit-down": "sit-down-east",
+        "stand-up": "stand-up-east",
+        "seated-idle": "seated-idle-east",
+        "coffee-sip": "coffee-sip-east"
       }
     }
   },
@@ -436,6 +858,12 @@
       "glasses": [
         "hair"
       ]
+    },
+    "cardinalOnly": {
+      "hair": [
+        "bob"
+      ],
+      "wear": []
     }
   }
 }

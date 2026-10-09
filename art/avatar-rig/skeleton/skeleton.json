@@ -23,6 +23,39 @@
         "near": "right",
         "far": "left"
       }
+    },
+    "south": {
+      "forward": [
+        0.0,
+        0.57357644
+      ],
+      "note": "facing you square on, walking straight down the screen (S)",
+      "sides": {
+        "near": "right",
+        "far": "left"
+      }
+    },
+    "north": {
+      "forward": [
+        0.0,
+        -0.57357644
+      ],
+      "note": "facing away square on, walking straight up the screen (N)",
+      "sides": {
+        "near": "right",
+        "far": "left"
+      }
+    },
+    "east": {
+      "forward": [
+        1.0,
+        0.0
+      ],
+      "note": "side on, walking straight right across the screen (E); W is this mirrored",
+      "sides": {
+        "near": "right",
+        "far": "left"
+      }
     }
   },
   "joints": {

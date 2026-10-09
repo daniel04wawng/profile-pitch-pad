@@ -40,7 +40,7 @@ def seat(ch, view, a, breath=0.0):
     f = {"angles": {"hip.near": a, "hip.far": a, "knee.near": a, "knee.far": a}, "offset": [0, 0], "breath": breath}
     drop = ch.joints["ankle.near"][1] - pose(ch, view, f)["ankle.near"][1]
     f["offset"] = [0, float(drop)]
-    if view == "back" and a > 0.7:  # from behind, the body and the chair hide the legs once they're up
+    if view in ("back", "north") and a > 0.7:  # from behind, the body and the chair hide the legs once they're up
         f["hide"] = [p["part"] for p in ch.parts if p["part"].split(".")[0] in ("thigh", "shin", "foot")]
     return f
 
@@ -53,8 +53,8 @@ def sip_turn(ch):
     """How far the forearm turns at the top of a sip: from the mug at rest to the mouth, seen
     from the lifted elbow; from behind, a fixed turn up and in."""
     J = ch.joints
-    if "mouth" not in J:
-        return -0.5
+    if "mouth" not in J:  # from behind: up and in behind the head (facing straight away: just in)
+        return 0.35 if "shoulder.free" in J and J["elbow.mug"][0] > J["neck"][0] + 10 and J["elbow.mug"][1] < J["neck"][1] + 20 else -0.5
     ang = lambda v: math.atan2(v[1], v[0])  # noqa: E731
     return ang(J["mouth"] - J["elbow.mug.sip"]) - ang(J["hand.mug"] - J["elbow.mug"])
 
@@ -79,12 +79,32 @@ def actions(ch, view):
     }
 
 
+# the views for eight directions (facing you, away, side on), when a model has them: S, N, E
+# (W is E mirrored). They come from one drawing each, in the model's own hair only.
+CARDINAL = {"south": "S", "north": "N", "east": "E"}
 SHEET = {  # action, view -> the café's sheet name (the first character's manifest names them)
     **{(a, "front"): a for a in ("sit-down", "stand-up", "seated-idle", "coffee-sip")},
     **{(a, "back"): f"{a}-back" for a in ("sit-down", "stand-up", "seated-idle", "coffee-sip")},
     ("walk", "front"): "walk-front", ("walk", "back"): "walk-back",
     ("idle", "front"): "idle-front", ("idle", "back"): "idle-back",
+    **{(a, v): f"{a}-{v}" for v in CARDINAL for a in ("walk", "idle", "sit-down", "stand-up", "seated-idle", "coffee-sip")},
 }
+ACTION_OF = {"walk": "walk", "idle": "idle", "sit-down": "sit-down", "stand-up": "stand-up", "seated-idle": "seated-idle", "coffee-sip": "coffee-sip"}
+
+
+def add_cardinal(manifest, view):
+    """The manifest entries for a cardinal view: its clips (timed like the front ones) and the
+    direction(s) that play them."""
+    front = {a: SHEET[(a, "front")] for a in ACTION_OF}
+    for a, name in front.items():
+        clip = json.loads(json.dumps(manifest["animations"][name]))
+        clip["sheet"] = f"{SHEET[(a, view)]}.png"
+        clip.pop("rootMotion", None)
+        manifest["animations"][SHEET[(a, view)]] = clip
+    acts = {a: SHEET[(a, view)] for a in ACTION_OF}
+    manifest["directions"][CARDINAL[view]] = {"flipX": False, "actions": acts}
+    if view == "east":
+        manifest["directions"]["W"] = {"flipX": True, "actions": acts}
 
 
 TEMPLATE = json.load(open(HERE / "manifest.template.json"))  # the café's clip names, timings, directions
@@ -177,7 +197,11 @@ def bake_model(mid, spec):
     manifest["character"] = mid
     cdir = HERE / "characters" / spec["character"]
     refs = base = None
-    for view in ("front", "back"):
+    views = ["front", "back"] + [v for v in CARDINAL if (cdir / v / "parts.json").exists()]
+    for view in views:
+        cardinal = view in CARDINAL
+        if cardinal:
+            add_cardinal(manifest, view)
         mats = profile(cdir / view)
         own = Character(cdir / view)
         if refs is None:  # her colours, from her as drawn
@@ -188,14 +212,15 @@ def bake_model(mid, spec):
                 px = np.concatenate([a[m == k][:, :3] for a, m in pairs])
                 if len(px) > 20:
                     base[name] = "#%02x%02x%02x" % tuple(int(c) for c in np.median(px, axis=0))
-        bald = Character(cdir / view, layers=BALD)
+        # (a cardinal view has only its own hair: its body is drawn with it, its hair layer empty)
+        bald = own if cardinal else Character(cdir / view, layers=BALD)
         bald_ids = id_character(bald, view, mats)
         names = [p["part"] for p in bald.parts]
         under = set(names[: names.index("head") + 1])
         over = set(names) - under
-        hairs = {h: Character(cdir / view, layers=layers) for h, layers in spec["hair"].items()}
+        hairs = {h: Character(cdir / view, layers=layers) for h, layers in spec["hair"].items() if not cardinal or h == spec["own"]}
         hair_ids = {h: id_character(c, view, mats) for h, c in hairs.items()}
-        wears = {w: Character(cdir / view, layers=BALD + layers) for w, layers in WEAR.items() if (cdir / "layers" / layers[0]).is_dir()}
+        wears = {} if cardinal else {w: Character(cdir / view, layers=BALD + layers) for w, layers in WEAR.items() if (cdir / "layers" / layers[0]).is_dir()}
         masks = {w: mask_character(bald, cdir / "layers" / WEAR[w][0], view) for w in wears}
         for action, frames in actions(own, view).items():
             name = SHEET[(action, view)]
@@ -240,7 +265,10 @@ def bake_model(mid, spec):
         for a in ("sit-down", "stand-up", "seated-idle", "coffee-sip"):
             manifest["attachments"][SHEET[(a, view)]] = {"chairSeat": at}
     manifest["materials"] = {"ids": {v: k for k, v in MATERIALS.items()}, "refs": {k: round(v, 4) for k, v in refs.items() if k in base}, "base": base}
-    manifest["layers"] = {"hair": list(spec["hair"]), "defaultHair": spec["own"], "wear": list(wears), "wearHides": {w: ["hair"] for w in wears}}
+    worn = [w for w, layers in WEAR.items() if (cdir / "layers" / layers[0]).is_dir()]
+    manifest["layers"] = {"hair": list(spec["hair"]), "defaultHair": spec["own"], "wear": worn, "wearHides": {w: ["hair"] for w in worn},
+                          # the cardinal directions are drawn in the model's own hair with nothing worn
+                          "cardinalOnly": {"hair": [spec["own"]], "wear": []} if len(views) > 2 else None}
     json.dump(manifest, open(out / "manifest.json", "w"), indent=2)
     print("baked", mid, "hair:", ", ".join(spec["hair"]), "| wear:", ", ".join(wears))
     return {"id": mid, "label": spec["body"] + ("" if spec["jacket"] == "on" else ", jacket off"), "manifest": f"{mid}/manifest.json",
