@@ -1,3 +1,4 @@
+import { BUILDER } from "./release";
 import { useEffect, useRef, useState } from "react";
 import { Stage, useCompanions } from "./Stage";
 import { useMe } from "./useMe";
@@ -190,9 +191,11 @@ export function Play({
                   edit café
                 </a>
               )}
-              <a href="/cafe?build" className="rounded bg-[#9bbf7a] px-3 py-2 text-[#1a1512]">
-                build your own café
-              </a>
+              {BUILDER && (
+                <a href="/cafe?build" className="rounded bg-[#9bbf7a] px-3 py-2 text-[#1a1512]">
+                  build your own café
+                </a>
+              )}
             </>
           )}
         </div>

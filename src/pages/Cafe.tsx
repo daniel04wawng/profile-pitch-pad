@@ -3,6 +3,7 @@ import { Play } from "@/components/cafe/engine/Play";
 import { Editor } from "@/components/cafe/engine/Editor";
 import type { Layout } from "@/components/cafe/engine/types";
 import { openCafe, openHosted } from "@/components/cafe/engine/store";
+import { BUILDER_OR_DEV } from "@/components/cafe/engine/release";
 import type { Screens } from "@/components/cafe/engine/screenData";
 
 const FONTS =
@@ -16,7 +17,9 @@ const FONTS =
 //  /cafe?edit     the dev server only: edit Daniel's café, saving to disk
 const q = new URLSearchParams(window.location.search);
 const VISIT = q.get("visit");
-const MODE = import.meta.env.DEV && q.has("edit") ? "edit" : q.has("build") ? "build" : q.has("mine") ? "mine" : VISIT ? "hosted" : "visit";
+// (build, mine and someone's café are the café builder's: not in the portfolio's release)
+const MODE =
+  import.meta.env.DEV && q.has("edit") ? "edit" : !BUILDER_OR_DEV ? "visit" : q.has("build") ? "build" : q.has("mine") ? "mine" : VISIT ? "hosted" : "visit";
 
 const Cafe = () => {
   const [cafe, setCafe] = useState<{ layout: Layout; screens: Screens; name?: string } | null>(null);
