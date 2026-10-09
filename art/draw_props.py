@@ -1107,73 +1107,42 @@ def record_cabinet_back():
 
 
 def register():
-    """A vintage brass cash register on the counter, facing down-left: a cash drawer at the
-    bottom, a dark key bank stepping up toward the back with rows of cream keys, a brass body
-    behind it with the price lit amber in its window, a little sign on top and a crank."""
-    c = Canvas(60, 64)
-    X0, Y0 = 16, 34
-    L, D = 8, 6  # along the counter, and front to back
-    BASE = 5
-
-    # the drawer: brass, a dark seam all along and a knob in the middle
+    """A café till, the kind on most counters now: a tablet on a swivel stand, its screen lit
+    with a grid of coloured menu buttons, a white cash drawer under it and a little card
+    terminal beside it. Facing down-left, to sit on the counter."""
+    c = Canvas(56, 52)
+    X0, Y0 = 18, 30
+    L, D = 8, 6
+    # the card terminal, back right on the counter, beside the drawer: dark, a lit top
+    face_left(c, X0, Y0, 8.6, 10.2, 1.6, 0, 5, lambda t, z: "slate0" if z > 3.6 or t < 0.3 else "slate1")
+    face_right(c, X0, Y0, 10.2, 0.6, 1.6, 0, 5, lambda s_, z: "slate0")
+    face_top(c, X0, Y0, 8.6, 10.2, 0.6, 1.6, 5, lambda a, b: "olive3")
+    # the cash drawer: white, a seam along it
     def drawer(t, z):
-        if z >= BASE - 1:
-            return "brass2"
-        if abs(z - 2.0) < 0.6:
-            return "brass0"
-        if 2.6 <= z < 3.8 and abs(t - L / 2) < 0.7:
-            return "iron"
-        return "brass1" if t > 0.6 else "brass2"
-    face_left(c, X0, Y0, 0, L, D, 0, BASE, drawer)
-    face_right(c, X0, Y0, L, 0, D, 0, BASE, lambda s_, z: "brass2" if z >= BASE - 1 else "brass0")
-    # the key bank: three dark steps rising toward the back, each with a row of cream keys
-    steps = ((4.2, 6, BASE + 1.5), (2.6, 4.2, BASE + 3), (1.2, 2.6, BASE + 4.5))
-    zlow = BASE
-    for b0, b1, z in steps:
-        face_left(c, X0, Y0, 0.4, L - 0.4, b1, zlow, z, lambda t, zz: "slate0")
-        face_right(c, X0, Y0, L - 0.4, b0, b1, zlow, z, lambda bb, zz: "iron")
-        face_top(c, X0, Y0, 0.4, L - 0.4, b0, b1, z, lambda aa, bb: "slate1")
-        zlow = z
-        bm = (b0 + b1) / 2
-        for k in range(4):
-            a = 1.2 + k * 1.85
-            kx, ky = X0 + 2 * a - 2 * bm, Y0 + a + bm - z
-            c.px(kx, ky - 1, "key2")
-            c.px(kx + 1, ky - 1, "key1")
-            c.px(kx, ky, "key1")
-            c.px(kx + 1, ky, "key0")
-    # the body behind the keys: brass, with the price window lit amber
-    TOP = BASE + 13
-    H = TOP - steps[-1][2]  # (a face's colour_fn gets z from the face's own bottom)
+        if z >= 2.5:
+            return "silver2"
+        if abs(z - 1.2) < 0.5:
+            return "silver0"
+        return "chalk" if t > 0.6 else "silver1"
+    face_left(c, X0, Y0, 0, L, D, 0, 3, drawer)
+    face_right(c, X0, Y0, L, 0, D, 0, 3, lambda s_, z: "silver1" if z < 2.5 else "silver2")
+    face_top(c, X0, Y0, 0, L, 0, D, 3, lambda a, b: "silver2")
+    # the tablet, tilted up toward you: a dark frame, the screen lit with menu buttons
+    TILES = ["red2", "olive3", "navy2", "amber1", "terra2", "olive2"]
+    def screen(t, z):
+        if t < 0.5 or t > 7.0 or z < 0.7 or z > 10.3:
+            return "slate0"  # the frame
+        if z > 8.8:
+            return "slate1"  # the top bar
+        if t > 5.2:
+            return "silver1" if z > 2.5 else "olive3"  # the order list, and the pay button
+        col, row = int((t - 0.5) / 1.6), int((z - 0.7) / 2.7)
+        inside = ((t - 0.5) % 1.6) < 1.1 and ((z - 0.7) % 2.7) < 1.8
+        return TILES[(col + 2 * row) % len(TILES)] if inside else "navy0"  # lit buttons on the dark screen
+    face_left(c, X0, Y0, 0.0, 7.5, 2.6, 8, 19, screen)
+    face_right(c, X0, Y0, 7.5, 2.0, 2.6, 8, 19, lambda s_, z: "slate0")
+    face_top(c, X0, Y0, 0.0, 7.5, 2.0, 2.6, 19, lambda a, b: "slate0")
 
-    def body(t, z):
-        if z >= H - 1:
-            return "brass2"
-        if H - 6.5 <= z < H - 1.5 and 1.0 <= t < L - 1.0:
-            if H - 5.5 <= z < H - 2.5 and 1.5 <= t < L - 1.5 and int(t * 2) % 3 != 2:
-                return "amber2" if z >= H - 4 else "amber1"  # the lit digits
-            return "slate0"
-        if t < 0.5 or t > L - 0.5:
-            return "brass0"  # the body's beading
-        return "brass1" if (int(t * 2) + int(z)) % 6 else "brass2"
-    face_left(c, X0, Y0, 0, L, 1.2, steps[-1][2], TOP, body)
-    face_right(c, X0, Y0, L, 0, 1.2, steps[-1][2], TOP, lambda s_, z: "brass0")
-    face_top(c, X0, Y0, 0, L, 0, 1.2, TOP, lambda aa, bb: "brass2")
-    # the sign on top: a little brass plate with a dark "$"
-    def sign(t, z):
-        if t < 0.4 or t > L - 4.4 or z >= 4.4:
-            return "brass0"
-        return "brass2"
-    face_left(c, X0, Y0, 2, L - 2, 0.6, TOP, TOP + 5, sign)
-    sx, sy = X0 + 2 * (L / 2) - 2 * 0.6, Y0 + L / 2 + 0.6 - TOP - 3
-    for dx, dy in ((0, -1), (-1, 0), (0, 1), (1, 2), (0, 3), (0, -2), (0, 4)):
-        c.px(sx + dx, sy + dy, "iron")
-    # the crank on the right side: an arm out and a red-brown handle
-    hx, hy = X0 + 2 * L - 2 * 3, Y0 + L + 3 - (BASE + 2)
-    for k in range(5):
-        c.px(hx + 1 + k, hy + k // 2, "iron")
-    for dy in (0, 1, 2):
-        c.px(hx + 6, hy + 2 - dy, "red2" if dy else "red1")
     return save(c, "register", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
