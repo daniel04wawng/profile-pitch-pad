@@ -492,6 +492,25 @@ def cut(cid: str, view: str):
     # (below the ankle, everything in a shoe's outline is the shoe: its dark outline can look
     # like the trousers, and left on the shin it drifts off as the leg swings)
     feet = {side: poly(size, s[f"foot.{side}"]) & solid & ~(trouser_colour & (yy < s[f"ankle.{side}"][1] + 3)) for side in ("near", "far")}
+    if KIND[view] == "east":
+        # side on, the shoes overlap, so their outlines can't be boxes: each shoe is one of the
+        # two white shapes (the lower one is the near shoe), and its outline the dark pixels
+        # round it (each to the nearer shoe), the trousers left out
+        both = (feet["near"] | feet["far"])
+        white = both & (a[:, :, :3].min(2) > 150)
+        lab, n = label(white, structure=np.ones((3, 3)))
+        sizes = np.bincount(lab.ravel())[1:]
+        big = [k + 1 for k in np.argsort(sizes)[::-1][:2]]
+        if len(big) == 2:
+            ys = [np.nonzero(lab == k)[0].mean() for k in big]
+            near_k, far_k = (big[0], big[1]) if ys[0] > ys[1] else (big[1], big[0])
+            owner = np.zeros(lab.shape, int)
+            owner[binary_dilation(lab == far_k, iterations=1)] = 2
+            owner[lab == near_k] = 1
+            _, (iy, ix) = distance_transform_edt(owner == 0, return_indices=True)
+            nearest = owner[iy, ix]
+            shoe = binary_dilation(white, iterations=2) & solid & ~trouser_colour
+            feet = {"near": shoe & (nearest == 1), "far": shoe & (nearest == 2)}
     allfeet = feet["near"] | feet["far"]
     forearm_m = poly(size, s["forearm"]) & solid
     sleeve_m = poly(size, s["sleeve"]) & solid
