@@ -17,14 +17,14 @@ const nameOf = (file: string) => file.replace(/^sprites\//, "").replace(/\.png$/
 
 type Seated = { x: number; y: number; lift: number; back: boolean; flip: boolean; z: number; seat: SpriteDef };
 
-// arrow keys / WASD walk along the floor's own axes, the way the avatar faces: up is up-right
-// (away, to the right), right is down-right, down is down-left, left is up-left. Two keys
-// together walk straight across the screen.
+// arrow keys / WASD walk the way they point on screen: up is straight up the screen (away),
+// right straight right, and so on (on the floor's grid, a step along both axes). Two keys
+// together walk the floor's diagonals (up + right is up-right).
 const KEYS: Record<string, Cell> = {
-  ArrowUp: { i: 0, j: -1 }, w: { i: 0, j: -1 },
-  ArrowRight: { i: 1, j: 0 }, d: { i: 1, j: 0 },
-  ArrowDown: { i: 0, j: 1 }, s: { i: 0, j: 1 },
-  ArrowLeft: { i: -1, j: 0 }, a: { i: -1, j: 0 },
+  ArrowUp: { i: -1, j: -1 }, w: { i: -1, j: -1 },
+  ArrowRight: { i: 1, j: -1 }, d: { i: 1, j: -1 },
+  ArrowDown: { i: 1, j: 1 }, s: { i: 1, j: 1 },
+  ArrowLeft: { i: -1, j: 1 }, a: { i: -1, j: 1 },
 };
 const keyName = (e: KeyboardEvent) => (e.key.length === 1 ? e.key.toLowerCase() : e.key);
 
