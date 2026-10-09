@@ -22,7 +22,7 @@ import numpy as np
 from PIL import Image
 from scipy.ndimage import binary_dilation, binary_erosion, binary_fill_holes, distance_transform_edt, label
 
-from cut_green import fill_under, keep_under, legs_split, poly
+from cut_green import fill_under, keep_under, legs_split, poly, smooth_fill
 from hair_swap import paint_across
 from materials import IDS, palette_map
 
@@ -190,6 +190,64 @@ MUG = {
 SIP_LIFT = (10, -18)
 SIP_LIFT_BACK = (-8, -28)  # behind: the hand goes up and in, out of sight behind her shoulder and head  # how far the elbow comes up and in for a sip (front)
 
+# --- the jacket-off base models, from their own art (cafe16, normalize_cafe16.py) ---
+C16 = HERE / "characters" / "cafe16-src"
+SOURCE = {
+    "man-tee": {"front": C16 / "01-man-tee-front.png", "back": C16 / "02-man-tee-back.png"},
+    "woman-tee": {"front": C16 / "03-woman-tee-front.png", "back": C16 / "04-woman-tee-back.png"},
+}
+SPECS["man-tee"] = {  # in just his white tee: the tee is his top ("shirt"), arms bare below short sleeves
+    "front": spec([122, 72], 74, 66, ([117, 148], [116, 185], [115, 224]), ([139, 145], [139, 180], [140, 214]), [142, 76], [147, 120],
+                  133, 129, "left", 140, 142, 136,
+                  [(138, 74), (146, 74), (152, 84), (155, 100), (157, 112), (158, 124), (148, 125), (146, 110), (143, 95), (140, 84)],
+                  [(144, 120), (158, 119), (161, 135), (163, 157), (146, 158), (144, 140)],
+                  box(102, 222, 129, 254), box(131, 210, 170, 242),
+                  [[112, 55, 122, 62], [93, 108, 100, 118], [146, 110, 152, 130]], [[100, 30, 130, 45]],
+                  [[122, 118, 140, 130], [97, 80, 108, 98]], [],
+                  [[106, 160, 122, 200], [132, 160, 146, 200]], [[108, 232, 124, 246], [140, 220, 160, 232]], [[127, 88, 149, 113]]),
+    "back": spec([126, 68], 70, 64, ([140, 148], [140, 190], [141, 230]), ([114, 150], [112, 188], [110, 213]), [98, 75], [97, 120],
+                 138, 127, "right", 146, 148, 140,
+                 [(92, 72), (101, 70), (104, 88), (104, 118), (100, 124), (92, 124), (89, 108), (89, 90)],
+                 [(90, 118), (104, 118), (105, 135), (105, 152), (91, 152), (90, 135)],
+                 box(128, 225, 165, 256), box(97, 205, 126, 236),
+                 [[93, 108, 100, 128], [148, 85, 160, 100]], [[110, 30, 145, 55]],
+                 [[110, 90, 140, 125], [92, 80, 99, 98]], [],
+                 [[106, 170, 122, 200], [132, 170, 146, 210]], [[104, 214, 120, 228], [136, 238, 158, 250]], [[147, 79, 160, 92]]),
+}
+SPECS["woman-tee"] = {  # Sage in just her cream tee: the tee is her top, arms bare below short sleeves
+    "front": spec([128, 78], 80, 70, ([113, 150], [112, 188], [112, 228]), ([138, 148], [138, 185], [140, 219]), [143, 80], [152, 122],
+                  136, 127, "left", 142, 145, 137,
+                  [(138, 78), (147, 77), (153, 88), (157, 104), (159, 118), (160, 126), (150, 127), (148, 112), (145, 98), (141, 88)],
+                  [(147, 120), (160, 119), (163, 135), (165, 166), (149, 166), (147, 140)],
+                  box(97, 224, 127, 256), box(129, 214, 166, 244),
+                  [[128, 58, 138, 66], [93, 110, 102, 122], [150, 110, 156, 135]], [[105, 30, 135, 45], [97, 55, 110, 75]],
+                  [[105, 85, 120, 100], [135, 122, 148, 134]], [],
+                  [[104, 165, 122, 205], [130, 165, 146, 205]], [[103, 234, 120, 248], [136, 224, 156, 236]], [[131, 92, 151, 119]]),
+    "back": spec([127, 86], 88, 80, ([140, 158], [140, 195], [141, 231]), ([113, 158], [112, 192], [112, 215]), [100, 82], [98, 122],
+                 150, 122, "right", 158, 160, 152,
+                 [(93, 82), (101, 80), (104, 95), (104, 120), (100, 125), (92, 125), (89, 110), (90, 92)],
+                 [(90, 118), (104, 118), (105, 140), (103, 158), (91, 158), (90, 138)],
+                 box(128, 225, 166, 256), box(91, 210, 126, 240),
+                 [[93, 110, 101, 130], [152, 112, 162, 125]], [[110, 40, 145, 70]],
+                 [[112, 100, 140, 140], [91, 86, 99, 100]], [],
+                 [[104, 175, 120, 205], [130, 175, 146, 215]], [[98, 222, 116, 232], [134, 238, 158, 250]], [[150, 99, 164, 113]]),
+}
+for cid in ("man-tee", "woman-tee"):
+    for v in ("front", "back"):
+        SPECS[cid][v]["zones"] = {"skin": NECK_AND_MUG_HAND[v] + ([[140, 75, 170, 125]] if v == "back" else [])}
+MUG["man-tee"] = {
+    "front": {"upper": [(92, 74), (104, 72), (110, 82), (110, 100), (106, 124), (96, 126), (90, 118), (89, 98), (90, 84)],
+              "fore": [(96, 118), (106, 110), (114, 100), (122, 97), (128, 90), (148, 90), (148, 112), (132, 113), (120, 120), (108, 126), (98, 127)],
+              "shoulder": [100, 78], "elbow": [100, 121], "mug": [140, 101], "mouth": [121, 63]},
+    "back": {"fore": [(148, 78), (168, 78), (169, 100), (162, 118), (152, 120), (150, 100)], "elbow": [154, 118]},
+}
+MUG["woman-tee"] = {
+    "front": {"upper": [(93, 78), (104, 77), (110, 88), (110, 104), (106, 126), (96, 127), (90, 118), (89, 100), (91, 86)],
+              "fore": [(95, 118), (106, 110), (114, 102), (122, 98), (130, 92), (150, 92), (150, 118), (134, 119), (122, 122), (108, 128), (97, 128)],
+              "shoulder": [100, 82], "elbow": [99, 122], "mug": [140, 106], "mouth": [133, 69]},
+    "back": {"fore": [(147, 98), (166, 98), (167, 125), (158, 138), (150, 138), (148, 118)], "elbow": [153, 132]},
+}
+
 FRONT_ORDER = ["torso", "head", "upper-arm.free", "forearm.free", "upper-arm.mug", "forearm.mug", "thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near"]
 BACK_ORDER = ["forearm.mug", "thigh.far", "shin.far", "foot.far", "thigh.near", "shin.near", "foot.near", "torso", "head", "upper-arm.free", "forearm.free"]
 KINDS = {
@@ -268,7 +326,7 @@ def palette(a: np.ndarray, boxes: dict) -> dict:
 
 def cut(cid: str, view: str):
     s = SPECS[cid][view]
-    im = Image.open(SRC / cid / "stand-front.png" if view == "front" else SRC / cid / "stand-back.png").convert("RGBA")
+    im = Image.open(SOURCE[cid][view] if cid in SOURCE else SRC / cid / f"stand-{view}.png").convert("RGBA")
     a = np.array(im)
     solid = a[:, :, 3] > 0
     yy, xx = np.mgrid[: a.shape[0], : a.shape[1]]
@@ -277,7 +335,9 @@ def cut(cid: str, view: str):
     # a shoe is everything in its (generous) outline that isn't trouser-coloured: the hem the
     # outline overlaps stays with the leg, the shoe's own outline and sock go with the shoe
     trouser_colour = near_palette(a, s["trouserSample"])
-    feet = {side: poly(size, s[f"foot.{side}"]) & solid & ~trouser_colour for side in ("near", "far")}
+    # (below the ankle, everything in a shoe's outline is the shoe: its dark outline can look
+    # like the trousers, and left on the shin it drifts off as the leg swings)
+    feet = {side: poly(size, s[f"foot.{side}"]) & solid & ~(trouser_colour & (yy < s[f"ankle.{side}"][1] + 3)) for side in ("near", "far")}
     allfeet = feet["near"] | feet["far"]
     forearm_m = poly(size, s["forearm"]) & solid
     sleeve_m = poly(size, s["sleeve"]) & solid
@@ -334,11 +394,7 @@ def cut(cid: str, view: str):
     # behind the forearm is all her; behind the upper arm, all but its outer edge (with the arm
     # up, her side is a little slimmer than the arm made it)
     behind = (mug_fore | (mug_upper & binary_erosion(was, iterations=5))) if "upper" in mg else np.zeros_like(was)  # behind: the hand was beside her, nothing under it
-    cloth = (body[:, :, 3] > 0) & (body[:, :, :3].max(2) >= 60)
-    patch = paint_across(body, cloth, behind)
-    on = patch[:, :, 3] > 0
-    body[on] = patch[on]
-    fill_under(body, behind & ~on, reach=12)
+    smooth_fill(body, behind)
     keep_under(body, a, (legs["near"] | legs["far"]) & (yy < s["torsoOverlapY"] + 6))
     # below the hem nothing is the torso's: strays (a shoe's top edge, an outline in the crotch)
     # go to the nearest leg or shoe, or they'd stay behind as the legs move

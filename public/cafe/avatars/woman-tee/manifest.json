@@ -295,50 +295,50 @@
   "attachments": {
     "coffee-sip": {
       "chairSeat": [
-        31.25,
-        42.08
+        30.62,
+        41.58
       ]
     },
     "seated-idle": {
       "chairSeat": [
-        31.25,
-        42.08
+        30.62,
+        41.58
       ]
     },
     "sit-down": {
       "chairSeat": [
-        31.25,
-        42.08
+        30.62,
+        41.58
       ]
     },
     "stand-up": {
       "chairSeat": [
-        31.25,
-        42.08
+        30.62,
+        41.58
       ]
     },
     "sit-down-back": {
       "chairSeat": [
-        30.5,
-        52.14
+        30.88,
+        52.94
       ]
     },
     "stand-up-back": {
       "chairSeat": [
-        30.5,
-        52.14
+        30.88,
+        52.94
       ]
     },
     "coffee-sip-back": {
       "chairSeat": [
-        30.5,
-        52.14
+        30.88,
+        52.94
       ]
     },
     "seated-idle-back": {
       "chairSeat": [
-        30.5,
-        52.14
+        30.88,
+        52.94
       ]
     }
   },
@@ -398,18 +398,18 @@
       "shoes": 6
     },
     "refs": {
-      "skin": 0.9765,
-      "hair": 0.2275,
-      "shirt": 0.9529,
-      "trousers": 0.2706,
-      "shoes": 0.8549
+      "skin": 0.9882,
+      "hair": 0.2431,
+      "shirt": 0.9569,
+      "trousers": 0.2824,
+      "shoes": 0.9176
     },
     "base": {
-      "skin": "#f9a85d",
-      "hair": "#3a2d2d",
-      "shirt": "#f3dcc0",
-      "trousers": "#433e45",
-      "shoes": "#dacec3"
+      "skin": "#fcba79",
+      "hair": "#3e3030",
+      "shirt": "#f4e1c8",
+      "trousers": "#463f48",
+      "shoes": "#eadbca"
     }
   },
   "layers": {

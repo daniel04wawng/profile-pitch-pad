@@ -29,7 +29,7 @@ PEOPLE = ("green",) + WOMEN  # whose hair there is: his wavy crop, their bob, pi
 CUTS = ("green:tidy", "green:short", "green:cropped", "green:bun")  # and his hair cut shorter (hairstyles.py)
 # who wears it: the base models (the man, the woman, the woman with her jacket off, whose head is
 # the woman's own), each with no hair at all ("hair-none", what the café stacks a hair layer on)
-MODELS = {"green": "green", "sage-bob": "sage-bob", "woman-tee": "sage-bob"}  # model -> whose hair is hers
+MODELS = {"green": "green", "man-tee": "green", "sage-bob": "sage-bob", "woman-tee": "sage-bob"}  # model -> whose hair is theirs
 HAIR, SKIN = IDS["hair"], IDS["skin"]
 
 
@@ -138,7 +138,7 @@ def paint_from(arr, src_mask, hole):
 # whose neck, collar and shoulders show under a wearer's hair once it's gone: a woman with
 # short hair, so they're drawn (the wearer's own hair hid hers)
 # (in order: where the first has hair too, the next one's is used)
-UNDER = {"green": ("blue-pixie", "terracotta-curls"), "woman-tee": ("blue-pixie", "terracotta-curls"), "sage-bob": ("blue-pixie", "terracotta-curls"), "plum-braid": ("blue-pixie", "terracotta-curls"),
+UNDER = {"green": ("blue-pixie", "terracotta-curls"), "man-tee": ("blue-pixie", "terracotta-curls"), "woman-tee": ("blue-pixie", "terracotta-curls"), "sage-bob": ("blue-pixie", "terracotta-curls"), "plum-braid": ("blue-pixie", "terracotta-curls"),
          "terracotta-curls": ("blue-pixie",), "blue-pixie": ("terracotta-curls", "sage-bob")}
 
 

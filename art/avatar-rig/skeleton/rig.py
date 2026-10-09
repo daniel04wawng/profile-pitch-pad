@@ -172,6 +172,8 @@ def render(ch: Character, view: str, f: dict, only=None) -> Image.Image:
     for p in (ch.parts[i] for i in order):
         if only is not None and p["part"] not in only:
             continue
+        if p["part"] in f.get("hide", ()):
+            continue
         for arr in [ch.images[p["part"]], *ch.overlays.get(p["part"], [])]:  # the part, then its layers
             frame.alpha_composite(Image.fromarray(_place(arr, p, ch, J, P, turns, by_name)))
     return frame

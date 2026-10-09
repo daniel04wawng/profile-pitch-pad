@@ -40,6 +40,8 @@ def seat(ch, view, a, breath=0.0):
     f = {"angles": {"hip.near": a, "hip.far": a, "knee.near": a, "knee.far": a}, "offset": [0, 0], "breath": breath}
     drop = ch.joints["ankle.near"][1] - pose(ch, view, f)["ankle.near"][1]
     f["offset"] = [0, float(drop)]
+    if view == "back" and a > 0.7:  # from behind, the body and the chair hide the legs once they're up
+        f["hide"] = [p["part"] for p in ch.parts if p["part"].split(".")[0] in ("thigh", "shin", "foot")]
     return f
 
 
@@ -112,6 +114,7 @@ def hair_layers(character, own):
 # The base models: the man, and the woman with her jacket on or off (her head either way).
 MODELS = {
     "man": {"character": "green", "body": "man", "jacket": "on", "own": "wavy"},
+    "man-tee": {"character": "man-tee", "body": "man", "jacket": "off", "own": "wavy"},
     "woman": {"character": "sage-bob", "body": "woman", "jacket": "on", "own": "bob"},
     "woman-tee": {"character": "woman-tee", "body": "woman", "jacket": "off", "own": "bob"},
 }

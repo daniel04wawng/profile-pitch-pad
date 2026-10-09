@@ -1,0 +1,277 @@
+{
+  "format": "flattened source poses",
+  "images": [
+    {
+      "file": "01-man-tee-front.png",
+      "canvas": [
+        1199,
+        1312
+      ],
+      "visible_bounds_alpha_gt_32": [
+        448,
+        133,
+        811,
+        1170
+      ],
+      "suggested_ground_anchor": [
+        629.5,
+        1170
+      ]
+    },
+    {
+      "file": "02-man-tee-back.png",
+      "canvas": [
+        1199,
+        1312
+      ],
+      "visible_bounds_alpha_gt_32": [
+        488,
+        117,
+        848,
+        1185
+      ],
+      "suggested_ground_anchor": [
+        668.0,
+        1185
+      ]
+    },
+    {
+      "file": "03-woman-tee-front.png",
+      "canvas": [
+        1070,
+        1470
+      ],
+      "visible_bounds_alpha_gt_32": [
+        366,
+        148,
+        770,
+        1412
+      ],
+      "suggested_ground_anchor": [
+        568.0,
+        1412
+      ]
+    },
+    {
+      "file": "04-woman-tee-back.png",
+      "canvas": [
+        1070,
+        1470
+      ],
+      "visible_bounds_alpha_gt_32": [
+        340,
+        169,
+        755,
+        1402
+      ],
+      "suggested_ground_anchor": [
+        547.5,
+        1402
+      ]
+    },
+    {
+      "file": "05-man-jacket-south.png",
+      "canvas": [
+        1199,
+        1312
+      ],
+      "visible_bounds_alpha_gt_32": [
+        399,
+        134,
+        797,
+        1174
+      ],
+      "suggested_ground_anchor": [
+        598.0,
+        1174
+      ]
+    },
+    {
+      "file": "06-man-jacket-north.png",
+      "canvas": [
+        1199,
+        1312
+      ],
+      "visible_bounds_alpha_gt_32": [
+        429,
+        127,
+        787,
+        1147
+      ],
+      "suggested_ground_anchor": [
+        608.0,
+        1147
+      ]
+    },
+    {
+      "file": "07-man-jacket-east.png",
+      "canvas": [
+        1199,
+        1312
+      ],
+      "visible_bounds_alpha_gt_32": [
+        507,
+        138,
+        762,
+        1149
+      ],
+      "suggested_ground_anchor": [
+        634.5,
+        1149
+      ]
+    },
+    {
+      "file": "08-man-tee-south.png",
+      "canvas": [
+        1199,
+        1312
+      ],
+      "visible_bounds_alpha_gt_32": [
+        423,
+        129,
+        786,
+        1176
+      ],
+      "suggested_ground_anchor": [
+        604.5,
+        1176
+      ]
+    },
+    {
+      "file": "09-man-tee-north.png",
+      "canvas": [
+        1199,
+        1312
+      ],
+      "visible_bounds_alpha_gt_32": [
+        417,
+        120,
+        796,
+        1169
+      ],
+      "suggested_ground_anchor": [
+        606.5,
+        1169
+      ]
+    },
+    {
+      "file": "10-man-tee-east.png",
+      "canvas": [
+        1199,
+        1312
+      ],
+      "visible_bounds_alpha_gt_32": [
+        485,
+        136,
+        766,
+        1159
+      ],
+      "suggested_ground_anchor": [
+        625.5,
+        1159
+      ]
+    },
+    {
+      "file": "11-woman-jacket-south.png",
+      "canvas": [
+        1070,
+        1470
+      ],
+      "visible_bounds_alpha_gt_32": [
+        309,
+        171,
+        745,
+        1405
+      ],
+      "suggested_ground_anchor": [
+        527.0,
+        1405
+      ]
+    },
+    {
+      "file": "12-woman-jacket-north.png",
+      "canvas": [
+        1070,
+        1470
+      ],
+      "visible_bounds_alpha_gt_32": [
+        330,
+        167,
+        736,
+        1356
+      ],
+      "suggested_ground_anchor": [
+        533.0,
+        1356
+      ]
+    },
+    {
+      "file": "13-woman-jacket-east.png",
+      "canvas": [
+        1070,
+        1470
+      ],
+      "visible_bounds_alpha_gt_32": [
+        388,
+        140,
+        753,
+        1404
+      ],
+      "suggested_ground_anchor": [
+        570.5,
+        1404
+      ]
+    },
+    {
+      "file": "14-woman-tee-south.png",
+      "canvas": [
+        1070,
+        1470
+      ],
+      "visible_bounds_alpha_gt_32": [
+        337,
+        147,
+        751,
+        1385
+      ],
+      "suggested_ground_anchor": [
+        544.0,
+        1385
+      ]
+    },
+    {
+      "file": "15-woman-tee-north.png",
+      "canvas": [
+        1070,
+        1470
+      ],
+      "visible_bounds_alpha_gt_32": [
+        336,
+        168,
+        749,
+        1362
+      ],
+      "suggested_ground_anchor": [
+        542.5,
+        1362
+      ]
+    },
+    {
+      "file": "16-woman-tee-east.png",
+      "canvas": [
+        1070,
+        1470
+      ],
+      "visible_bounds_alpha_gt_32": [
+        382,
+        138,
+        737,
+        1395
+      ],
+      "suggested_ground_anchor": [
+        559.5,
+        1395
+      ]
+    }
+  ]
+}

@@ -9,6 +9,13 @@
       "jacket": "on"
     },
     {
+      "id": "man-tee",
+      "label": "man, jacket off",
+      "manifest": "man-tee/manifest.json",
+      "body": "man",
+      "jacket": "off"
+    },
+    {
       "id": "woman",
       "label": "woman",
       "manifest": "woman/manifest.json",

@@ -108,14 +108,31 @@ def cut_mug(a: np.ndarray, body: np.ndarray, taken: np.ndarray, mg: dict):
     was = body[:, :, 3] > 0
     body[fore | upper] = 0
     behind = (fore | (upper & binary_erosion(was, iterations=5))) if "upper" in mg else np.zeros_like(fore)
-    cloth = (body[:, :, 3] > 0) & (body[:, :, :3].max(2) >= 60)
-    patch = paint_across(body, cloth, behind)
-    on = patch[:, :, 3] > 0
-    body[on] = patch[on]
-    fill_under(body, behind & ~on, reach=12)
+    smooth_fill(body, behind)
     if "upper" not in mg:
         fill_under(body, fore)
     return fore, upper
+
+
+def smooth_fill(body: np.ndarray, hole: np.ndarray, rounds: int = 300) -> None:
+    """Fill `hole` in `body` (in place) by spreading the colours round it inward: each round,
+    every hole pixel takes the average of its filled neighbours, so the cloth's shading carries
+    on smoothly (copying strips of cloth across leaves streaks)."""
+    known = (body[:, :, 3] > 0) & ~hole & (body[:, :, :3].max(2) >= 110)  # cloth, not outlines or the hand
+    rgb = body[:, :, :3].astype(float)
+    have = known.copy()
+    for _ in range(rounds):
+        acc = np.zeros_like(rgb)
+        n = np.zeros(hole.shape)
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            sh = np.roll(np.roll(have, dy, 0), dx, 1)
+            acc += np.roll(np.roll(rgb, dy, 0), dx, 1) * sh[:, :, None]
+            n += sh
+        upd = hole & (n > 0)
+        rgb[upd] = acc[upd] / n[upd][:, None]
+        have |= upd
+    body[hole & have, :3] = np.round(rgb[hole & have]).astype(np.uint8)
+    body[hole & have, 3] = 255
 
 
 def mug_joints(mg: dict, view: str) -> dict:
