@@ -49,7 +49,7 @@ export function useCatalog() {
 }
 
 // one loaded avatar: its runtime (whose sheets every Body shares) and each clip's sheet URL
-export type Rig = { id: string; base: CafeAvatar; urls: Record<string, string>; manifestUrl: string };
+export type Rig = { id: string; base: CafeAvatar; urls: Record<string, string>; manifestUrl: string; held?: HTMLImageElement[] }; // held: its decoded sheets, kept
 const rigs = new Map<string, Promise<Rig>>();
 
 // What someone has on: a hairstyle and things to wear (layers the avatar's manifest lists), and
@@ -194,7 +194,19 @@ async function dressRig(plain: Rig, dress: Dress, key: string): Promise<Rig> {
       urls[name] = await new Promise<string>((res) => canvas.toBlob((b) => res(b ? URL.createObjectURL(b) : plain.urls[name]), "image/png"));
     }),
   );
-  return { id: key, base: new CafeAvatar(dressed, sheets), urls, manifestUrl: plain.manifestUrl };
+  // every sheet decoded now, before this outfit shows: the stage swaps sheets by address as the
+  // avatar turns and changes action, and one that loads only then blinks the avatar out
+  const held = await Promise.all(
+    Object.values(urls).map((u) => {
+      const im = new Image();
+      im.src = u;
+      return im.decode().then(
+        () => im,
+        () => im,
+      );
+    }),
+  );
+  return { id: key, base: new CafeAvatar(dressed, sheets), urls, manifestUrl: plain.manifestUrl, held };
 }
 const canvasOf = (w: number, h: number) => Object.assign(document.createElement("canvas"), { width: w, height: h });
 function recolourPixels(P: Uint8ClampedArray, ids: Uint8ClampedArray, targets: Map<number, { h: number; s: number; v: number; ref: number }>) {
