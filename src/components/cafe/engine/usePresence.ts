@@ -71,7 +71,8 @@ function cleanWire(v: unknown, w: number, h: number, people: People | null): Wir
 }
 
 // off (solo) in your own café and in the editor: nobody else is there
-export function usePresence(me: Me, size: { w: number; h: number }, on = true) {
+// `space`: whose café this is (Daniel's: "cafe"; a visitor's published café: its own rooms)
+export function usePresence(me: Me, size: { w: number; h: number }, on = true, space = "cafe") {
   const [others, setOthers] = useState<Record<string, Other>>({});
   const [full, setFull] = useState(false);
   const [, tick] = useState(0);
@@ -177,7 +178,7 @@ export function usePresence(me: Me, size: { w: number; h: number }, on = true) {
 
     // try a room: "joined", "full" or "error"
     const tryRoom = async (n: number): Promise<"joined" | "full" | "error"> => {
-      const c = client.channel(`cafe-${n}`, { config: { presence: { key: id.current }, broadcast: { self: false } } });
+      const c = client.channel(`${space}-${n}`, { config: { presence: { key: id.current }, broadcast: { self: false } } });
       c.on("presence", { event: "sync" }, sync(c)).on("broadcast", { event: "walk" }, onWalk);
       const synced = firstSync(c);
       const ok = await new Promise<boolean>((res) => {

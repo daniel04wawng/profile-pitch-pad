@@ -2,15 +2,18 @@ import { BASE, BOOT, frontOf, type Layout } from "./types";
 import { SEATS } from "./walk";
 import type { Screens } from "./screenData";
 import type { Collision } from "./Stage";
+import { supabase } from "./supabase";
 
-// Where a café's files live. Two places:
+// Where a café's files live. Three places:
 //  - "disk": the dev server writes straight into public/cafe (how Daniel's café is made).
 //  - "browser": your own café, kept in this browser (IndexedDB): its layout, its screens and
 //    any pixel art you've drawn or imported (or repainted over a built-in asset). It starts
-//    as a copy of Daniel's café. Nothing leaves the browser.
+//    as a copy of Daniel's café. Nothing leaves the browser until you publish it.
+//  - "hosted": someone's published café (Supabase: a row in `cafes`, its pictures in the
+//    "cafes" bucket under its id; supabase/cafes.sql), opened read-only at /cafe?visit=<id>.
 // Every image URL goes through fileUrl, so a browser-saved PNG replaces the built-in one.
 
-export type Where = "disk" | "browser";
+export type Where = "disk" | "browser" | "hosted";
 
 const DB = "cafe-mine";
 let dbOpen: Promise<IDBDatabase> | null = null;
@@ -189,6 +192,80 @@ export async function publishMineToSite(layout: Layout, screens: Screens) {
   for (const [name, collision] of Object.entries(mineCollisions)) await post("/__cafe/collision", JSON.stringify({ name, collision }));
   await post("/__cafe/layout", JSON.stringify(layout));
   await post("/__cafe/screens", JSON.stringify({ screens }));
+}
+
+// ---------- published cafés ----------
+
+type Doc = { v: 1; layout: Layout; screens: Screens; collisions: Record<string, Collision | null>; files: string[] };
+const FILE = /^(sprites|ui|media)\/[a-z0-9_-]+(\/[a-z0-9_-]+)*\.(png|jpg|jpeg|webp|gif)$/i;
+const MAX_FILE = 400 * 1024;
+
+// A visitor's café shows no links at all (its screens are theirs to write; links could point
+// anywhere), and only the pictures it published.
+function untrusted(screens: Screens, files: Set<string>): Screens {
+  const out: Screens = {};
+  for (const [k, sc] of Object.entries(screens ?? {})) {
+    out[k] = {
+      ...sc,
+      links: [],
+      items: (sc.items ?? []).map(({ href: _href, links: _links, ...it }) => ({ ...it, media: (it.media ?? []).filter((m) => files.has(m.src)) })),
+    };
+  }
+  return out;
+}
+
+export async function openHosted(id: string): Promise<{ layout: Layout; screens: Screens; name: string }> {
+  where = "hosted";
+  if (!supabase || !/^[a-f0-9]{6,20}$/.test(id)) throw new Error("no such café");
+  const { data, error } = await supabase.from("cafes").select("name, doc, updated_at").eq("id", id).maybeSingle();
+  if (error || !data) throw new Error("no such café");
+  const doc = data.doc as Doc;
+  if (doc?.v !== 1 || !Array.isArray(doc.layout?.assets)) throw new Error("that café can't be opened");
+  const files = new Set((doc.files ?? []).filter((f) => typeof f === "string" && FILE.test(f) && !f.includes("..")));
+  const v = encodeURIComponent(String(data.updated_at));
+  for (const f of files) urls.set(f, `${supabase.storage.from("cafes").getPublicUrl(`${id}/${f}`).data.publicUrl}?v=${v}`);
+  mineCollisions = doc.collisions ?? {};
+  return { layout: tidyLayout(doc.layout), screens: untrusted(doc.screens, files), name: String(data.name).slice(0, 40) };
+}
+
+// Publish the café you built in this browser: its layout, screens, collisions and pictures go
+// up, under an anonymous account this browser keeps (no sign-up). Publishing again updates the
+// same café, at the same address. Returns its id (/cafe?visit=<id>) and anything left out.
+export async function publishCafe(layout: Layout, screens: Screens, name: string): Promise<{ id: string; skipped: string[] }> {
+  if (!supabase) throw new Error("Publishing is offline right now.");
+  const { data: s } = await supabase.auth.getSession();
+  if (!s.session) {
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) throw new Error("Publishing isn't switched on yet.");
+  }
+  const files: [string, Blob][] = [];
+  const skipped: string[] = [];
+  for (const k of (await tx("files", "readonly", (st) => st.getAllKeys())) as string[]) {
+    const blob = (await tx("files", "readonly", (st) => st.get(k))) as Blob;
+    if (!FILE.test(k) || blob.size > MAX_FILE) skipped.push(k);
+    else files.push([k, blob]);
+  }
+  const doc: Doc = { v: 1, layout, screens, collisions: mineCollisions, files: files.map(([k]) => k) };
+  const { data, error } = await supabase
+    .from("cafes")
+    .upsert({ name: name.trim().slice(0, 40) || "My café", doc }, { onConflict: "owner" })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(error?.message.includes("check") ? "Your café is too big to publish." : "Couldn't publish just now.");
+  const id = data.id as string;
+  for (const [k, blob] of files) {
+    const { error: e } = await supabase.storage.from("cafes").upload(`${id}/${k}`, blob, { upsert: true, contentType: blob.type || "image/png" });
+    if (e) skipped.push(k);
+  }
+  await tx("docs", "readwrite", (st) => st.put(id, "published"));
+  return { id, skipped };
+}
+export async function publishedId(): Promise<string | null> {
+  try {
+    return ((await tx("docs", "readonly", (st) => st.get("published"))) as string | undefined) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // Every asset you can place: the built-in sprites, plus your own.

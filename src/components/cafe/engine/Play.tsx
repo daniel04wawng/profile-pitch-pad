@@ -23,6 +23,7 @@ export function Play({
   hour: forcedHour,
   solo = false,
   title = "Daniel's café",
+  space,
 }: {
   layout: Layout;
   screens: Screens;
@@ -33,6 +34,8 @@ export function Play({
   // a café of your own (or the editor's preview): no one else, no shared board
   solo?: boolean;
   title?: string;
+  // someone's published café: its own rooms, and no Daniel's-café-only bits
+  space?: string;
 }) {
   const [liveHour, setLiveHour] = useState(pacificHour);
   useEffect(() => {
@@ -49,7 +52,7 @@ export function Play({
   const player = useRef<LofiPlayer | null>(null);
   const companions = useCompanions();
   const me = useMe(layout, companions, !focus);
-  const room = usePresence(me, { w: layout.width, h: layout.height }, !solo);
+  const room = usePresence(me, { w: layout.width, h: layout.height }, !solo, space);
   const timer = useRef<number>();
 
   const close = () => {

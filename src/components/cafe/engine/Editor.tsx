@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pixelize } from "./pixelize";
-import { exportCafe, fileUrl, importCafe, listAssets, publishMineToSite, resetCafe, saveCafe, storage, writePng } from "./store";
+import { publishCafe, publishedId, exportCafe, fileUrl, importCafe, listAssets, publishMineToSite, resetCafe, saveCafe, storage, writePng } from "./store";
 import { Stage, assetName, opaqueAt, useCompanions } from "./Stage";
 import { CollisionPanel, changed, collisionFor, setAssetCollision, type CollisionChange } from "./collision";
 import { makeWalk } from "./walk";
@@ -444,6 +444,30 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mine, status, layout, screens]);
+  // put your café online (store.publishCafe), with a link to share
+  const [publishing, setPublishing] = useState(false);
+  const [shared, setShared] = useState<string | null>(null);
+  useEffect(() => {
+    if (mine) publishedId().then((id) => id && setShared(`${location.origin}/cafe?visit=${id}`));
+  }, [mine]);
+  const publishPublic = async () => {
+    const name = window.prompt("Name your café", "My café")?.trim();
+    if (!name) return;
+    setPublishing(true);
+    try {
+      await save();
+      const { id, skipped } = await publishCafe(layout, screens, name);
+      const url = `${location.origin}/cafe?visit=${id}`;
+      setShared(url);
+      navigator.clipboard?.writeText(url).catch(() => {});
+      window.alert(`Your café is online (link copied):\n${url}${skipped.length ? `\n\nLeft out (too big, or videos): ${skipped.join(", ")}` : ""}`);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const exportMine = async () => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(await exportCafe(layout, screens));
@@ -562,8 +586,17 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
         <div className="flex flex-wrap items-center gap-2 bg-[#86a86b] px-3 py-1.5 text-[12px] text-[#1a1512]">
           <span className="font-['Silkscreen'] text-[11px] uppercase tracking-wider">your own café</span>
           <span className="opacity-80">a copy kept only in this browser. Changes here don't touch Daniel's café.</span>
+          <span className="ml-auto" />
+          {shared && (
+            <a href={shared} target="_blank" rel="noreferrer" className="underline">
+              {shared.replace(/^https?:\/\//, "")}
+            </a>
+          )}
+          <button onClick={publishPublic} disabled={publishing} className="rounded bg-[#1a1512] px-2.5 py-1 font-medium text-[#f3ecdc] disabled:opacity-60" title="Put it online, with a link to share">
+            {publishing ? "publishing…" : shared ? "Publish again" : "Publish & share"}
+          </button>
           {import.meta.env.DEV && (
-            <button onClick={publishMine} className="ml-auto rounded bg-[#1a1512] px-2.5 py-1 font-medium text-[#f3ecdc]" title="Dev server only">
+            <button onClick={publishMine} className="rounded bg-[#1a1512] px-2.5 py-1 font-medium text-[#f3ecdc]" title="Dev server only">
               Make this my café →
             </button>
           )}
