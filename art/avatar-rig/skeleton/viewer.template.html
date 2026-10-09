@@ -63,7 +63,7 @@ function paint(base,map){og.clearRect(0,0,192,260);og.drawImage(base,0,0);const 
  for(let p=0;p<P.length;p+=4){if(!P[p+3])continue;const t=target[M[p]];if(!t)continue;const[,s,v]=rgb2hsv(P[p]/255,P[p+1]/255,P[p+2]/255);
   const pale=t.ref>0.8,nv=pale?Math.min(1,Math.max(0,t.hsv[2]+(v-t.ref)*0.45)):Math.min(1,v*t.hsv[2]/Math.max(1e-6,t.ref)),ns=pale?t.hsv[1]:Math.min(1,t.hsv[1]*(0.6+0.4*Math.min(1.5,s/0.4)));const[r,gg,b]=hsv2rgb(t.hsv[0],ns,nv);P[p]=r*255;P[p+1]=gg*255;P[p+2]=b*255;}
  og.putImageData(A,0,0);return off;}
-function draw(){const own=who==="green",key=who+":"+(own?hair+"+"+wear:hair+"+none")+"-"+view,im=img(D.frames[key][i]),mp=img(D.maps[key][i]);const go=()=>{if(!im.complete||!mp.complete)return;g.clearRect(0,0,192,260);g.drawImage(paint(im,mp),0,0);
+function draw(){if(!D.hairs[who].includes(hair))hair=D.hairs[who][0];let key=who+":"+hair+"+"+wear+"-"+view;if(!D.frames[key])key=who+":"+hair+"+none-"+view;const im=img(D.frames[key][i]),mp=img(D.maps[key][i]);const go=()=>{if(!im.complete||!mp.complete)return;g.clearRect(0,0,192,260);g.drawImage(paint(im,mp),0,0);
  if(skel){const J=D.joints[key][i];for(const[a,b]of D.bones){g.strokeStyle=(a+b).includes("near")?"#dc2828":(a+b).includes("far")?"#285ae6":"#1e963c";g.lineWidth=1.5;g.beginPath();g.moveTo(J[a][0],J[a][1]);g.lineTo(J[b][0],J[b][1]);g.stroke();}
  for(const k in J){g.fillStyle="#fff";g.strokeStyle="#222";g.lineWidth=1;g.beginPath();g.arc(J[k][0],J[k][1],2.5,0,7);g.fill();g.stroke();}}
  document.getElementById("f").value=i;document.getElementById("fl").textContent=(i+1)+"/8";};im.onload=mp.onload=go;go();}
@@ -79,8 +79,8 @@ document.querySelectorAll("[data-wear]").forEach(b=>b.onclick=()=>{wear=b.datase
 document.getElementById("sk").onclick=e=>{skel=!skel;e.target.classList.toggle("on",skel);draw();};
 document.getElementById("sp").onchange=e=>{ms=+e.target.value;loop();};
 function whoRow(){document.getElementById("who").innerHTML="<span>who:</span>"+Object.entries(D.who).map(([k,n])=>`<button data-who="${k}" class="${k===who?"on":""}">${n}</button>`).join("");
- document.querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>{who=b.dataset.who;hair="natural";whoRow();hairRow();document.getElementById("wearrow").style.display=who==="green"?"":"none";draw();parts();});}
-const HAIRNAME=h=>h==="natural"?"natural":(D.who[h]||h).toLowerCase()+"'s";
+ document.querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>{who=b.dataset.who;whoRow();hairRow();draw();parts();});}
+const HAIRNAME=h=>h;
 function hairRow(){const r=document.getElementById("hairrow");r.innerHTML="<span>hair:</span>"+D.hairs[who].map(h=>`<button data-hair="${h}" class="${h===hair?"on":""}">${HAIRNAME(h)}</button>`).join("");
  r.querySelectorAll("[data-hair]").forEach(b=>b.onclick=()=>{hair=b.dataset.hair;hairRow();draw();});}
 hairRow();

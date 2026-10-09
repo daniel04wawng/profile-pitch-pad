@@ -22,12 +22,11 @@ BONES = [("pelvis", "neck"), ("neck", "shoulder.free"), ("shoulder.free", "elbow
          ("pelvis", "hip.near"), ("hip.near", "knee.near"), ("knee.near", "ankle.near"),
          ("pelvis", "hip.far"), ("hip.far", "knee.far"), ("knee.far", "ankle.far")]
 CROP = (40, 10, 232, 270)
-HAIRS = {"natural": (), "tidy": ("hair-tidy",), "short": ("hair-short",), "cropped": ("hair-cropped",), "bun": ("hair-bun",)}
 WEARS = {"none": (), "beanie": ("beanie",), "glasses": ("glasses",), "both": ("beanie", "glasses")}
-LOOKS = {f"{h}+{w}": hl + wl for h, hl in HAIRS.items() for w, wl in WEARS.items()}
 # who to show: the first character with his layers, and every cut woman as drawn (the hair and
 # wear layers are cut from his art, so they're his alone for now)
-WHO = {"green": "Green overshirt", "sage-bob": "Sage bob", "blue-pixie": "Blue pixie", "terracotta-curls": "Terracotta curls", "plum-braid": "Plum braid"}
+# the café's base models (bake_cafe.MODELS), each with every hairstyle and thing to wear
+WHO = {"green": "Man", "sage-bob": "Woman", "woman-tee": "Woman, jacket off"}
 
 
 def prof(who: str, view: str) -> dict:
@@ -76,8 +75,13 @@ def build():
         base = Character(HERE / "characters" / who / "front")
         data["refs"][who] = reference_values([(a, material_map(n, a, **prof(who, "front"))) for n, a in base.images.items()])
         # the women wear each other's hair (hair_swap.py); his hair and wear layers are his
-        looks = LOOKS if who == "green" else {"natural+none": (), **{f"{d}+none": (f"hair-{d}",) for d in WHO if d not in ("green", who) and (HERE / "characters" / who / "layers" / f"hair-{d}").is_dir()}}
-        data["hairs"][who] = [k.split("+")[0] for k in looks if k.endswith("+none")]
+        from bake_cafe import MODELS
+
+        hairs = next(m["hair"] for m in MODELS.values() if m["character"] == who)
+        # every hairstyle; things to wear on the model's own hair (every pairing would be ~70 MB)
+        own = next(h for h, hl in hairs.items() if hl == ())
+        looks = {**{f"{h}+none": hl for h, hl in hairs.items()}, **{f"{own}+{w}": wl for w, wl in WEARS.items() if wl}}
+        data["hairs"][who] = list(hairs)
         for look, layers in looks.items():
             for view in ("front", "back"):
                 frames(data, who, look, layers, view)

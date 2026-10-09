@@ -23,6 +23,7 @@ for k, v in {
     "red0": "#4a1012", "red1": "#7a1f1f", "red2": "#a8352a", "red3": "#c95a3a",
     "navy0": "#1b2040", "navy1": "#2c3463", "navy2": "#46508a",
     "iron": "#24170f",
+    "amber1": "#e0902c", "amber2": "#ffd27a",
     "rust0": "#4a1d12", "rust1": "#6e2c1a", "rust2": "#94402a", "rust3": "#b85a3a", "rust4": "#d47a55",
     "olive0": "#2a3319", "olive1": "#45522a", "olive2": "#647538", "olive3": "#8a9a4e",
     "lea0": "#5e2e12", "lea1": "#8a4a20", "lea2": "#b8682e", "lea3": "#d88a45", "lea4": "#efae6a",
@@ -1106,59 +1107,73 @@ def record_cabinet_back():
 
 
 def register():
-    """A vintage brass cash register to sit on the counter, facing down-left: a cash drawer,
-    three stepped rows of round keys, a tall ornate back with the price showing in its
-    window, and a crank on the side."""
+    """A vintage brass cash register on the counter, facing down-left: a cash drawer at the
+    bottom, a dark key bank stepping up toward the back with rows of cream keys, a brass body
+    behind it with the price lit amber in its window, a little sign on top and a crank."""
     c = Canvas(60, 64)
     X0, Y0 = 16, 34
     L, D = 8, 6  # along the counter, and front to back
-    BASE = 6
+    BASE = 5
 
-    # the drawer: brass, a darker seam and a knob
+    # the drawer: brass, a dark seam all along and a knob in the middle
     def drawer(t, z):
         if z >= BASE - 1:
             return "brass2"
-        if abs(z - 2.5) < 0.6:
-            return "brass0"  # the drawer's seam
-        if 3.5 <= z < 4.6 and abs(t - L / 2) < 0.7:
-            return "iron"  # its knob
+        if abs(z - 2.0) < 0.6:
+            return "brass0"
+        if 2.6 <= z < 3.8 and abs(t - L / 2) < 0.7:
+            return "iron"
         return "brass1" if t > 0.6 else "brass2"
     face_left(c, X0, Y0, 0, L, D, 0, BASE, drawer)
     face_right(c, X0, Y0, L, 0, D, 0, BASE, lambda s_, z: "brass2" if z >= BASE - 1 else "brass0")
-    # the key bank: three steps rising toward the back, each with a row of round keys
-    for i, (b0, b1, z) in enumerate(((3.5, 6, BASE + 1), (2, 3.5, BASE + 3), (0.5, 2, BASE + 5))):
-        face_left(c, X0, Y0, 0.5, L - 0.5, b1, z - 2 + (i == 0), z, lambda t, zz: "wood0")
-        face_top(c, X0, Y0, 0.5, L - 0.5, b0, b1, z, lambda a, bb: "wood1")
+    # the key bank: three dark steps rising toward the back, each with a row of cream keys
+    steps = ((4.2, 6, BASE + 1.5), (2.6, 4.2, BASE + 3), (1.2, 2.6, BASE + 4.5))
+    zlow = BASE
+    for b0, b1, z in steps:
+        face_left(c, X0, Y0, 0.4, L - 0.4, b1, zlow, z, lambda t, zz: "slate0")
+        face_right(c, X0, Y0, L - 0.4, b0, b1, zlow, z, lambda bb, zz: "iron")
+        face_top(c, X0, Y0, 0.4, L - 0.4, b0, b1, z, lambda aa, bb: "slate1")
+        zlow = z
+        bm = (b0 + b1) / 2
         for k in range(4):
-            kx, ky = X0 + 2 * (1.4 + k * 1.7) - 2 * (b0 + b1) / 2, Y0 + 1.4 + k * 1.7 + (b0 + b1) / 2 - z
+            a = 1.2 + k * 1.85
+            kx, ky = X0 + 2 * a - 2 * bm, Y0 + a + bm - z
             c.px(kx, ky - 1, "key2")
             c.px(kx + 1, ky - 1, "key1")
             c.px(kx, ky, "key1")
-    # the tall back: ornate brass, a window with the price flag showing
-    TOP = 24
+            c.px(kx + 1, ky, "key0")
+    # the body behind the keys: brass, with the price window lit amber
+    TOP = BASE + 13
+    H = TOP - steps[-1][2]  # (a face's colour_fn gets z from the face's own bottom)
 
-    def back(t, z):
-        if z >= TOP - 2:
-            return "brass2" if z >= TOP - 1 else "brass1"
-        if TOP - 9 <= z < TOP - 3 and 2 <= t < L - 2:
-            if TOP - 7 <= z < TOP - 4 and 3 <= t < L - 3:
-                return "cream2" if (int(t * 2) + int(z)) % 3 else "wood1"  # the price, in the window
-            return "iron"  # the window
-        if (int(t * 2) + int(z)) % 5 == 0:
-            return "brass0"  # embossed scrollwork
-        return "brass1" if t > 0.8 else "brass2"
-    face_left(c, X0, Y0, 0, L, 0.6, BASE, TOP, back)
-    face_right(c, X0, Y0, L, 0, 0.6, BASE, TOP, lambda s_, z: "brass0")
-    # a scrolled crest on top
-    cx, cy = X0 + L - 0.6, Y0 + L / 2 - TOP
-    for dx, dy in ((-3, 0), (-2, -1), (-1, -2), (0, -2), (1, -2), (2, -1), (3, 0), (0, -3)):
-        c.px(cx + dx, cy + dy, "brass2" if dy < -1 else "brass1")
-    # the crank on the right side
-    hx, hy = X0 + 2 * L - 2 * 3, Y0 + L + 3 - 4
-    for k in range(4):
-        c.px(hx + 1 + k, hy - k // 2, "iron")
-    c.px(hx + 5, hy - 2, "wood3")
-    c.px(hx + 5, hy - 3, "wood4")
+    def body(t, z):
+        if z >= H - 1:
+            return "brass2"
+        if H - 6.5 <= z < H - 1.5 and 1.0 <= t < L - 1.0:
+            if H - 5.5 <= z < H - 2.5 and 1.5 <= t < L - 1.5 and int(t * 2) % 3 != 2:
+                return "amber2" if z >= H - 4 else "amber1"  # the lit digits
+            return "slate0"
+        if t < 0.5 or t > L - 0.5:
+            return "brass0"  # the body's beading
+        return "brass1" if (int(t * 2) + int(z)) % 6 else "brass2"
+    face_left(c, X0, Y0, 0, L, 1.2, steps[-1][2], TOP, body)
+    face_right(c, X0, Y0, L, 0, 1.2, steps[-1][2], TOP, lambda s_, z: "brass0")
+    face_top(c, X0, Y0, 0, L, 0, 1.2, TOP, lambda aa, bb: "brass2")
+    # the sign on top: a little brass plate with a dark "$"
+    def sign(t, z):
+        if t < 0.4 or t > L - 4.4 or z >= 4.4:
+            return "brass0"
+        return "brass2"
+    face_left(c, X0, Y0, 2, L - 2, 0.6, TOP, TOP + 5, sign)
+    sx, sy = X0 + 2 * (L / 2) - 2 * 0.6, Y0 + L / 2 + 0.6 - TOP - 3
+    for dx, dy in ((0, -1), (-1, 0), (0, 1), (1, 2), (0, 3), (0, -2), (0, 4)):
+        c.px(sx + dx, sy + dy, "iron")
+    # the crank on the right side: an arm out and a red-brown handle
+    hx, hy = X0 + 2 * L - 2 * 3, Y0 + L + 3 - (BASE + 2)
+    for k in range(5):
+        c.px(hx + 1 + k, hy + k // 2, "iron")
+    for dy in (0, 1, 2):
+        c.px(hx + 6, hy + 2 - dy, "red2" if dy else "red1")
     return save(c, "register", foot=(X0 + 2 * L - 2 * D, Y0 + L + D), size=(L, D))
 
 
