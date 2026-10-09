@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { pixelize } from "./pixelize";
 import { exportCafe, fileUrl, importCafe, listAssets, publishMineToSite, resetCafe, saveCafe, storage, writePng } from "./store";
 import { Stage, assetName, opaqueAt, useCompanions } from "./Stage";
 import { CollisionPanel, changed, collisionFor, setAssetCollision, type CollisionChange } from "./collision";
@@ -353,6 +354,28 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
     if (!at) setTab("assets");
     // one new asset: open it straight in the pixel editor, like New asset does
     if (imported.length === 1) setPainting(imported[0]);
+  };
+
+  // a new asset from a few words (api/asset.ts), made into pixel art here (pixelize.ts), then
+  // imported like any PNG
+  const [generating, setGenerating] = useState(false);
+  const generateAsset = async () => {
+    const what = window.prompt("Describe the asset to make (e.g. a small potted cactus, a jukebox)")?.trim();
+    if (!what) return;
+    const size = Number(window.prompt("How many pixels across?", "48")) || 48;
+    setGenerating(true);
+    try {
+      const r = await fetch("/api/asset", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ words: what }) });
+      const out = (await r.json()) as { image?: string; error?: string };
+      if (!r.ok || !out.image) throw new Error(out.error ?? "something went wrong");
+      const png = await pixelize(out.image, Math.max(16, Math.min(160, size)));
+      const blob = await (await fetch(png)).blob();
+      await importFiles([new File([blob], `${slug(what).slice(0, 40) || "generated"}.png`, { type: "image/png" })]);
+    } catch (e) {
+      window.alert(`Couldn't make it: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const newAsset = async () => {
@@ -986,6 +1009,9 @@ export function Editor({ initial, initialScreens }: { initial: Layout; initialSc
               <div className="flex gap-2 border-b border-white/10 p-3">
                 <button onClick={newAsset} className={`${btn} flex-1`}>
                   New asset
+                </button>
+                <button onClick={generateAsset} disabled={generating} className={`${btn} flex-1`} title="Make an asset from a few words">
+                  {generating ? "Making…" : "Generate"}
                 </button>
                 <label className={`${btn} flex-1 cursor-pointer text-center`}>
                   Import PNG
