@@ -100,7 +100,13 @@ export function loadRig(id: string, dress?: Dress): Promise<Rig> {
   const key = rigKey(id, dress);
   let p = rigs.get(key);
   if (!p) {
-    p = loadPlain(id).then((plain) => dressRig(plain, cleanDress(dress), key));
+    // (an outfit that can't be put together falls back to the model as drawn, never to nothing)
+    p = loadPlain(id).then((plain) =>
+      dressRig(plain, cleanDress(dress), key).catch((err) => {
+        console.warn(`avatar ${key}: couldn't dress it, showing it as drawn`, err);
+        return plain;
+      }),
+    );
     p.catch(() => rigs.delete(key)); // a failed load can be tried again later
     rigs.set(key, p);
   }
