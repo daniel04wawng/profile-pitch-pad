@@ -144,13 +144,16 @@ async function dressRig(plain: Rig, dress: Dress, key: string): Promise<Rig> {
   await Promise.all(
     (Object.entries(manifest.animations) as [string, Clip][]).map(async ([name, clip]) => {
       const body = plain.base.sheets[name] as HTMLImageElement;
+      // a clip no direction plays any more (a straight-on view, in another hairstyle): just
+      // its body, never its layers (they aren't drawn for it)
+      const used = Object.values(dressed.directions).some((d) => (Object.values(d.actions) as string[]).includes(name));
       const w = body.naturalWidth;
       const h = body.naturalHeight;
       const [hairImg, hairMap, worn, hides, over, overMap, bodyMap] = await Promise.all([
-        hair && layers ? at(`hair/${hair}/${clip.sheet}`) : null,
-        hair && layers && targets.size ? at(`hair/${hair}/${clip.sheet.replace(/\.png$/, ".mat.png")}`) : null,
-        Promise.all(wear.map((x) => at(`wear/${x}/${clip.sheet}`))),
-        Promise.all(wear.map((x) => at(`wear/${x}/${clip.sheet.replace(/\.png$/, ".hide.png")}`))),
+        used && hair && layers ? at(`hair/${hair}/${clip.sheet}`) : null,
+        used && hair && layers && targets.size ? at(`hair/${hair}/${clip.sheet.replace(/\.png$/, ".mat.png")}`) : null,
+        Promise.all((used ? wear : []).map((x) => at(`wear/${x}/${clip.sheet}`))),
+        Promise.all((used ? wear : []).map((x) => at(`wear/${x}/${clip.sheet.replace(/\.png$/, ".hide.png")}`))),
         clip.over ? at(clip.over) : null,
         clip.overMap && targets.size ? at(clip.overMap) : null,
         clip.materialMap && targets.size ? at(clip.materialMap) : null,

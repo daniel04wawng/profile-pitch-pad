@@ -146,8 +146,42 @@ WEAR = {"beanie": ("beanie",), "glasses": ("glasses",)}
 BALD = ("hair-none",)
 
 
+# Down to the café's size (a quarter): each 4x4 block of the art becomes one pixel, its colour
+# the average of the block's solid pixels, solid if at least 6 of its 16 are. (Keeping every
+# 4th pixel instead picks up stray outline and shading pixels: specks, and dark blocks.)
+COVER = 6
+
+
 def game(im):
-    return im.resize(GAME, Image.Resampling.NEAREST)
+    a = np.array(im.convert("RGBA")).astype(float)
+    h, w = GAME[1], GAME[0]
+    al = (a[:, :, 3] > 0).astype(float)
+    rgb = (a[:, :, :3] * al[:, :, None]).reshape(h, 4, w, 4, 3).sum((1, 3))
+    n = al.reshape(h, 4, w, 4).sum((1, 3))
+    out = np.zeros((h, w, 4), np.uint8)
+    on = n >= COVER
+    out[on, :3] = np.round(rgb[on] / n[on][:, None]).astype(np.uint8)
+    out[on, 3] = 255
+    return Image.fromarray(out)
+
+
+def game_ids(im):
+    """The same for a material map (red = material id): the block's most common material
+    among its solid pixels (ids can't be averaged), solid exactly where game() is."""
+    a = np.array(im.convert("RGBA"))
+    h, w = GAME[1], GAME[0]
+    ids = a[:, :, 0].reshape(h, 4, w, 4).transpose(0, 2, 1, 3).reshape(h, w, 16)
+    sol = (a[:, :, 3] > 0).reshape(h, 4, w, 4).transpose(0, 2, 1, 3).reshape(h, w, 16)
+    out = np.zeros((h, w, 4), np.uint8)
+    for k in np.unique(ids):
+        cnt = ((ids == k) & sol).sum(2)
+        better = cnt > out[:, :, 1]  # (G holds the best count so far)
+        out[better, 0] = k
+        out[better, 1] = cnt[better]
+    out[:, :, 1] = 0
+    out[:, :, 3] = np.where(sol.sum(2) >= COVER, 255, 0)
+    out[out[:, :, 3] == 0] = 0
+    return Image.fromarray(out)
 
 
 def strip(frames):
@@ -230,16 +264,16 @@ def bake_model(mid, spec):
             for f in frames:
                 b = render(bald, view, f, only=under)
                 body.append(game(b))
-                body_m.append(game(render(bald_ids, view, f, only=under)))
+                body_m.append(game_ids(render(bald_ids, view, f, only=under)))
                 front.append(game(render(bald, view, f, only=over)))
-                front_m.append(game(render(bald_ids, view, f, only=over)))
+                front_m.append(game_ids(render(bald_ids, view, f, only=over)))
                 for h, c in hairs.items():
                     img = render(c, view, f, only=under)
                     keep = only_new(img, b)
                     hm = np.array(render(hair_ids[h], view, f, only=under))
                     hm[np.array(keep)[:, :, 3] == 0] = 0
                     hair[h][0].append(game(keep))
-                    hair[h][1].append(game(Image.fromarray(hm)))
+                    hair[h][1].append(game_ids(Image.fromarray(hm)))
                 for w, c in wears.items():
                     wear[w][0].append(game(only_new(render(c, view, f, only=under), b)))
                     wear[w][1].append(game(render(masks[w], view, f, only=under)))
