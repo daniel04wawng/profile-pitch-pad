@@ -232,6 +232,7 @@ def bake_model(mid, spec):
     cdir = HERE / "characters" / spec["character"]
     refs = base = None
     straight_hairs = None  # the hairstyles every straight-on view has
+    straight_wear = None  # and the things to wear
     views = ["front", "back"] + [v for v in CARDINAL if (cdir / v / "parts.json").exists()]
     for view in views:
         cardinal = view in CARDINAL
@@ -259,7 +260,9 @@ def bake_model(mid, spec):
         if cardinal:
             straight_hairs = set(hairs) if straight_hairs is None else straight_hairs & set(hairs)
         hair_ids = {h: id_character(c, view, mats) for h, c in hairs.items()}
-        wears = {} if cardinal else {w: Character(cdir / view, layers=BALD + layers) for w, layers in WEAR.items() if (cdir / "layers" / layers[0]).is_dir()}
+        wears = {w: Character(cdir / view, layers=BALD + layers) for w, layers in WEAR.items() if (cdir / "layers" / layers[0]).is_dir() and (not cardinal or (bald is not own and has(layers)))}
+        if cardinal:
+            straight_wear = set(wears) if straight_wear is None else straight_wear & set(wears)
         masks = {w: mask_character(bald, cdir / "layers" / WEAR[w][0], view) for w in wears}
         for action, frames in actions(own, view).items():
             name = SHEET[(action, view)]
@@ -307,7 +310,7 @@ def bake_model(mid, spec):
     worn = [w for w, layers in WEAR.items() if (cdir / "layers" / layers[0]).is_dir()]
     manifest["layers"] = {"hair": list(spec["hair"]), "defaultHair": spec["own"], "wear": worn, "wearHides": {w: ["hair"] for w in worn},
                           # the cardinal directions are drawn in the model's own hair with nothing worn
-                          "cardinalOnly": {"hair": sorted(straight_hairs or [spec["own"]]), "wear": []} if len(views) > 2 else None}
+                          "cardinalOnly": {"hair": sorted(straight_hairs or [spec["own"]]), "wear": sorted(straight_wear or [])} if len(views) > 2 else None}
     json.dump(manifest, open(out / "manifest.json", "w"), indent=2)
     print("baked", mid, "hair:", ", ".join(spec["hair"]), "| wear:", ", ".join(wears))
     return {"id": mid, "label": spec["body"] + ("" if spec["jacket"] == "on" else ", jacket off"), "manifest": f"{mid}/manifest.json",

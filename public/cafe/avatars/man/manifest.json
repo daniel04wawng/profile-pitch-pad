@@ -864,9 +864,16 @@
     "cardinalOnly": {
       "hair": [
         "bob",
+        "bun",
+        "cropped",
+        "short",
+        "tidy",
         "wavy"
       ],
-      "wear": []
+      "wear": [
+        "beanie",
+        "glasses"
+      ]
     }
   }
 }

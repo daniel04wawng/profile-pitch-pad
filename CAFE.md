@@ -38,12 +38,12 @@ scipy). Four base models (man and woman, jacket on and off), nine hairstyles, a 
 glasses, eight directions. After changing the rig or the art:
 
 ```bash
-cd art/avatar-rig/skeleton
-python3 cut_women.py            # cut the characters into parts (cut_green.py for the man's diagonals)
-python3 hair_swap.py            # hairstyles and things to wear, per model
-python3 bake_cafe.py            # bake the café's avatars into public/cafe/avatars/
-python3 viewer.py               # public/rig-viewer.html, to look at them (not committed)
+python3 art/avatar-rig/skeleton/build_all.py   # every step in order, then checks every outfit walks all 8 ways
+python3 art/avatar-rig/skeleton/viewer.py      # public/rig-viewer.html, to look at them (not committed)
 ```
+
+`build_all.py` fails and lists what's missing if any hairstyle or thing to wear lacks
+straight-on drawings (facing you, facing away, side on).
 
 New art: see `art/avatar-rig/skeleton/characters/GENERATE.md` for the prompts and rules.
 

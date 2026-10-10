@@ -94,6 +94,29 @@ def glasses_front():
     return im
 
 
+def glasses_south():
+    """Facing you: two round lenses, the bridge between them, the arms out to the temples."""
+    im = canvas()
+    ring(im, 120, 58.5, 4, 3.5)
+    ring(im, 133.5, 58.5, 4, 3.5)
+    px = im.load()
+    for x in range(124, 130):
+        px[x, 58] = RIM
+    for x, y in ((115, 57), (114, 57), (139, 57), (140, 57)):
+        px[x, y] = RIM
+    return im
+
+
+def glasses_east():
+    """Side on: one lens in front of the eye, the arm back to the ear."""
+    im = canvas()
+    ring(im, 141.5, 60, 2, 3.5)
+    px = im.load()
+    for x in range(131, 140):
+        px[x, 58 + (1 if x < 136 else 0)] = RIM
+    return im
+
+
 def save(im, layer, view, part="head", hide=None):
     d = LAYERS / layer / view
     d.mkdir(parents=True, exist_ok=True)
@@ -110,3 +133,10 @@ if __name__ == "__main__":
     b, h = beanie(cx=137, top=29, cuff_top=44, rx=22, cuff_h=6, tilt=2)
     save(b, "beanie", "back", hide=h)
     save(glasses_front(), "glasses", "front")
+    # the straight-on views (facing you, away, side on)
+    for view, (cx, top, cuff_top) in {"south": (126, 30, 44), "north": (126, 32, 46), "east": (125, 33, 47)}.items():
+        b, h = beanie(cx=cx, top=top, cuff_top=cuff_top, rx=21, cuff_h=6, tilt=0)
+        save(b, "beanie", view, hide=h)
+    save(glasses_south(), "glasses", "south")
+    save(glasses_east(), "glasses", "east")
+    save(canvas(), "glasses", "north")  # (from behind: nothing shows, but the layer is there)

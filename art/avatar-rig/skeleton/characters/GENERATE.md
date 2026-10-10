@@ -128,3 +128,33 @@ Prompt (one per view, attach the character's own standing-front image as the ref
 
 Jacket off: add "without the overshirt: only the plain white tee, short sleeves, arms bare
 from the sleeve down".
+
+## The last three hairstyles, straight on (9 images)
+
+Pixie, curls and braid come from three of the first women's art, which only has the two
+three-quarter views. For them to walk all 8 ways, each needs the three straight-on views.
+Attach that woman's own `stand-front.png` from `art/people-src/women/<name>/` as the reference.
+
+Shared rules: the same block as the first 16 (same camera, scale, pixel style, transparent
+background, mug in the right hand at the chest, left arm relaxed and separate, legs apart).
+
+| File | Attach | Prompt |
+|---|---|---|
+| `17-pixie-south.png` | `blue-pixie/stand-front.png` | Same character, standing facing straight toward the viewer, body square to the camera. |
+| `18-pixie-north.png` | `blue-pixie/stand-front.png` | Same character, standing facing straight away from the viewer, back square to the camera; the mug isn't visible. |
+| `19-pixie-east.png` | `blue-pixie/stand-front.png` | Same character, standing in side profile facing right; the mug arm nearest the viewer. |
+| `20-curls-south.png` | `terracotta-curls/stand-front.png` | (as 17) |
+| `21-curls-north.png` | `terracotta-curls/stand-front.png` | (as 18) |
+| `22-curls-east.png` | `terracotta-curls/stand-front.png` | (as 19) |
+| `23-braid-south.png` | `plum-braid/stand-front.png` | (as 17) |
+| `24-braid-north.png` | `plum-braid/stand-front.png` | (as 18; the braid hangs down her back) |
+| `25-braid-east.png` | `plum-braid/stand-front.png` | (as 19) |
+
+Only their hair is used (it's moved onto the base models), so the outfit and pose matter less
+than the hair matching her own exactly.
+
+## Adding anything new
+
+`python3 art/avatar-rig/skeleton/build_all.py` rebuilds everything and fails, listing what's
+missing, until every outfit walks all 8 ways. Draw (or generate) a new hairstyle, hat or person
+in all five views: three-quarter front and back, facing you, facing away, side on.

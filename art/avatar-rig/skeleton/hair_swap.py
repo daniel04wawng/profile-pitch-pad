@@ -354,6 +354,10 @@ def cardinal():
         for v in CARDINAL:
             if (CH / w / v / "parts.json").exists() and (CH / other / v / "parts.json").exists():
                 print(w, v, "no hair", swap(w, None, v), "|", other, swap(w, other, v))
+                for cut in CUTS if w != "green" else ():  # his hair cut shorter, on everyone else too
+                    swap(w, cut, v)
+                if w != "green":
+                    fit_wear(w, v)
 
 
 if __name__ == "__main__" and "--cardinal" in __import__("sys").argv:

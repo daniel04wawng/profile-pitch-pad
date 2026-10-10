@@ -16,24 +16,26 @@ import numpy as np
 from PIL import Image
 from scipy.ndimage import binary_dilation
 
-from materials import HEM, material_map
+from materials import HEM, material_map, profile
 
 HERE = pathlib.Path(__file__).parent
 CH = HERE / "characters" / "green"
 INK = np.array([36, 20, 13, 255], np.uint8)
 
 # the head's centre per view, and each style's shape (how far the hair may reach, px)
-CENTRE = {"front": (127, 52), "back": (139, 50)}
+CENTRE = {"front": (127, 52), "back": (139, 50), "south": (127, 50), "north": (126, 54), "east": (124, 56)}
 STYLES = {"tidy": (23, 22, 0), "short": (20.5, 20, 0), "cropped": (18.5, 18.5, 1)}  # rx, ry, drop
 # the bun: the short trim, plus a patch of crown hair (centre, radius) moved up to sit on top
-BUN = {"front": ((124, 44), (119, 32), 8.5), "back": ((139, 44), (140, 32), 10)}
+BUN = {"front": ((124, 44), (119, 32), 8.5), "back": ((139, 44), (140, 32), 10),
+       "south": ((127, 44), (127, 32), 9), "north": ((126, 47), (126, 34), 10), "east": ((122, 49), (117, 37), 9)}
+VIEWS = [v for v in CENTRE if (CH / v / "head.png").exists()]
 
 
 def trim(view: str, rx: float, ry: float, drop: float):
     """The hair cut to an oval `rx` x `ry` around the head's centre (lowered by `drop`):
     returns what to take away and the outline to draw along the new edge."""
     head = np.array(Image.open(CH / view / "head.png").convert("RGBA"))
-    m = material_map("head", head, HEM[view])
+    m = material_map("head", head, **profile(CH / view))
     hair, skin = m == 2, m == 1
     solid = head[:, :, 3] > 0
     yy, xx = np.mgrid[: solid.shape[0], : solid.shape[1]]
@@ -57,7 +59,7 @@ def with_bun(view: str, hide: np.ndarray, fill: np.ndarray):
     hair below it. Its outline is black against the background and the hair's own darkest tone
     where it meets the hair."""
     head = np.array(Image.open(CH / view / "head.png").convert("RGBA"))
-    hair = material_map("head", head, HEM[view]) == 2
+    hair = material_map("head", head, **profile(CH / view)) == 2
     yy, xx = np.mgrid[: hair.shape[0], : hair.shape[1]]
     (sx, sy), (dx, dy), r = BUN[view]
     src = (((xx - sx) / r) ** 2 + ((yy - sy) / (r * 0.85)) ** 2 <= 1) & hair
@@ -91,7 +93,7 @@ def with_bun(view: str, hide: np.ndarray, fill: np.ndarray):
 def main():
     for name, (rx, ry, drop) in STYLES.items():
         layer = CH / "layers" / f"hair-{name}"
-        for view in ("front", "back"):
+        for view in VIEWS:
             d = layer / view
             d.mkdir(parents=True, exist_ok=True)
             hide, fill = trim(view, rx, ry, drop)
@@ -100,7 +102,7 @@ def main():
         json.dump({"slot": "hair", "about": "trimmed from the original hair"}, open(layer / "layer.json", "w"), indent=1)
         print("hair-" + name)
     layer = CH / "layers" / "hair-bun"
-    for view in ("front", "back"):
+    for view in VIEWS:
         d = layer / view
         d.mkdir(parents=True, exist_ok=True)
         hide, fill = trim(view, *STYLES["short"])
