@@ -530,12 +530,23 @@
  "register": {
   "foot": {
    "x": 17,
-   "y": 38
+   "y": 32
   },
   "size": {
    "a": 8,
    "b": 6,
    "from": "front"
+  },
+  "collision": {
+   "foot": {
+    "x": 17,
+    "y": 32
+   },
+   "size": {
+    "a": 8,
+    "b": 6,
+    "from": "front"
+   }
   }
  }
 }

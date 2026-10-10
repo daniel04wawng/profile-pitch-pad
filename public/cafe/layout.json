@@ -43,7 +43,8 @@
       "baseY": 349,
       "hotspot": "chill",
       "label": "sit and listen",
-      "flipX": false
+      "flipX": false,
+      "rot": 0
     },
     {
       "id": "piano",
@@ -163,12 +164,12 @@
     {
       "id": "back-bar-shelves",
       "file": "sprites/back-bar-shelves.png",
-      "x": 183,
-      "y": 97,
+      "x": 344,
+      "y": 39,
       "w": 41,
       "h": 77,
-      "flipX": true,
-      "baseY": 174,
+      "flipX": false,
+      "baseY": 116,
       "hotspot": null,
       "label": null
     },
@@ -392,11 +393,11 @@
     {
       "id": "menu-board",
       "file": "sprites/menu-board.png",
-      "x": 388,
-      "y": 80,
+      "x": 412,
+      "y": 82,
       "w": 49,
       "h": 74,
-      "baseY": 154,
+      "baseY": 156,
       "hotspot": "menu",
       "label": "read the menu",
       "flipX": false
@@ -404,24 +405,24 @@
     {
       "id": "wall-lamp",
       "file": "sprites/wall-lamp.png",
-      "x": 361,
-      "y": 86,
+      "x": 393,
+      "y": 100,
       "w": 14,
       "h": 16,
       "flipX": true,
-      "baseY": 102,
+      "baseY": 116,
       "hotspot": null,
       "label": null
     },
     {
       "id": "wall-lamp-2",
       "file": "sprites/wall-lamp.png",
-      "x": 457,
-      "y": 126,
+      "x": 465,
+      "y": 138,
       "w": 14,
       "h": 16,
       "flipX": true,
-      "baseY": 142,
+      "baseY": 154,
       "hotspot": null,
       "label": null
     },
@@ -498,19 +499,6 @@
       "rot": 1
     },
     {
-      "id": "register",
-      "file": "sprites/register.png",
-      "x": 341,
-      "y": 176,
-      "w": 30,
-      "h": 39,
-      "baseY": 253,
-      "hotspot": "contact",
-      "label": "say hello",
-      "flipX": false,
-      "rot": 0
-    },
-    {
       "id": "wardrobe",
       "file": "sprites/wardrobe.png",
       "x": 490,
@@ -533,6 +521,19 @@
       "baseY": 148,
       "hotspot": "notes",
       "label": "leave a note",
+      "flipX": true,
+      "rot": 3
+    },
+    {
+      "id": "bookshelf",
+      "file": "sprites/bookshelf.png",
+      "x": 191,
+      "y": 141,
+      "w": 34,
+      "h": 84,
+      "baseY": 225,
+      "hotspot": "books",
+      "label": "books I love",
       "flipX": true,
       "rot": 3
     }
