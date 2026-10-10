@@ -864,8 +864,11 @@
     "cardinalOnly": {
       "hair": [
         "bob",
+        "braid",
         "bun",
         "cropped",
+        "curls",
+        "pixie",
         "short",
         "tidy",
         "wavy"

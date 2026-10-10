@@ -219,25 +219,28 @@ HIDE_TOO = {
 }
 
 
-def neck_offset(w, d, view):
+def neck_offset(w, d, view, dview=None):
     """From behind there's no face to line up: the necks are lined up instead."""
     nw = json.load(open(CH / who(w) / view / "parts.json"))["joints"]["neck"]
-    nd = json.load(open(CH / who(d) / view / "parts.json"))["joints"]["neck"]
+    nd = json.load(open(CH / who(d) / (dview or view) / "parts.json"))["joints"]["neck"]
     return np.round(np.array(nw) - np.array(nd)).astype(int)
 
 
-def offset(w, d, view):
-    """How far to move d's head things so d's face sits on w's."""
+def offset(w, d, view, dview=None):
+    """How far to move d's head things (from d's `dview`) so d's face sits on w's (in `view`)."""
+    dview = dview or view
     if view == "north":
-        return neck_offset(w, d, view)
-    def centre(c):
-        a = load(c, view, "head")
-        return face_centre(a, material_map("head", a, **profile(CH / who(c) / view)), json.load(open(CH / who(c) / view / "parts.json"))["joints"]["neck"][1])
-    return np.round(centre(w) - centre(d)).astype(int)
+        return neck_offset(w, d, view, dview)
+    def centre(c, v):
+        a = load(c, v, "head")
+        return face_centre(a, material_map("head", a, **profile(CH / who(c) / v)), json.load(open(CH / who(c) / v / "parts.json"))["joints"]["neck"][1])
+    return np.round(centre(w, view) - centre(d, dview)).astype(int)
 
 
-def swap(w, d, view):
-    """w wearing d's hair (d None: no hair at all, her head as a hair layer goes on)."""
+def swap(w, d, view, dview=None):
+    """w wearing d's hair (d None: no hair at all, her head as a hair layer goes on). `dview`:
+    which of d's views the hair comes from, when d isn't drawn in `view` itself."""
+    dv = dview or view
     pw = profile(CH / w / view)
     neck_w = json.load(open(CH / w / view / "parts.json"))["joints"]["neck"][1]
     hw, tw = load(w, view, "head"), load(w, view, "torso")
@@ -245,14 +248,22 @@ def swap(w, d, view):
     out = CH / w / "layers" / f"hair-{(d or 'none').replace(':', '-')}" / view
     out.mkdir(parents=True, exist_ok=True)
     if d:
-        pd = profile(CH / who(d) / view)
-        hd, td = load(d, view, "head"), load(d, view, "torso")
+        pd = profile(CH / who(d) / dv)
+        hd, td = load(d, dv, "head"), load(d, dv, "torso")
         mhd, mtd = material_map("head", hd, **pd), material_map("torso", td, **pd)
-        dx, dy = offset(w, d, view)
+        dx, dy = offset(w, d, view, dv)
         # the donor's hair, on the wearer's face
         dh = hd.copy()
         dh[~hair_of(hd, mhd)] = 0
         dh = shift(dh, dx, dy)
+        if dv != view and view == "east":
+            # side on from three-quarter art: the hair stays off the face (below the brow, the
+            # three-quarter face's own lines would come along)
+            fw = face_of(material_map("head", hw, **pw))
+            fy = np.nonzero(fw.any(1))[0]
+            if len(fy):
+                yy_ = np.mgrid[: fw.shape[0], : fw.shape[1]][0]
+                dh[binary_dilation(fw, iterations=1) & (yy_ > fy.min() + 0.3 * (fy.max() - fy.min()))] = 0
         drop_specks(dh)  # stray dots of the donor's outline, away from her hair
         # only the hair itself and what touches it (a cut leaves bits of the old outline about)
         lab, n = label(binary_dilation(dh[:, :, 3] > 0, iterations=1), structure=np.ones((3, 3)))
@@ -275,6 +286,15 @@ def swap(w, d, view):
     for k in range(1, n + 1):
         if (lab == k).sum() < 15:
             own |= lab == k
+    if d and dv != view and view == "east" and MODELS[w] == "sage-bob":
+        # side on, her own hair's outline (a dark line with a light rim) runs across the cheek
+        # where the new hair doesn't reach: it goes too, though not the face's own outline
+        # against the background
+        edge = binary_dilation(hw[:, :, 3] == 0, iterations=2)
+        lum = hw[:, :, :3].astype(int)
+        line = (lum.max(2) < 70) | ((lum.min(2) > 215) & (lum.max(2) - lum.min(2) < 40))
+        near = binary_dilation(own, iterations=3)
+        own |= near & line & (hw[:, :, 3] > 0) & ~edge
     hide = np.zeros_like(hw)
     hide[own, 3] = 255
     face = mhw == SKIN
@@ -286,7 +306,9 @@ def swap(w, d, view):
     fill = np.zeros_like(hw)
     fill[bare] = ub[bare]
     # over the face itself (a fringe on the forehead): her own skin, carried in
-    over_face = (bare & binary_dilation(face_of(mhw), iterations=4) & (yy >= fys.min() - 2) & ~(fill[:, :, 3] > 0)) if len(fys) else np.zeros_like(bare)
+    # (side on from three-quarter art, the borrowed bald head's hairline sits wrong: skin there too)
+    taken = np.zeros_like(bare) if (d and dv != view and view == "east") else (fill[:, :, 3] > 0)
+    over_face = (bare & binary_dilation(face_of(mhw), iterations=4) & (yy >= fys.min() - 2) & ~taken) if len(fys) else np.zeros_like(bare)
     painted = paint_from(hw, face, over_face)
     fill[over_face] = painted[over_face]
     # anything still open inside the new head (where the borrowed neck had hair too, and the
@@ -301,6 +323,14 @@ def swap(w, d, view):
     if holes.any():  # from skin or cloth beside it: copying a dark outline or hair draws squiggles
         near = paint_from(res, solid & (res[:, :, :3].max(2) >= 110), holes)
         fill[holes] = near[holes]
+    if d and dv != view and view == "east":
+        # side on from three-quarter art: the borrowed bald head's hairline (a dark line) mustn't
+        # cross the face where the new hair has been kept off it; skin there instead
+        streak = (fill[:, :, 3] > 0) & binary_dilation(face_of(mhw), iterations=6) & ~(dh[:, :, 3] > 0)
+        if streak.any():
+            # (from lit skin: under his old fringe the skin is shadowed nearly as dark as hair)
+            lit = face & (hw[:, :, :3].max(2) >= 150)
+            fill[streak] = paint_from(hw, lit, streak)[streak]
     Image.fromarray(dh).save(out / "head.png")
     Image.fromarray(hide).save(out / "head.hide.png")
     drop_specks(fill)
@@ -317,7 +347,7 @@ def swap(w, d, view):
         fill_t[own_t] = ub[own_t]
         drop_specks(fill_t)
         Image.fromarray(fill_t).save(out / "torso.fill.png")
-    if d:
+    if d and not (dv != view and view == "east"):  # (side on, a three-quarter braid's tail doesn't fit)
         dt = td.copy()
         dt[~hair_of(td, mtd)] = 0
         if dt[:, :, 3].any():
@@ -358,6 +388,10 @@ def cardinal():
                     swap(w, cut, v)
                 if w != "green":
                     fit_wear(w, v)
+                # the three women drawn only three-quarter: their hair from the nearest of their
+                # views (facing you and side on from the front, facing away from the back)
+                for d in ("blue-pixie", "terracotta-curls", "plum-braid"):
+                    swap(w, d, v, {"south": "front", "north": "back", "east": "front"}[v])
 
 
 if __name__ == "__main__" and "--cardinal" in __import__("sys").argv:
