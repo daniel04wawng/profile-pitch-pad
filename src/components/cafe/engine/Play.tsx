@@ -1,5 +1,5 @@
 import { BUILDER } from "./release";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Stage, useCompanions } from "./Stage";
 import { useMe } from "./useMe";
 import { seatOf } from "./walk";
@@ -44,6 +44,7 @@ export function Play({
     return () => window.clearInterval(t);
   }, []);
   const hour = forcedHour ?? liveHour;
+  const light = useMemo(() => lightAt(hour), [hour]); // (one object while the hour holds: the stage's furniture redraws only when it changes)
   const [hovered, setHovered] = useState<SpriteDef | null>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [focus, setFocus] = useState<SpriteDef | null>(null);
@@ -115,7 +116,7 @@ export function Play({
         hovered={focus ? null : hovered?.id ?? null}
         camera={focus ? { x: focus.x, y: focus.y, w: focus.w, h: focus.h } : null}
         follow={me.actor ? { x: me.actor.x, y: me.actor.y } : null}
-        light={lightAt(hour)}
+        light={light}
         handlers={{
           onHover: (s) => !focus && setHovered(s),
           onPointerMove: (_, e) => setMouse({ x: e.clientX, y: e.clientY }),

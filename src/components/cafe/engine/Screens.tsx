@@ -232,7 +232,13 @@ const WOOD = "#5b3523";
 function Bake({ it, onOpen, onRemove, big = false }: { it: ScreenItem; onOpen: () => void; onRemove?: () => void; big?: boolean }) {
   const photo = it.media?.find((m) => m.kind === "image") ?? it.media?.[0];
   return (
-    <button onClick={onOpen} className="group relative flex min-w-0 flex-col items-center">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && (ev.preventDefault(), onOpen())}
+      className="group relative flex min-w-0 cursor-pointer flex-col items-center"
+    >
       {/* the tray, a little white slab, with the bake on it */}
       <span className="relative flex w-full items-end justify-center transition-transform duration-200 group-hover:-translate-y-1.5" style={{ height: big ? 82 : 76 }}>
         <span className="absolute bottom-0 h-3 w-[92%]" style={{ background: "#f4f1ea", boxShadow: "0 3px 0 #b9b2a4, inset 0 1px 0 #fff" }} />
@@ -253,7 +259,7 @@ function Bake({ it, onOpen, onRemove, big = false }: { it: ScreenItem; onOpen: (
           <EditButton onClick={onRemove}>✕</EditButton>
         </span>
       )}
-    </button>
+    </div>
   );
 }
 

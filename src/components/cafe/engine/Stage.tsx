@@ -191,87 +191,13 @@ export function Stage({
 
   const g = layout.grid ?? DEFAULT_GRID;
   const ordered = useMemo(() => [...layout.assets].sort((a, b) => a.baseY - b.baseY), [layout.assets]);
-
-  // Camera: zoom so the focused rect fills a good chunk of the screen, centered a little high.
-  let cam = { k: 1, tx: 0, ty: 0 };
-  const roomW = layout.width * scale;
-  const roomH = layout.height * scale;
-  if (!camera && follow && box.h / roomH > 1.6) {
-    const k = Math.min(2.4, (box.h * 0.6) / roomH);
-    const want = box.w / 2 - k * (ox + follow.x * scale);
-    // never past the room's sides
-    const tx = Math.min(-k * ox, Math.max(box.w - k * (ox + roomW), want));
-    cam = { k, tx: Math.round(tx), ty: Math.round(box.h * 0.52 - k * (oy + roomH / 2)) };
-  } else if (camera) {
-    const k = Math.max(1.4, Math.min(5, (box.w * 0.5) / (camera.w * scale), (box.h * 0.45) / (camera.h * scale)));
-    const cx = ox + (camera.x + camera.w / 2) * scale;
-    const cy = oy + (camera.y + camera.h / 2) * scale;
-    cam = { k, tx: box.w / 2 - k * cx, ty: box.h * 0.42 - k * cy };
-  }
-
-  const toScene = (e: { clientX: number; clientY: number }) => {
-    const r = wrap.current!.getBoundingClientRect();
-    // undo the camera too (a phone's follow view taps through it)
-    const cx = (e.clientX - r.left - cam.tx) / cam.k;
-    const cy = (e.clientY - r.top - cam.ty) / cam.k;
-    return { x: (cx - ox) / scale, y: (cy - oy) / scale };
-  };
-
-  const hit = (p: { x: number; y: number }) => {
-    for (let i = ordered.length - 1; i >= 0; i--) {
-      const s = ordered[i];
-      if (s.hidden || !interactive(s)) continue;
-      const rx = Math.floor(p.x - s.x);
-      const lx = s.flipX ? s.w - 1 - rx : rx;
-      const ly = Math.floor(p.y - s.y);
-      if (lx < 0 || ly < 0 || lx >= s.w || ly >= s.h) continue;
-      const m = masks[`${s.file}?v=${versions[s.file] ?? BOOT}`];
-      if (!m || m.data[(ly * m.w + lx) * 4 + 3] > 0) return s;
-    }
-    return null;
-  };
-
   const outline = (color: string) =>
     `drop-shadow(1px 0 0 ${color}) drop-shadow(-1px 0 0 ${color}) drop-shadow(0 1px 0 ${color}) drop-shadow(0 -1px 0 ${color})`;
-
-  return (
-    <div
-      ref={wrap}
-      className="absolute inset-0 touch-none select-none overflow-hidden"
-      onPointerMove={(e) => {
-        const p = toScene(e);
-        handlers.onHover?.(hit(p));
-        handlers.onPointerMove?.(p, e);
-      }}
-      onPointerDown={(e) => {
-        const p = toScene(e);
-        handlers.onPointerDown?.(hit(p), p, e);
-      }}
-      onPointerUp={(e) => handlers.onPointerUp?.(e)}
-      onPointerLeave={() => handlers.onHover?.(null)}
-      onDragOver={(e) => handlers.onDrop && e.preventDefault()}
-      onDrop={(e) => {
-        if (!handlers.onDrop) return;
-        e.preventDefault();
-        handlers.onDrop(e, toScene(e));
-      }}
-    >
-      <div
-        className="absolute inset-0 origin-top-left transition-transform duration-700 ease-[cubic-bezier(.65,0,.35,1)]"
-        style={{ transform: `translate(${cam.tx}px, ${cam.ty}px) scale(${cam.k})` }}
-      >
-      <div
-        className="absolute origin-top-left [&_img]:[image-rendering:pixelated]"
-        style={{ left: ox, top: oy, width: layout.width, height: layout.height, transform: `scale(${scale})` }}
-      >
-        <img
-          src={src(layout.scene)}
-          alt=""
-          draggable={false}
-          className="absolute left-0 top-0 max-w-none"
-          style={{ opacity: showBackground ? 1 : 0.12 }}
-        />
-        {ordered.map((s) => {
+  // The furniture, drawn only when it (or the light, the hover, the selection) changes: people
+  // walking re-render the stage every frame, and redrawing every piece each time slowed the
+  // café down with a few visitors in it. (Depth against people is by zIndex, so it can stay put.)
+  const furniture = useMemo(
+    () => (ordered.map((s) => {
           if (s.hidden) return null;
           const comp = companions[assetName(s.file)];
           const flip = s.flipX ? "scaleX(-1)" : undefined;
@@ -346,7 +272,89 @@ export function Stage({
             />
             </Fragment>
           );
-        })}
+        })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ordered, light, companions, selected, hovered, showOutlines, versions],
+  );
+
+  // Camera: zoom so the focused rect fills a good chunk of the screen, centered a little high.
+  let cam = { k: 1, tx: 0, ty: 0 };
+  const roomW = layout.width * scale;
+  const roomH = layout.height * scale;
+  if (!camera && follow && box.h / roomH > 1.6) {
+    const k = Math.min(2.4, (box.h * 0.6) / roomH);
+    const want = box.w / 2 - k * (ox + follow.x * scale);
+    // never past the room's sides
+    const tx = Math.min(-k * ox, Math.max(box.w - k * (ox + roomW), want));
+    cam = { k, tx: Math.round(tx), ty: Math.round(box.h * 0.52 - k * (oy + roomH / 2)) };
+  } else if (camera) {
+    const k = Math.max(1.4, Math.min(5, (box.w * 0.5) / (camera.w * scale), (box.h * 0.45) / (camera.h * scale)));
+    const cx = ox + (camera.x + camera.w / 2) * scale;
+    const cy = oy + (camera.y + camera.h / 2) * scale;
+    cam = { k, tx: box.w / 2 - k * cx, ty: box.h * 0.42 - k * cy };
+  }
+
+  const toScene = (e: { clientX: number; clientY: number }) => {
+    const r = wrap.current!.getBoundingClientRect();
+    // undo the camera too (a phone's follow view taps through it)
+    const cx = (e.clientX - r.left - cam.tx) / cam.k;
+    const cy = (e.clientY - r.top - cam.ty) / cam.k;
+    return { x: (cx - ox) / scale, y: (cy - oy) / scale };
+  };
+
+  const hit = (p: { x: number; y: number }) => {
+    for (let i = ordered.length - 1; i >= 0; i--) {
+      const s = ordered[i];
+      if (s.hidden || !interactive(s)) continue;
+      const rx = Math.floor(p.x - s.x);
+      const lx = s.flipX ? s.w - 1 - rx : rx;
+      const ly = Math.floor(p.y - s.y);
+      if (lx < 0 || ly < 0 || lx >= s.w || ly >= s.h) continue;
+      const m = masks[`${s.file}?v=${versions[s.file] ?? BOOT}`];
+      if (!m || m.data[(ly * m.w + lx) * 4 + 3] > 0) return s;
+    }
+    return null;
+  };
+
+
+  return (
+    <div
+      ref={wrap}
+      className="absolute inset-0 touch-none select-none overflow-hidden"
+      onPointerMove={(e) => {
+        const p = toScene(e);
+        handlers.onHover?.(hit(p));
+        handlers.onPointerMove?.(p, e);
+      }}
+      onPointerDown={(e) => {
+        const p = toScene(e);
+        handlers.onPointerDown?.(hit(p), p, e);
+      }}
+      onPointerUp={(e) => handlers.onPointerUp?.(e)}
+      onPointerLeave={() => handlers.onHover?.(null)}
+      onDragOver={(e) => handlers.onDrop && e.preventDefault()}
+      onDrop={(e) => {
+        if (!handlers.onDrop) return;
+        e.preventDefault();
+        handlers.onDrop(e, toScene(e));
+      }}
+    >
+      <div
+        className="absolute inset-0 origin-top-left transition-transform duration-700 ease-[cubic-bezier(.65,0,.35,1)]"
+        style={{ transform: `translate(${cam.tx}px, ${cam.ty}px) scale(${cam.k})` }}
+      >
+      <div
+        className="absolute origin-top-left [&_img]:[image-rendering:pixelated]"
+        style={{ left: ox, top: oy, width: layout.width, height: layout.height, transform: `scale(${scale})` }}
+      >
+        <img
+          src={src(layout.scene)}
+          alt=""
+          draggable={false}
+          className="absolute left-0 top-0 max-w-none"
+          style={{ opacity: showBackground ? 1 : 0.12 }}
+        />
+        {furniture}
         {actors.map((a) => (
           <div
             key={a.id}
