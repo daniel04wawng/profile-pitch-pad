@@ -231,6 +231,7 @@ def bake_model(mid, spec):
     manifest["character"] = mid
     cdir = HERE / "characters" / spec["character"]
     refs = base = None
+    straight_hairs = None  # the hairstyles every straight-on view has
     views = ["front", "back"] + [v for v in CARDINAL if (cdir / v / "parts.json").exists()]
     for view in views:
         cardinal = view in CARDINAL
@@ -246,13 +247,17 @@ def bake_model(mid, spec):
                 px = np.concatenate([a[m == k][:, :3] for a, m in pairs])
                 if len(px) > 20:
                     base[name] = "#%02x%02x%02x" % tuple(int(c) for c in np.median(px, axis=0))
-        # (a cardinal view has only its own hair: its body is drawn with it, its hair layer empty)
-        bald = own if cardinal else Character(cdir / view, layers=BALD)
+        # (a straight-on view has the hairstyles whose layers were made for it, hair_swap.py
+        # --cardinal: the model's own and the other model's; the rest turn diagonal)
+        has = lambda layers: all((cdir / "layers" / l / view).is_dir() for l in layers)  # noqa: E731
+        bald = Character(cdir / view, layers=BALD) if not cardinal or has(BALD) else own
         bald_ids = id_character(bald, view, mats)
         names = [p["part"] for p in bald.parts]
         under = set(names[: names.index("head") + 1])
         over = set(names) - under
-        hairs = {h: Character(cdir / view, layers=layers) for h, layers in spec["hair"].items() if not cardinal or h == spec["own"]}
+        hairs = {h: Character(cdir / view, layers=layers) for h, layers in spec["hair"].items() if not cardinal or (bald is not own and has(layers)) or h == spec["own"]}
+        if cardinal:
+            straight_hairs = set(hairs) if straight_hairs is None else straight_hairs & set(hairs)
         hair_ids = {h: id_character(c, view, mats) for h, c in hairs.items()}
         wears = {} if cardinal else {w: Character(cdir / view, layers=BALD + layers) for w, layers in WEAR.items() if (cdir / "layers" / layers[0]).is_dir()}
         masks = {w: mask_character(bald, cdir / "layers" / WEAR[w][0], view) for w in wears}
@@ -302,7 +307,7 @@ def bake_model(mid, spec):
     worn = [w for w, layers in WEAR.items() if (cdir / "layers" / layers[0]).is_dir()]
     manifest["layers"] = {"hair": list(spec["hair"]), "defaultHair": spec["own"], "wear": worn, "wearHides": {w: ["hair"] for w in worn},
                           # the cardinal directions are drawn in the model's own hair with nothing worn
-                          "cardinalOnly": {"hair": [spec["own"]], "wear": []} if len(views) > 2 else None}
+                          "cardinalOnly": {"hair": sorted(straight_hairs or [spec["own"]]), "wear": []} if len(views) > 2 else None}
     json.dump(manifest, open(out / "manifest.json", "w"), indent=2)
     print("baked", mid, "hair:", ", ".join(spec["hair"]), "| wear:", ", ".join(wears))
     return {"id": mid, "label": spec["body"] + ("" if spec["jacket"] == "on" else ", jacket off"), "manifest": f"{mid}/manifest.json",

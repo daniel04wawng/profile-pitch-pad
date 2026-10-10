@@ -89,6 +89,9 @@ def face_centre(arr, m, neck_y):
     yy = np.mgrid[: arr.shape[0], : arr.shape[1]][0]
     face = (m == SKIN) & (yy < neck_y - 6)
     ys, xs = np.nonzero(face)
+    if len(xs) < 20:  # from behind, no face: the head's middle, a third of the way down it
+        ys, xs = np.nonzero(arr[:, :, 3] > 0)
+        return np.array([(xs.min() + xs.max()) / 2, ys.min() + (ys.max() - ys.min()) / 3])
     return np.array([xs.mean(), ys.mean()])
 
 
@@ -172,7 +175,8 @@ def drop_specks(arr, smallest=6):
 def under(w, view, neck_w):
     """What's under the wearer's hair, from each UNDER woman in turn (see under_from)."""
     out = np.zeros((280, 256, 4), np.uint8)
-    for b in UNDER[w]:
+    # (the straight-on views: only the first two people have them; his short hair shows his neck)
+    for b in UNDER[w] if view in ("front", "back") else ("green",):
         layer = under_from(b, w, view, neck_w)
         gap = (out[:, :, 3] == 0) & (layer[:, :, 3] > 0)
         out[gap] = layer[gap]
@@ -186,7 +190,7 @@ def under_from(b, w, view, neck_w):
     bi, bm = composite(b, view)
     wi, wm = composite(w, view)
     neck_b = json.load(open(CH / b / view / "parts.json"))["joints"]["neck"][1]
-    dx, dy = np.round(face_centre(wi, wm, neck_w) - face_centre(bi, bm, neck_b)).astype(int)
+    dx, dy = (neck_offset(w, b, view) if view == "north" else np.round(face_centre(wi, wm, neck_w) - face_centre(bi, bm, neck_b)).astype(int))
     looks = {}
     for name in ("skin", "shirt", "tee"):
         px = wi[wm == IDS[name]][:, :3]
@@ -215,8 +219,17 @@ HIDE_TOO = {
 }
 
 
+def neck_offset(w, d, view):
+    """From behind there's no face to line up: the necks are lined up instead."""
+    nw = json.load(open(CH / who(w) / view / "parts.json"))["joints"]["neck"]
+    nd = json.load(open(CH / who(d) / view / "parts.json"))["joints"]["neck"]
+    return np.round(np.array(nw) - np.array(nd)).astype(int)
+
+
 def offset(w, d, view):
     """How far to move d's head things so d's face sits on w's."""
+    if view == "north":
+        return neck_offset(w, d, view)
     def centre(c):
         a = load(c, view, "head")
         return face_centre(a, material_map("head", a, **profile(CH / who(c) / view)), json.load(open(CH / who(c) / view / "parts.json"))["joints"]["neck"][1])
@@ -273,7 +286,7 @@ def swap(w, d, view):
     fill = np.zeros_like(hw)
     fill[bare] = ub[bare]
     # over the face itself (a fringe on the forehead): her own skin, carried in
-    over_face = bare & binary_dilation(face_of(mhw), iterations=4) & (yy >= fys.min() - 2) & ~(fill[:, :, 3] > 0)
+    over_face = (bare & binary_dilation(face_of(mhw), iterations=4) & (yy >= fys.min() - 2) & ~(fill[:, :, 3] > 0)) if len(fys) else np.zeros_like(bare)
     painted = paint_from(hw, face, over_face)
     fill[over_face] = painted[over_face]
     # anything still open inside the new head (where the borrowed neck had hair too, and the
@@ -330,7 +343,22 @@ def fit_wear(w, view):
             (CH / w / "layers" / name / "layer.json").write_text(meta.read_text())
 
 
-if __name__ == "__main__":
+CARDINAL = ("south", "north", "east")
+
+
+def cardinal():
+    """The straight-on views (facing you, away, side on) exist only for the base models in their
+    own hair, so there the hairstyles are each other's: his wavy hair on her, her bob on him."""
+    for w, own in MODELS.items():
+        other = "sage-bob" if own == "green" else "green"
+        for v in CARDINAL:
+            if (CH / w / v / "parts.json").exists() and (CH / other / v / "parts.json").exists():
+                print(w, v, "no hair", swap(w, None, v), "|", other, swap(w, other, v))
+
+
+if __name__ == "__main__" and "--cardinal" in __import__("sys").argv:
+    cardinal()
+elif __name__ == "__main__":
     for w, own in MODELS.items():
         print(w, "with no hair", [swap(w, None, v) for v in ("front", "back")])
         for d in PEOPLE + (CUTS if w != "green" else ()):  # (on him the cuts are his own hair's layers)
