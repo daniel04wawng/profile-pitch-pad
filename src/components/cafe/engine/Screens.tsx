@@ -3,7 +3,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Ed, EditButton, EditCtx, LinksEdit, MediaEdit, useEdit, withItem } from "./screenEdit";
 import { BASE } from "./types";
 import { fileUrl } from "./store";
-import type { Media, ScreenDef, ScreenItem, Tone } from "./screenData";
+import type { Media, ScreenDef, ScreenItem, TextAlign, Tone } from "./screenData";
 
 // What you see after walking up to an object: a full screen in the café's pixel style
 // (pixel fonts, notched frames, hard shadows, pixel sprites). Each screen is data from
@@ -84,16 +84,16 @@ export function Frame({ screen, title, kicker, onBack, onClose, children }: { sc
   );
 }
 
-function Body({ lines, onChange }: { lines: string[]; onChange?: (lines: string[]) => void }) {
+function Body({ lines, onChange, align = "left" }: { lines: string[]; onChange?: (lines: string[]) => void; align?: TextAlign }) {
   const e = useEdit();
   if (e?.on && onChange)
     return (
-      <div className="opacity-90">
+      <div className="opacity-90" style={{ textAlign: align }}>
         <Ed multi value={lines.join("\n")} placeholder="write something…" onChange={(v) => onChange(v.split("\n"))} />
       </div>
     );
   return (
-    <div className="space-y-2 opacity-90">
+    <div className="space-y-2 opacity-90" style={{ textAlign: align }}>
       {lines.filter(Boolean).map((p, i) => (
         <p key={i}>{p}</p>
       ))}
@@ -329,7 +329,7 @@ function CaseTemplate({ screen, onClose }: Props) {
         )}
         {(screen.body.some((l) => l.trim()) || e?.on) && (
           <div className="mx-auto mt-4 max-w-lg px-4 py-3 font-['VT323'] text-[20px] text-[#2b1d1a]" style={pixelBox("#fbf3e4", INK, 3, "rgba(0,0,0,0.3)")}>
-            <Body lines={screen.body} onChange={(l) => e?.set({ ...screen, body: l })} />
+            <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
           </div>
         )}
       </div>
@@ -425,7 +425,7 @@ function MenuTemplate({ screen, onClose }: Props) {
   if (open !== null && screen.items[open]) return <ItemDetail screen={screen} item={screen.items[open]} index={open} onBack={() => setOpen(null)} onClose={onClose} />;
   return (
     <Frame screen={screen} onClose={onClose}>
-      <Body lines={screen.body} onChange={(l) => e?.set({ ...screen, body: l })} />
+      <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
       <ul className="mt-6 space-y-3">
         {screen.items.map((it, i) => (
           <li key={i}>
@@ -453,7 +453,7 @@ function ShelfTemplate({ screen, onClose }: Props) {
   const t = TONES[screen.tone] ?? TONES.wood;
   return (
     <Frame screen={screen} onClose={onClose}>
-      <Body lines={screen.body} onChange={(l) => e?.set({ ...screen, body: l })} />
+      <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
       <div className="mt-6 flex h-44 items-end gap-2 overflow-x-auto px-3">
         {screen.items.map((b, i) => (
           <button
@@ -504,7 +504,7 @@ function MusicTemplate({ screen, playing, onMusic, onClose }: Props) {
   const e = useEdit();
   return (
     <Frame screen={screen} onClose={onClose}>
-      <Body lines={screen.body} onChange={(l) => e?.set({ ...screen, body: l })} />
+      <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
       <div className="mt-6 flex items-center gap-6">
         {/* stepped spin keeps the record looking like pixel art */}
         <img src={sprite("record")} alt="" className={`h-32 w-32 shrink-0 ${playing ? "animate-spin [animation-duration:2.4s] [animation-timing-function:steps(8)]" : ""}`} />
@@ -540,7 +540,7 @@ function ReceiptTemplate({ screen, onClose }: Props) {
       <div className="mx-auto max-w-sm px-6 py-5 text-[#2b1d1a]" style={pixelBox("#fdf8ef", "#e2cfa8", 3, "rgba(0,0,0,0.15)")}>
         <p className="text-center font-['Silkscreen'] text-sm">DANIEL'S CAFÉ</p>
         <div className="my-3" style={{ borderTop: "3px dashed rgba(43,29,26,0.35)" }} />
-        <Body lines={screen.body} onChange={(l) => e?.set({ ...screen, body: l })} />
+        <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
         {(screen.items.length > 0 || e?.on) && (
           <>
             <div className="my-3" style={{ borderTop: "3px dashed rgba(43,29,26,0.35)" }} />
@@ -572,7 +572,7 @@ function TextTemplate({ screen, onClose }: Props) {
   const t = TONES[screen.tone] ?? TONES.cream;
   return (
     <Frame screen={screen} onClose={onClose}>
-      <Body lines={screen.body} onChange={(l) => e?.set({ ...screen, body: l })} />
+      <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
       {(screen.items.length > 0 || e?.on) && (
         <div className="mt-5 space-y-2">
           {screen.items.map((it, i) => (

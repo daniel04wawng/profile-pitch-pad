@@ -175,7 +175,22 @@ export function ScreenEditor({
           <input value={s.title} onChange={(e) => set({ title: e.target.value })} className={input} />
         </label>
         <label className="block text-[11px] opacity-80">
-          text (one paragraph per line)
+          <span className="flex items-center justify-between">
+            text (one paragraph per line)
+            <span className="flex gap-1">
+              {(["left", "center", "right"] as const).map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  title={`align ${a}`}
+                  onClick={(e) => (e.preventDefault(), set({ align: a }))}
+                  className={`rounded px-1.5 py-0.5 ${(s.align ?? "left") === a ? "bg-white/25" : "bg-white/5 opacity-70"}`}
+                >
+                  {a === "left" ? "⇤" : a === "center" ? "↔" : "⇥"}
+                </button>
+              ))}
+            </span>
+          </span>
           <textarea value={s.body.join("\n")} onChange={(e) => set({ body: e.target.value.split("\n") })} rows={4} className={input} />
         </label>
 

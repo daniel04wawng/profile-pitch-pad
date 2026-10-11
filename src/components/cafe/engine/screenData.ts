@@ -23,11 +23,13 @@ export type ScreenDef = {
   kicker: string;
   title: string;
   body: string[];
+  align?: TextAlign; // how the text sits (left when unset)
   items: ScreenItem[];
   links: { label: string; href: string }[];
 };
 
 export type Screens = Record<string, ScreenDef>;
+export type TextAlign = "left" | "center" | "right";
 
 export const TEMPLATES = {
   case: "Glass case (browse items, like pastries)",
