@@ -822,14 +822,14 @@
     "refs": {
       "skin": 0.9882,
       "hair": 0.2431,
-      "shirt": 0.9569,
+      "shirt": 0.9725,
       "trousers": 0.2824,
       "shoes": 0.9176
     },
     "base": {
-      "skin": "#fcba79",
+      "skin": "#fcb979",
       "hair": "#3e3030",
-      "shirt": "#f4e1c8",
+      "shirt": "#f8e6cd",
       "trousers": "#463f48",
       "shoes": "#eadbca"
     }

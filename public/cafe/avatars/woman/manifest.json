@@ -822,18 +822,18 @@
     "refs": {
       "skin": 0.9725,
       "hair": 0.2314,
-      "shirt": 0.4627,
-      "tee": 0.9569,
+      "shirt": 0.5255,
+      "tee": 0.9529,
       "trousers": 0.2706,
-      "shoes": 0.8549
+      "shoes": 0.8471
     },
     "base": {
       "skin": "#f8b275",
       "hair": "#3b2d2d",
-      "shirt": "#767145",
-      "tee": "#f4e0c7",
+      "shirt": "#86814e",
+      "tee": "#f3e3cb",
       "trousers": "#433c45",
-      "shoes": "#dacec3"
+      "shoes": "#d8cbbf"
     }
   },
   "layers": {

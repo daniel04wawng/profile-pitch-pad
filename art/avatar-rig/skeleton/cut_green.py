@@ -115,24 +115,31 @@ def cut_mug(a: np.ndarray, body: np.ndarray, taken: np.ndarray, mg: dict):
 
 
 def smooth_fill(body: np.ndarray, hole: np.ndarray, rounds: int = 300) -> None:
-    """Fill `hole` in `body` (in place) by spreading the colours round it inward: each round,
-    every hole pixel takes the average of its filled neighbours, so the cloth's shading carries
-    on smoothly (copying strips of cloth across leaves streaks)."""
+    """Fill `hole` in `body` (in place) with the cloth round it, kept pixel art: each hole pixel
+    starts as its nearest cloth pixel, a few rounds of a median among its neighbours even out
+    the streaks that copying leaves, then every pixel snaps to the nearest colour actually
+    drawn on the cloth round the hole (averaging would blur the jacket and the tee into a pale
+    smear)."""
     known = (body[:, :, 3] > 0) & ~hole & (body[:, :, :3].max(2) >= 110)  # cloth, not outlines or the hand
-    rgb = body[:, :, :3].astype(float)
-    have = known.copy()
-    for _ in range(rounds):
-        acc = np.zeros_like(rgb)
-        n = np.zeros(hole.shape)
-        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            sh = np.roll(np.roll(have, dy, 0), dx, 1)
-            acc += np.roll(np.roll(rgb, dy, 0), dx, 1) * sh[:, :, None]
-            n += sh
-        upd = hole & (n > 0)
-        rgb[upd] = acc[upd] / n[upd][:, None]
-        have |= upd
-    body[hole & have, :3] = np.round(rgb[hole & have]).astype(np.uint8)
-    body[hole & have, 3] = 255
+    if not hole.any() or not known.any():
+        return
+    _, (iy, ix) = distance_transform_edt(~known, return_indices=True)
+    rgb = body[:, :, :3].astype(int).copy()
+    rgb[hole] = rgb[iy[hole], ix[hole]]
+    for _ in range(4):
+        stack = np.stack([np.roll(np.roll(rgb, dy, 0), dx, 1) for dy in (-1, 0, 1) for dx in (-1, 0, 1)])
+        lum = stack.sum(3)
+        k = np.argsort(lum, axis=0)[4]
+        med = np.take_along_axis(stack, k[None, :, :, None], 0)[0]
+        rgb[hole] = med[hole]
+    ring = known & binary_dilation(hole, iterations=8)
+    pal = np.unique(body[ring][:, :3], axis=0).astype(int)
+    if len(pal):
+        h = rgb[hole]
+        d = ((h[:, None, :] - pal[None, :, :]) ** 2).sum(2)
+        rgb[hole] = pal[d.argmin(1)]
+    body[hole, :3] = rgb[hole].astype(np.uint8)
+    body[hole, 3] = 255
 
 
 def mug_joints(mg: dict, view: str) -> dict:

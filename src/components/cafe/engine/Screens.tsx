@@ -230,7 +230,9 @@ const PER_SHELF = 4;
 const WOOD = "#5b3523";
 
 function Bake({ it, onOpen, onRemove, big = false }: { it: ScreenItem; onOpen: () => void; onRemove?: () => void; big?: boolean }) {
-  const photo = it.media?.find((m) => m.kind === "image") ?? it.media?.[0];
+  // in the case, the bake as pixel art (its photos are in its story); a photo only stands in
+  // when no drawing's been picked
+  const photo = it.sprite ? undefined : (it.media?.find((m) => m.kind === "image") ?? it.media?.[0]);
   return (
     <div
       role="button"
