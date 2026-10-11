@@ -125,6 +125,9 @@ export type StageHandlers = {
   onDrop?: (e: React.DragEvent, scene: { x: number; y: number }) => void;
 };
 
+// how far a pinch zooms in
+const MAX_ZOOM = 3.5;
+
 export function Stage({
   layout,
   interactive,
@@ -141,6 +144,7 @@ export function Stage({
   light = null,
   handlers,
   actors = [],
+  zoomable = false,
   children,
 }: {
   layout: Layout;
@@ -167,6 +171,9 @@ export function Stage({
   handlers: StageHandlers;
   // People in the room (avatars), drawn among the furniture by where they stand.
   actors?: Actor[];
+  // Pinch (two fingers, or a trackpad / ctrl+scroll) zooms in toward `follow` (you), the
+  // camera following you while zoomed in.
+  zoomable?: boolean;
   children?: React.ReactNode;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -174,6 +181,31 @@ export function Stage({
   const masks = useAlphaMasks(layout, versions);
   const companions = useCompanions();
   const src = (file: string) => fileUrl(file, versions[file] ?? BOOT);
+
+  // zoom: 1 is the room as it's framed; pinching scales that up to MAX_ZOOM
+  const [zoom, setZoom] = useState(1);
+  const fingers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ d0: number; z0: number } | null>(null);
+  const [pinching, setPinching] = useState(false);
+  // a touch is a tap once its finger lifts with no second finger having joined (or a pinch's
+  // first finger would walk you off)
+  const pendingTap = useRef<ReactPointerEvent | null>(null);
+  const spread = () => {
+    const [a, b] = [...fingers.current.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el || !zoomable) return;
+    // (a trackpad pinch arrives as ctrl+wheel: the page itself mustn't zoom, so not passive)
+    const wheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setZoom((z) => Math.min(MAX_ZOOM, Math.max(1, z * Math.exp(-e.deltaY * 0.01))));
+    };
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => el.removeEventListener("wheel", wheel);
+  }, [zoomable]);
 
   useEffect(() => {
     const el = wrap.current;
@@ -293,6 +325,18 @@ export function Stage({
     const cy = oy + (camera.y + camera.h / 2) * scale;
     cam = { k, tx: box.w / 2 - k * cx, ty: box.h * 0.42 - k * cy };
   }
+  if (!camera && zoom > 1) {
+    // zoomed in: closer by `zoom`, centred on you (or the room), never past the room's edges
+    const k = cam.k * zoom;
+    const fx = follow ? ox + follow.x * scale : ox + roomW / 2;
+    const fy = follow ? oy + (follow.y - 20) * scale : oy + roomH / 2;
+    const fit = (want: number, lo: number, hi: number) => (lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, want)));
+    cam = {
+      k,
+      tx: Math.round(fit(box.w / 2 - k * fx, box.w - k * (ox + roomW), -k * ox)),
+      ty: Math.round(fit(box.h * 0.55 - k * fy, box.h - k * (oy + roomH), -k * oy)),
+    };
+  }
 
   const toScene = (e: { clientX: number; clientY: number }) => {
     const r = wrap.current!.getBoundingClientRect();
@@ -322,15 +366,58 @@ export function Stage({
       ref={wrap}
       className="absolute inset-0 touch-none select-none overflow-hidden"
       onPointerMove={(e) => {
+        if (fingers.current.has(e.pointerId)) fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pinch.current && fingers.current.size >= 2) {
+          const { d0, z0 } = pinch.current;
+          setZoom(Math.min(MAX_ZOOM, Math.max(1, (z0 * spread()) / d0)));
+          return;
+        }
         const p = toScene(e);
         handlers.onHover?.(hit(p));
         handlers.onPointerMove?.(p, e);
       }}
       onPointerDown={(e) => {
+        if (zoomable && e.pointerType === "touch") {
+          fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (fingers.current.size === 1) {
+            e.persist?.();
+            pendingTap.current = e;
+            return;
+          }
+          if (fingers.current.size === 2) {
+            // a second finger: a pinch, not a tap
+            pendingTap.current = null;
+            pinch.current = { d0: Math.max(1, spread()), z0: zoom };
+            setPinching(true);
+            return;
+          }
+          if (fingers.current.size > 2) return;
+        }
         const p = toScene(e);
         handlers.onPointerDown?.(hit(p), p, e);
       }}
-      onPointerUp={(e) => handlers.onPointerUp?.(e)}
+      onPointerUp={(e) => {
+        fingers.current.delete(e.pointerId);
+        const tap = pendingTap.current;
+        if (tap && tap.pointerId === e.pointerId) {
+          pendingTap.current = null;
+          const p = toScene(tap);
+          handlers.onPointerDown?.(hit(p), p, tap);
+        }
+        if (fingers.current.size < 2 && pinch.current) {
+          pinch.current = null;
+          setPinching(false);
+        }
+        handlers.onPointerUp?.(e);
+      }}
+      onPointerCancel={(e) => {
+        fingers.current.delete(e.pointerId);
+        pendingTap.current = null;
+        if (fingers.current.size < 2) {
+          pinch.current = null;
+          setPinching(false);
+        }
+      }}
       onPointerLeave={() => handlers.onHover?.(null)}
       onDragOver={(e) => handlers.onDrop && e.preventDefault()}
       onDrop={(e) => {
@@ -340,7 +427,7 @@ export function Stage({
       }}
     >
       <div
-        className="absolute inset-0 origin-top-left transition-transform duration-700 ease-[cubic-bezier(.65,0,.35,1)]"
+        className={`absolute inset-0 origin-top-left ${pinching ? "" : "transition-transform duration-700 ease-[cubic-bezier(.65,0,.35,1)]"}`}
         style={{ transform: `translate(${cam.tx}px, ${cam.ty}px) scale(${cam.k})` }}
       >
       <div

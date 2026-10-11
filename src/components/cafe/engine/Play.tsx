@@ -5,6 +5,7 @@ import { useMe } from "./useMe";
 import { seatOf } from "./walk";
 import { usePresence } from "./usePresence";
 import { CafeScreen } from "./Screens";
+import { TapMark, buzz } from "./TapMark";
 import { NOTES, WARDROBE, type Layout, type SpriteDef } from "./types";
 import { NotesBoard } from "./NotesBoard";
 import { Wardrobe } from "./Wardrobe";
@@ -50,6 +51,12 @@ export function Play({
   const [focus, setFocus] = useState<SpriteDef | null>(null);
   // the screen appears once the camera has arrived
   const [screenOpen, setScreenOpen] = useState(false);
+  const [tap, setTap] = useState<{ x: number; y: number; id: number } | null>(null); // where you last tapped to walk
+  useEffect(() => {
+    if (!tap) return;
+    const t = setTimeout(() => setTap(null), 1600);
+    return () => clearTimeout(t);
+  }, [tap]);
   const [playing, setPlaying] = useState(false);
   const player = useRef<LofiPlayer | null>(null);
   const companions = useCompanions();
@@ -122,14 +129,21 @@ export function Play({
           onPointerMove: (_, e) => setMouse({ x: e.clientX, y: e.clientY }),
           onPointerDown: (s, p) => {
             if (focus) return;
+            buzz();
             // a seat: walk over and sit down, no screen (the chill corner starts the music)
             if (s && seatOf(s)) me.visit(s, () => s.hotspot === "chill" && setMusic(true));
             else if (s?.hotspot) me.visit(s, () => visit(s));
-            else me.walkTo(p);
+            else {
+              me.walkTo(p);
+              setTap({ x: p.x, y: p.y, id: Date.now() });
+            }
           },
         }}
         actors={[...room.actors, ...(me.actor ? [me.actor] : [])]}
-      />
+        zoomable
+      >
+        {tap && !focus && <TapMark key={tap.id} {...tap} />}
+      </Stage>
 
       {hovered?.label && !focus && (
         <div
