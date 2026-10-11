@@ -76,7 +76,7 @@ def notion_stamp(rgb, solid, h, w):
 
 
 
-BAKES = {"notion-cupcake": (52, notion_stamp), "vercel-pavlova": (54, None), "gemma-cookies": (52, None), "composio-cookies": (56, None), "gemma-1b-cake": (72, None), "waymo-cake": (58, None)}
+BAKES = {"notion-cupcake": (52, notion_stamp), "vercel-pavlova": (54, None), "gemma-cookies": (52, None), "composio-cookies": (56, None), "gemma-1b-cake": (72, None), "waymo-cake": (58, None), "coming-soon": (50, None)}  # (coming-soon's art: draw_coming_soon.py)
 
 if __name__ == "__main__":
     for name, (width, stamp) in BAKES.items():
