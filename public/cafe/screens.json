@@ -219,7 +219,13 @@
           "title": "Vercel pavlova",
           "meta": "pavlova",
           "sprite": "pastry-vercel-pavlova",
-          "note": "Placeholder: photos and the story coming soon."
+          "note": "Placeholder: photos and the story coming soon.",
+          "media": [
+            {
+              "src": "media/vercel-pavolas-m4ffp.jpeg",
+              "kind": "image"
+            }
+          ]
         },
         {
           "title": "Gemma cookies",
@@ -228,15 +234,21 @@
           "note": "Placeholder: photos and the story coming soon."
         },
         {
-          "title": "Cookies",
-          "meta": "chocolate chip",
-          "sprite": "pastry-cookies",
+          "title": "Composio Cookies",
+          "meta": "cookie",
+          "sprite": "pastry-composio-cookies",
           "note": "Placeholder: photos and the story coming soon."
         },
         {
-          "title": "Crêpes",
-          "meta": "with strawberries",
-          "sprite": "pastry-crepe",
+          "title": "Gemma 1B cake",
+          "meta": "sheet cake",
+          "sprite": "pastry-gemma-1b-cake",
+          "note": "Placeholder: photos and the story coming soon."
+        },
+        {
+          "title": "Waymo cake",
+          "meta": "cake",
+          "sprite": "pastry-waymo-cake",
           "note": "Placeholder: photos and the story coming soon."
         }
       ],
