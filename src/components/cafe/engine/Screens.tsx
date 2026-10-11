@@ -162,48 +162,14 @@ function MediaView({ m, className = "", fit = "contain" }: { m: Media; className
 }
 
 // A gallery: the picked photo or video large, the rest as thumbnails to pick from.
-// A photo shown as pixel art: shrunk to `across` pixels wide, its colours stepped down to a
-// small set, drawn back up with hard pixels (videos play as they are).
-function PixelPhoto({ m, across = 72 }: { m: Media; across?: number }) {
-  const [src, setSrc] = useState<string | null>(null);
-  useEffect(() => {
-    if (m.kind !== "image") return;
-    let gone = false;
-    const im = new Image();
-    im.onload = () => {
-      if (gone) return;
-      const w = Math.min(across, im.naturalWidth);
-      const h = Math.max(1, Math.round((im.naturalHeight * w) / im.naturalWidth));
-      const c = document.createElement("canvas");
-      c.width = w;
-      c.height = h;
-      const g = c.getContext("2d", { willReadFrequently: true })!;
-      g.imageSmoothingQuality = "high";
-      g.drawImage(im, 0, 0, w, h);
-      const d = g.getImageData(0, 0, w, h);
-      const step = 28; // each channel in steps: flat patches of colour, like the café's art
-      for (let i = 0; i < d.data.length; i += 4)
-        for (let k = 0; k < 3; k++) d.data[i + k] = Math.min(255, Math.round(d.data[i + k] / step) * step);
-      g.putImageData(d, 0, 0);
-      setSrc(c.toDataURL());
-    };
-    im.src = fileUrl(m.src);
-    return () => {
-      gone = true;
-    };
-  }, [m.src, m.kind, across]);
-  if (m.kind !== "image") return <MediaView m={m} className="h-full w-full" />;
-  return src ? <img src={src} alt="" className="h-full w-full object-contain" style={{ imageRendering: "pixelated" }} /> : null;
-}
-
-function Gallery({ media, frame = "#2b1d1a", pixel = false }: { media: Media[]; frame?: string; pixel?: boolean }) {
+function Gallery({ media, frame = "#2b1d1a" }: { media: Media[]; frame?: string }) {
   const [i, setI] = useState(0);
   const m = media[Math.min(i, media.length - 1)];
   if (!m) return null;
   return (
     <div>
       <div className="flex h-[min(46dvh,340px)] items-center justify-center bg-black/80" style={pixelBox("#15131c", frame, 3, "rgba(0,0,0,0.25)")}>
-        {pixel ? <PixelPhoto m={m} /> : <MediaView m={m} className="h-full w-full" />}
+        <MediaView m={m} className="h-full w-full" />
       </div>
       {media.length > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -378,7 +344,6 @@ function BakeStory({ screen, index, onBack, onClose }: { screen: ScreenDef; inde
   const item = screen.items[index];
   const put = (it: ScreenItem) => e?.set(withItem(screen, index, it));
   const [shown, setShown] = useState(false);
-  const [real, setReal] = useState(true); // the photo as it is (pixel art is a toggle: shrunk, a small bake turns to a blob)
   useEffect(() => {
     const t = requestAnimationFrame(() => setShown(true));
     return () => cancelAnimationFrame(t);
@@ -401,20 +366,9 @@ function BakeStory({ screen, index, onBack, onClose }: { screen: ScreenDef; inde
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
         {item.media?.length ? (
-          <div className="relative">
-            {/* a wooden picture frame */}
-            <div className="p-2" style={pixelBox(WOOD, INK, 3, "rgba(0,0,0,0.3)")}>
-              <Gallery media={item.media} frame="#3d2418" pixel={!real} />
-            </div>
-            {item.media.some((m) => m.kind === "image") && (
-              <button
-                onClick={() => setReal((r) => !r)}
-                className="absolute right-4 top-4 px-1.5 py-0.5 font-['Silkscreen'] text-[9px] uppercase text-[#2b1d1a]"
-                style={{ background: "#fbf8f2", boxShadow: "0 0 0 2px #2b1d1a, 0 3px 0 rgba(0,0,0,0.3)" }}
-              >
-                {real ? "pixel art" : "real photo"}
-              </button>
-            )}
+          // a wooden picture frame
+          <div className="p-2" style={pixelBox(WOOD, INK, 3, "rgba(0,0,0,0.3)")}>
+            <Gallery media={item.media} frame="#3d2418" />
           </div>
         ) : null}
         {e?.on && <MediaEdit media={item.media ?? []} onChange={(m) => put({ ...item, media: m })} />}
