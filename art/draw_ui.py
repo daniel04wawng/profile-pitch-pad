@@ -200,8 +200,33 @@ def cup():
     save(s, "cup")
 
 
+
+def coming_soon():
+    """What's baking next, under a silver cloche with a question mark on it (the pastry case's
+    "coming soon" spot)."""
+    s = Iso(30, 26)
+    s.d.ellipse([1, 19, 28, 24], fill=P["steel1"])  # the plate
+    s.d.ellipse([2, 19, 27, 22], fill=P["steel3"])
+    s.d.ellipse([4, 4, 25, 30], fill=P["steel2"])  # the dome (its lower half hidden by the rim)
+    s.d.rectangle([0, 21, 30, 30], fill=(0, 0, 0, 0))
+    s.d.ellipse([2, 19, 27, 22], fill=P["steel3"])
+    s.d.ellipse([1, 19, 28, 23], outline=P["steel1"])
+    for x in range(5, 25):  # the rim
+        s.px(x, 20, "steel1")
+    s.d.ellipse([6, 8, 9, 13], fill=P["steel3"])  # shine
+    s.px(7, 9, "white"); s.px(7, 10, "white")
+    s.d.ellipse([13, 1, 16, 4], fill=P["steel1"])  # the knob
+    s.px(14, 2, "steel3")
+    # the question mark
+    for row, y in zip([".XXXX.", "XX..XX", "....XX", "...XX.", "..XX..", "..XX..", "......", "..XX.."], range(7, 15)):
+        for i, c in enumerate(row):
+            if c == "X":
+                s.px(12 + i, y, "ink")
+    s.outline()
+    save(s, "pastry-coming-soon")
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    for f in (cookies, crepe, bread, pie, cupcake, tart) if "--new" in sys.argv else (croissant, macaron, cinnamon, muffin, donut, cake_slice, cookies, crepe, bread, pie, cupcake, tart, record, cup):
+    for f in (cookies, crepe, bread, pie, cupcake, tart) if "--new" in sys.argv else (croissant, macaron, cinnamon, muffin, donut, cake_slice, cookies, crepe, bread, pie, cupcake, tart, record, cup, coming_soon):
         f()
     print("ui sprites ->", OUT)

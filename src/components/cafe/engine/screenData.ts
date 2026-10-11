@@ -44,7 +44,7 @@ export const TONES = { cream: "Cream paper", chalk: "Chalkboard", wood: "Dark wo
 export type Tone = keyof typeof TONES;
 
 export const UI_SPRITES = [
-  "pastry-notion-cupcake", "pastry-vercel-pavlova", "pastry-gemma-cookies", "pastry-composio-cookies", "pastry-gemma-1b-cake", "pastry-waymo-cake", "pastry-cake", "pastry-cookies", "pastry-crepe", "pastry-bread", "pastry-pie", "pastry-cupcake", "pastry-tart",
+  "pastry-notion-cupcake", "pastry-vercel-pavlova", "pastry-gemma-cookies", "pastry-composio-cookies", "pastry-gemma-1b-cake", "pastry-waymo-cake", "pastry-coming-soon", "pastry-cake", "pastry-cookies", "pastry-crepe", "pastry-bread", "pastry-pie", "pastry-cupcake", "pastry-tart",
   "pastry-croissant", "pastry-macaron", "pastry-cinnamon", "pastry-muffin", "pastry-donut", "cup", "record",
 ];
 

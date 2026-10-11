@@ -205,7 +205,7 @@
       "items": [
         {
           "title": "Notion cupcake",
-          "meta": "cupcake",
+          "meta": "Oreo Buttercream Cupcakes",
           "sprite": "pastry-notion-cupcake",
           "note": "Placeholder: photos and the story coming soon.",
           "media": [
@@ -217,7 +217,7 @@
         },
         {
           "title": "Vercel pavlova",
-          "meta": "pavlova",
+          "meta": "Vanilla Berry Pavlovas",
           "sprite": "pastry-vercel-pavlova",
           "note": "Placeholder: photos and the story coming soon.",
           "media": [
@@ -229,27 +229,33 @@
         },
         {
           "title": "Gemma cookies",
-          "meta": "iced cookies",
+          "meta": "Iced Sugar Cookies",
           "sprite": "pastry-gemma-cookies",
           "note": "Placeholder: photos and the story coming soon."
         },
         {
           "title": "Composio Cookies",
-          "meta": "cookie",
+          "meta": "Iced Lemon Chocolate Cookies",
           "sprite": "pastry-composio-cookies",
           "note": "Placeholder: photos and the story coming soon."
         },
         {
           "title": "Gemma 1B cake",
-          "meta": "sheet cake",
+          "meta": "Pandan Kaya Sheet Cake",
           "sprite": "pastry-gemma-1b-cake",
           "note": "Placeholder: photos and the story coming soon."
         },
         {
           "title": "Waymo cake",
-          "meta": "cake",
+          "meta": "Vanilla Angel Food Cake",
           "sprite": "pastry-waymo-cake",
           "note": "Placeholder: photos and the story coming soon."
+        },
+        {
+          "title": "Coming soon",
+          "meta": "next up",
+          "sprite": "pastry-coming-soon",
+          "note": "Something's in the oven. Check back soon to see what I'm baking next."
         }
       ],
       "links": []
