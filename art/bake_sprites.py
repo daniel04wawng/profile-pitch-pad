@@ -76,7 +76,7 @@ def notion_stamp(rgb, solid, h, w):
 
 
 
-BAKES = {"notion-cupcake": (52, notion_stamp), "vercel-pavlova": (54, None)}
+BAKES = {"notion-cupcake": (52, notion_stamp), "vercel-pavlova": (54, None), "gemma-cookies": (52, None)}
 
 if __name__ == "__main__":
     for name, (width, stamp) in BAKES.items():
