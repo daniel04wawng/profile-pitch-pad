@@ -204,9 +204,21 @@
       ],
       "items": [
         {
-          "title": "Cake",
-          "meta": "layer cake",
-          "sprite": "pastry-cake",
+          "title": "Notion cupcake",
+          "meta": "cupcake",
+          "sprite": "pastry-notion-cupcake",
+          "note": "Placeholder: photos and the story coming soon.",
+          "media": [
+            {
+              "src": "media/notion-cupcake-lx4sq.jpeg",
+              "kind": "image"
+            }
+          ]
+        },
+        {
+          "title": "Vercel pavlova",
+          "meta": "pavlova",
+          "sprite": "pastry-vercel-pavlova",
           "note": "Placeholder: photos and the story coming soon."
         },
         {

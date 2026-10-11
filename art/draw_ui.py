@@ -200,49 +200,8 @@ def cup():
     save(s, "cup")
 
 
-
-def notion_cupcake():
-    """The Notion cupcake, stylised: a chocolate cupcake in a dark green foil case, on top a
-    shortbread cut and stamped as the Notion cube (a slanted top and side, a heavy outline, a
-    chunky serif N on its face), bold enough to read at the size of a label."""
-    s = Iso(26, 30)
-    for y in range(21, 29):  # the foil case, pleated, narrowing to its foot
-        inset = (y - 21) // 3
-        for x in range(5 + inset, 21 - inset):
-            s.px(x, y, "sage1" if x % 3 == 0 else ("sage0" if x % 2 else "chalk1"))
-    s.d.ellipse([2, 15, 23, 23], fill=P["wood0"])  # the cake's dome
-    s.d.ellipse([4, 15, 21, 20], fill=P["wood1"])
-    s.px(7, 16, "wood2"); s.px(8, 16, "wood2")
-    # the cube: its top slanting back, its side, its face (all shortbread, the cut edges dark)
-    s.poly([(5, 6), (9, 2), (22, 2), (18, 6)], "gold2")  # top
-    s.poly([(18, 6), (22, 2), (22, 16), (18, 20)], "wood3")  # side
-    s.poly([(5, 6), (18, 6), (18, 20), (5, 20)], "wood4")  # face
-    for x in range(5, 19):
-        s.px(x, 6, "wood0")
-    for y in range(6, 21):
-        s.px(18, y, "wood0")
-    for i in range(5):
-        s.px(18 + i, 6 - i, "wood0")
-    # the N: thick stems, a thick diagonal, serifs top and bottom
-    for y in range(9, 18):
-        s.px(8, y, "wood0"); s.px(9, y, "wood0")
-        s.px(15, y, "wood0")
-    for i, y in enumerate(range(9, 18)):
-        x = 9 + round(i * 6 / 8)
-        s.px(x, y, "wood0"); s.px(min(x + 1, 15), y, "wood0")
-    for x in (7, 8, 9, 10):
-        s.px(x, 17, "wood0")
-    for x in (7, 8, 9):
-        s.px(x, 9, "wood0")
-    for x in (14, 15, 16):
-        s.px(x, 9, "wood0")
-    s.px(6, 7, "white"); s.px(7, 7, "cream2")
-    s.outline()
-    save(s, "pastry-notion-cupcake")
-
-
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    for f in (cookies, crepe, bread, pie, cupcake, tart) if "--new" in sys.argv else (croissant, macaron, cinnamon, muffin, donut, cake_slice, cookies, crepe, bread, pie, cupcake, tart, record, cup, notion_cupcake):
+    for f in (cookies, crepe, bread, pie, cupcake, tart) if "--new" in sys.argv else (croissant, macaron, cinnamon, muffin, donut, cake_slice, cookies, crepe, bread, pie, cupcake, tart, record, cup):
         f()
     print("ui sprites ->", OUT)

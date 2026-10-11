@@ -162,14 +162,48 @@ function MediaView({ m, className = "", fit = "contain" }: { m: Media; className
 }
 
 // A gallery: the picked photo or video large, the rest as thumbnails to pick from.
-function Gallery({ media, frame = "#2b1d1a" }: { media: Media[]; frame?: string }) {
+// A photo shown as pixel art: shrunk to `across` pixels wide, its colours stepped down to a
+// small set, drawn back up with hard pixels (videos play as they are).
+function PixelPhoto({ m, across = 72 }: { m: Media; across?: number }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    if (m.kind !== "image") return;
+    let gone = false;
+    const im = new Image();
+    im.onload = () => {
+      if (gone) return;
+      const w = Math.min(across, im.naturalWidth);
+      const h = Math.max(1, Math.round((im.naturalHeight * w) / im.naturalWidth));
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const g = c.getContext("2d", { willReadFrequently: true })!;
+      g.imageSmoothingQuality = "high";
+      g.drawImage(im, 0, 0, w, h);
+      const d = g.getImageData(0, 0, w, h);
+      const step = 28; // each channel in steps: flat patches of colour, like the café's art
+      for (let i = 0; i < d.data.length; i += 4)
+        for (let k = 0; k < 3; k++) d.data[i + k] = Math.min(255, Math.round(d.data[i + k] / step) * step);
+      g.putImageData(d, 0, 0);
+      setSrc(c.toDataURL());
+    };
+    im.src = fileUrl(m.src);
+    return () => {
+      gone = true;
+    };
+  }, [m.src, m.kind, across]);
+  if (m.kind !== "image") return <MediaView m={m} className="h-full w-full" />;
+  return src ? <img src={src} alt="" className="h-full w-full object-contain" style={{ imageRendering: "pixelated" }} /> : null;
+}
+
+function Gallery({ media, frame = "#2b1d1a", pixel = false }: { media: Media[]; frame?: string; pixel?: boolean }) {
   const [i, setI] = useState(0);
   const m = media[Math.min(i, media.length - 1)];
   if (!m) return null;
   return (
     <div>
       <div className="flex h-[min(46dvh,340px)] items-center justify-center bg-black/80" style={pixelBox("#15131c", frame, 3, "rgba(0,0,0,0.25)")}>
-        <MediaView m={m} className="h-full w-full" />
+        {pixel ? <PixelPhoto m={m} /> : <MediaView m={m} className="h-full w-full" />}
       </div>
       {media.length > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -344,17 +378,18 @@ function BakeStory({ screen, index, onBack, onClose }: { screen: ScreenDef; inde
   const item = screen.items[index];
   const put = (it: ScreenItem) => e?.set(withItem(screen, index, it));
   const [shown, setShown] = useState(false);
+  const [real, setReal] = useState(true); // the photo as it is (pixel art is a toggle: shrunk, a small bake turns to a blob)
   useEffect(() => {
     const t = requestAnimationFrame(() => setShown(true));
     return () => cancelAnimationFrame(t);
   }, []);
   return (
     <div
-      className="relative m-2 flex max-h-[min(680px,86dvh)] w-[min(680px,92vw)] flex-col text-[#2b1d1a] transition-all duration-300 ease-out [&_img]:[image-rendering:pixelated]"
-      style={{ ...pixelBox("#fbf3e4", INK, 4), transform: shown ? "scale(1)" : "scale(0.6)", opacity: shown ? 1 : 0 }}
+      className="relative m-2 flex max-h-[min(720px,88dvh)] w-[min(680px,92vw)] flex-col text-[#2b1d1a] transition-all duration-300 ease-out [&_img]:[image-rendering:pixelated]"
+      style={{ ...pixelBox("#d98c4c", INK, 4, "rgba(0,0,0,0.35)"), transform: shown ? "scale(1)" : "scale(0.6)", opacity: shown ? 1 : 0 }}
       onClick={(ev) => ev.stopPropagation()}
     >
-      <header className="flex items-center gap-2 px-5 pb-3 pt-4" style={{ borderBottom: "3px dashed rgba(43,29,26,0.25)" }}>
+      <header className="flex items-center gap-2 px-4 pb-2 pt-3">
         <PixelButton onClick={onBack} fill="#fbf3e4">
           ← the case
         </PixelButton>
@@ -364,25 +399,48 @@ function BakeStory({ screen, index, onBack, onClose }: { screen: ScreenDef; inde
           x
         </PixelButton>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-4">
-        {item.media?.length ? <Gallery media={item.media} frame="#5b3523" /> : null}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
+        {item.media?.length ? (
+          <div className="relative">
+            {/* a wooden picture frame */}
+            <div className="p-2" style={pixelBox(WOOD, INK, 3, "rgba(0,0,0,0.3)")}>
+              <Gallery media={item.media} frame="#3d2418" pixel={!real} />
+            </div>
+            {item.media.some((m) => m.kind === "image") && (
+              <button
+                onClick={() => setReal((r) => !r)}
+                className="absolute right-4 top-4 px-1.5 py-0.5 font-['Silkscreen'] text-[9px] uppercase text-[#2b1d1a]"
+                style={{ background: "#fbf8f2", boxShadow: "0 0 0 2px #2b1d1a, 0 3px 0 rgba(0,0,0,0.3)" }}
+              >
+                {real ? "pixel art" : "real photo"}
+              </button>
+            )}
+          </div>
+        ) : null}
         {e?.on && <MediaEdit media={item.media ?? []} onChange={(m) => put({ ...item, media: m })} />}
-        <p className="mt-4 font-['Silkscreen'] text-[10px] uppercase tracking-wider opacity-60">
-          <Ed value={item.meta ?? ""} placeholder="when you made it" onChange={(v) => put({ ...item, meta: v })} />
-        </p>
-        <h2 className="mt-1 font-['Instrument_Serif'] text-4xl italic leading-tight">
-          <Ed value={item.title} placeholder="what you baked" onChange={(v) => put({ ...item, title: v })} />
-        </h2>
-        <div className="mt-3 font-['Space_Grotesk'] text-[16px] leading-relaxed">
-          {e?.on ? (
-            <Ed multi value={item.note ?? ""} placeholder="the story: who it was for, how it went, what you'd change…" onChange={(v) => put({ ...item, note: v })} />
-          ) : (
-            (item.note ?? "").split("\n").filter((l) => l.trim()).map((l, k) => (
-              <p key={k} className="mt-2">
-                {l}
-              </p>
-            ))
-          )}
+        <div className="mt-4 px-4 py-4" style={pixelBox("#fbf3e4", INK, 3, "rgba(0,0,0,0.25)")}>
+          <div className="flex items-end gap-3">
+            {item.sprite && <img src={sprite(item.sprite)} alt="" className="h-14 w-auto shrink-0" />}
+            <div className="min-w-0">
+              <span className="inline-block px-1.5 font-['Silkscreen'] text-[9px] uppercase" style={{ background: "#fbf8f2", boxShadow: "0 0 0 2px #2b1d1a" }}>
+                <Ed value={item.meta ?? ""} placeholder="when you made it" onChange={(v) => put({ ...item, meta: v })} />
+              </span>
+              <h2 className="mt-2 font-['Pixelify_Sans'] text-[30px] font-semibold leading-none">
+                <Ed value={item.title} placeholder="what you baked" onChange={(v) => put({ ...item, title: v })} />
+              </h2>
+            </div>
+          </div>
+          <div className="mt-3 font-['Pixelify_Sans'] text-[17px] leading-relaxed" style={{ borderTop: "3px dashed rgba(43,29,26,0.25)" }}>
+            {e?.on ? (
+              <Ed multi value={item.note ?? ""} placeholder="the story: who it was for, how it went, what you'd change…" onChange={(v) => put({ ...item, note: v })} />
+            ) : (
+              (item.note ?? "").split("\n").filter((l) => l.trim()).map((l, k) => (
+                <p key={k} className="mt-2">
+                  {l}
+                </p>
+              ))
+            )}
+          </div>
         </div>
         {(item.recipe?.trim() || e?.on) && (
           <section className="mt-6 px-5 py-4" style={{ background: "#fffdf8", boxShadow: "0 0 0 2px rgba(43,29,26,0.2), 3px 3px 0 rgba(43,29,26,0.15)", backgroundImage: "repeating-linear-gradient(transparent 0 27px, rgba(120,160,200,0.25) 27px 28px)" }}>
