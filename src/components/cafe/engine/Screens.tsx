@@ -474,34 +474,35 @@ function MenuTemplate({ screen, onClose }: Props) {
   );
 }
 
-// A book's spine as pixel art. From its cover: each row of the cover's middle, its typical
-// colour (the median, so lettering doesn't wash it grey), grouped into four flat colours, so
-// the spine runs top to bottom like the cover does (a sky over a red tundra, say). Or, with no
-// cover, from colour bands chosen for it (ScreenItem.spine). Then a lit left edge, a shaded
-// right one, a darker headband and tailband and two gilt lines. Gives the picture and the
-// colour its title reads in.
-const SPINE_W = 12;
-const SPINE_H = 64;
+// A book's spine as pixel art, laid out like a real one: a plain field the title sits on, big
+// and readable, and the cover's art squeezed into a strip at the top. From the cover: each row
+// of the cover's middle, its typical colour (the median, so lettering doesn't wash it grey),
+// grouped into four flat colours; the commonest is the field, all four (top to bottom, as on
+// the cover) make the strip. Or, with no cover, from colours chosen for it (ScreenItem.spine:
+// "field:#f2efe8 text:#8c7a22 #2f5e5a 2, #c9a640 1": the field, the title's colour, then the
+// strip's bands with weights). Then a lit left edge, a shaded right one, a dark headband and
+// tailband and gilt lines.
+const SPINE_W = 14;
+const SPINE_H = 80;
+const STRIP = [3, 17]; // rows of the art strip, under the headband
 type RGB = [number, number, number];
+type SpineArt = { field: RGB; strip: RGB[]; text?: RGB };
 
-function spineFromCover(im: HTMLImageElement): RGB[] {
+function spineFromCover(im: HTMLImageElement): SpineArt {
+  const N = 48;
   const c = document.createElement("canvas");
   c.width = 24;
-  c.height = SPINE_H;
+  c.height = N;
   const g = c.getContext("2d", { willReadFrequently: true })!;
   g.imageSmoothingQuality = "high";
-  g.drawImage(im, im.naturalWidth * 0.2, 0, im.naturalWidth * 0.6, im.naturalHeight, 0, 0, 24, SPINE_H);
-  const d = g.getImageData(0, 0, 24, SPINE_H).data;
+  g.drawImage(im, im.naturalWidth * 0.2, 0, im.naturalWidth * 0.6, im.naturalHeight, 0, 0, 24, N);
+  const d = g.getImageData(0, 0, 24, N).data;
   const median = (v: number[]) => v.sort((x, y) => x - y)[v.length >> 1];
   const rows: RGB[] = [];
-  for (let y = 0; y < SPINE_H; y++) {
-    const ch = [0, 1, 2].map((k) => median(Array.from({ length: 24 }, (_, x) => d[(y * 24 + x) * 4 + k])));
-    rows.push(ch as RGB);
-  }
+  for (let y = 0; y < N; y++) rows.push([0, 1, 2].map((k) => median(Array.from({ length: 24 }, (_, x) => d[(y * 24 + x) * 4 + k]))) as RGB);
   // four colours (k-means over the rows, started from the dark to the light ones)
-  const lum = (p: number[]) => 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
   const byLum = [...rows].sort((p, q) => lum(p) - lum(q));
-  const cent = [0, 1, 2, 3].map((j) => [...byLum[Math.floor(((j + 0.5) * SPINE_H) / 4)]]);
+  const cent = [0, 1, 2, 3].map((j) => [...byLum[Math.floor(((j + 0.5) * N) / 4)]]);
   let lab = rows.map(() => 0);
   for (let it = 0; it < 8; it++) {
     lab = rows.map((p) => cent.reduce((best, c0, j) => (dist(p, c0) < dist(p, cent[best]) ? j : best), 0));
@@ -510,63 +511,72 @@ function spineFromCover(im: HTMLImageElement): RGB[] {
       if (mine.length) for (let k = 0; k < 3; k++) c0[k] = mine.reduce((a, p) => a + p[k], 0) / mine.length;
     });
   }
-  // runs under 3 rows take the run above (no one-pixel stripes)
-  const out = [...lab];
-  let start = 0;
-  for (let y = 1; y <= SPINE_H; y++) {
-    if (y === SPINE_H || lab[y] !== lab[start]) {
-      if (y - start < 3 && start > 0) for (let k = start; k < y; k++) out[k] = out[start - 1];
-      start = y;
-    }
-  }
-  // a little more colour, like the café's art
-  return out.map((j) => {
-    const c0 = cent[j];
+  const vivid = (c0: number[]) => {
     const m = (c0[0] + c0[1] + c0[2]) / 3;
     return c0.map((v) => Math.max(0, Math.min(255, m + (v - m) * 1.3))) as RGB;
-  });
+  };
+  const counts = cent.map((_, j) => lab.filter((l) => l === j).length);
+  const field = vivid(cent[counts.indexOf(Math.max(...counts))]);
+  // the strip: the cover top to bottom, squeezed into the strip's rows
+  const h = STRIP[1] - STRIP[0];
+  const strip = Array.from({ length: h }, (_, y) => vivid(cent[lab[Math.floor(((y + 0.5) * N) / h)]]));
+  return { field, strip };
+}
+function lum(p: number[]) {
+  return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
 }
 function dist(p: number[], q: number[]) {
   return (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2;
 }
-function spineFromBands(bands: string): RGB[] {
-  // "#e8eef2 3, #6f8fa8 2, #3a3a40 1": colours top to bottom, each with an optional weight
-  const parts = bands.split(",").map((b) => b.trim().split(/\s+/)).filter((p) => /^#[0-9a-f]{6}$/i.test(p[0]));
-  const hex = (h: string): RGB => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16)) as RGB;
-  const total = parts.reduce((a, p) => a + (Number(p[1]) || 1), 0);
-  const rows: RGB[] = [];
-  let acc = 0;
-  for (const p of parts) {
-    acc += Number(p[1]) || 1;
-    while (rows.length < Math.round((acc / total) * SPINE_H)) rows.push(hex(p[0]));
+const hexRGB = (h: string): RGB => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16)) as RGB;
+function spineFromBands(spec: string): SpineArt {
+  let field: RGB | null = null;
+  let text: RGB | undefined;
+  const bands: [RGB, number][] = [];
+  for (const m of spec.matchAll(/(field:|text:)?(#[0-9a-f]{6})(?:\s+(\d+(?:\.\d+)?))?/gi)) {
+    if (m[1]?.toLowerCase() === "field:") field = hexRGB(m[2]);
+    else if (m[1]?.toLowerCase() === "text:") text = hexRGB(m[2]);
+    else bands.push([hexRGB(m[2]), Number(m[3]) || 1]);
   }
-  return rows;
+  const h = STRIP[1] - STRIP[0];
+  const total = bands.reduce((a, b0) => a + b0[1], 0) || 1;
+  const strip: RGB[] = [];
+  let acc = 0;
+  for (const [c0, w] of bands) {
+    acc += w;
+    while (strip.length < Math.round((acc / total) * h)) strip.push(c0);
+  }
+  while (strip.length < h) strip.push(field ?? [200, 200, 200]);
+  // no field given: the heaviest band
+  if (!field) field = bands.length ? bands.reduce((a, b0) => (b0[1] > a[1] ? b0 : a))[0] : [200, 200, 200];
+  return { field, strip, text };
 }
-function drawSpine(rows: RGB[]) {
+function drawSpine(art: SpineArt) {
   const out = document.createElement("canvas");
   out.width = SPINE_W;
   out.height = SPINE_H;
   const o = out.getContext("2d")!;
   const shade = ([r, g, b]: number[], f: number) => `rgb(${Math.min(255, r * f)},${Math.min(255, g * f)},${Math.min(255, b * f)})`;
-  rows.forEach((col, y) => {
-    const band = y < 3 || y >= SPINE_H - 3 ? 0.6 : 1; // headband and tailband
+  for (let y = 0; y < SPINE_H; y++) {
+    const inStrip = y >= STRIP[0] && y < STRIP[1];
+    const col = inStrip ? art.strip[y - STRIP[0]] : art.field;
+    const band = y < 3 || y >= SPINE_H - 3 ? 0.55 : 1; // headband and tailband
     o.fillStyle = shade(col, band);
     o.fillRect(0, y, SPINE_W, 1);
-    o.fillStyle = shade(col, band * 1.3);
+    o.fillStyle = shade(col, band * 1.25);
     o.fillRect(1, y, 1, 1); // the lit edge
-    o.fillStyle = shade(col, band * 0.7);
+    o.fillStyle = shade(col, band * 0.72);
     o.fillRect(SPINE_W - 2, y, 1, 1); // the shaded edge
-  });
-  o.fillStyle = "#e8c070"; // gilt lines under the headband and over the tailband
-  o.fillRect(2, 5, SPINE_W - 4, 1);
+  }
+  o.fillStyle = "#d9b25e"; // gilt lines framing the strip, and one above the tailband
+  o.fillRect(2, STRIP[1], SPINE_W - 4, 1);
   o.fillRect(2, SPINE_H - 6, SPINE_W - 4, 1);
-  const mid = rows.slice(10, SPINE_H - 10);
-  const lum = mid.reduce((a, [r, g, b]) => a + 0.299 * r + 0.587 * g + 0.114 * b, 0) / Math.max(1, mid.length);
-  return { url: out.toDataURL(), text: lum > 150 ? "#2b1d1a" : "#fdf8ef" };
+  const text = art.text ? `rgb(${art.text.join(",")})` : lum(art.field) > 140 ? "#2b1d1a" : "#fdf8ef";
+  return { url: out.toDataURL(), text, light: lum(art.field) > 140 };
 }
 
 function useSpine(src: string | undefined, bands: string | undefined) {
-  const [out, setOut] = useState<{ url: string; text: string } | null>(null);
+  const [out, setOut] = useState<ReturnType<typeof drawSpine> | null>(null);
   useEffect(() => {
     setOut(null);
     if (!src) {
@@ -587,11 +597,14 @@ function useSpine(src: string | undefined, bands: string | undefined) {
 function Spine({ book, i, picked, onPick }: { book: ScreenItem; i: number; picked: boolean; onPick: () => void }) {
   const cover = book.media?.find((m) => m.kind === "image")?.src;
   const spine = useSpine(cover, book.spine);
+  const color = spine?.text ?? "#fdf8ef";
+  // the field (where the words go) starts under the strip
+  const top = `${((STRIP[1] + 2) / SPINE_H) * 100}%`;
   return (
     <button
       onClick={onPick}
-      className={`relative flex w-11 shrink-0 items-center justify-center overflow-hidden transition-transform hover:-translate-y-2 ${picked ? "-translate-y-4" : ""}`}
-      style={{ ...pixelBox(spine ? "transparent" : SPINES[i % SPINES.length], INK, 3, "transparent"), height: `${72 + ((i * 37) % 26)}%` }}
+      className={`relative w-14 shrink-0 overflow-hidden transition-transform hover:-translate-y-2 ${picked ? "-translate-y-4" : ""}`}
+      style={{ ...pixelBox(spine ? "transparent" : SPINES[i % SPINES.length], INK, 3, "transparent"), height: `${86 + ((i * 37) % 13)}%` }}
       title={book.title}
     >
       {spine ? (
@@ -603,11 +616,19 @@ function Spine({ book, i, picked, onPick }: { book: ScreenItem; i: number; picke
           <span className="absolute left-1 top-1 h-[calc(100%-8px)] w-1 bg-white/25" />
         </>
       )}
-      <span
-        className="relative max-h-[86%] overflow-hidden text-ellipsis whitespace-nowrap font-['Silkscreen'] text-[9px] leading-none"
-        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", color: spine?.text ?? "#fdf8ef", textShadow: spine ? "1px 1px 0 rgba(0,0,0,0.25)" : undefined }}
-      >
-        {book.title}
+      {/* the title down the field, big; the author small at its foot */}
+      <span className="absolute inset-x-0 bottom-[9%] flex flex-col items-center gap-2" style={{ top: spine ? top : "8%" }}>
+        <span
+          className="min-h-0 flex-1 overflow-hidden text-center font-['Pixelify_Sans'] text-[14px] font-semibold uppercase leading-[1.05] tracking-wide"
+          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", color }}
+        >
+          {book.title}
+        </span>
+        {book.meta && (
+          <span className="shrink-0 overflow-hidden whitespace-nowrap font-['Silkscreen'] text-[7px] uppercase leading-none" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", color, opacity: 0.85, maxHeight: "30%" }}>
+            {book.meta.split(" ").slice(-1)[0]}
+          </span>
+        )}
       </span>
     </button>
   );
@@ -620,7 +641,7 @@ function ShelfTemplate({ screen, onClose }: Props) {
   return (
     <Frame screen={screen} onClose={onClose}>
       <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
-      <div className="mt-6 flex h-44 items-end gap-2 overflow-x-auto px-3">
+      <div className="mt-6 flex h-60 items-end gap-2 overflow-x-auto px-3">
         {screen.items.map((b, i) => (
           <Spine key={i} book={b} i={i} picked={pick === i} onPick={() => setPick(i)} />
         ))}

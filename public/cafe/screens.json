@@ -119,18 +119,18 @@
           "title": "The Chip War",
           "note": "Placeholder note on why it stuck with you.",
           "meta": "Chris Miller",
-          "spine": "#f4f1ec 3, #c4363c 1, #f4f1ec 1, #c4363c 1, #2c4a86 2, #f4f1ec 3"
+          "spine": "field:#f2efe8 text:#8c7a22 #2f5e5a 2, #c9a640 1, #2f5e5a 1"
         },
         {
           "title": "The Call of the Wild",
           "note": "Placeholder note on why it stuck with you.",
           "meta": "Jack London",
-          "spine": "#eef3f6 3, #9fbad0 2, #4a4e57 2, #c9a35a 1, #2f3540 2"
+          "spine": "field:#eef3f6 text:#2f3540 #9fbad0 2, #4a4e57 2, #c9a35a 1"
         },
         {
           "title": "Oryx and Crake",
           "meta": "Margaret Atwood",
-          "spine": "#1f4a3a 3, #3f8f7f 2, #e07a2e 1, #16302a 3"
+          "spine": "field:#1f4a3a text:#f3e6c9 #3f8f7f 2, #e07a2e 1, #16302a 1"
         }
       ],
       "links": []
