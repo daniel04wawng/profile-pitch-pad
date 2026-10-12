@@ -240,7 +240,7 @@ export function ScreenEditor({
                 )}
                 {s.template === "shelf" && (
                   <>
-                    <input value={it.spine ?? ""} onChange={(e) => setItem(i, { spine: e.target.value || undefined })} className={input} placeholder="no cover? spine colours: #e8eef2 3, #3a3a40 1" />
+                    <input value={it.spine ?? ""} onChange={(e) => setItem(i, { spine: e.target.value || undefined })} className={input} placeholder="spine colours: field:#f2efe8 text:#8c7a22 #2f5e5a 2, #c9a640 1" />
                     <p className="mt-1 text-[11px] opacity-70">the cover (its spine is drawn from it)</p>
                   </>
                 )}

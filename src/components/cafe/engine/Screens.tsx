@@ -579,10 +579,12 @@ function useSpine(src: string | undefined, bands: string | undefined) {
   const [out, setOut] = useState<ReturnType<typeof drawSpine> | null>(null);
   useEffect(() => {
     setOut(null);
-    if (!src) {
-      if (bands?.trim()) setOut(drawSpine(spineFromBands(bands)));
+    // colours set by hand win over the cover's (a cover's commonest colour can be its white)
+    if (bands?.trim()) {
+      setOut(drawSpine(spineFromBands(bands)));
       return;
     }
+    if (!src) return;
     let gone = false;
     const im = new Image();
     im.onload = () => !gone && setOut(drawSpine(spineFromCover(im)));

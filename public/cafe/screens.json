@@ -113,7 +113,8 @@
               "src": "media/beyond-the-trees.png",
               "kind": "image"
             }
-          ]
+          ],
+          "spine": "field:#a8492c text:#fbf3e4 #8fa3bf 2, #d9d4cc 1, #6b4a3a 1"
         },
         {
           "title": "The Chip War",
@@ -130,7 +131,13 @@
         {
           "title": "Oryx and Crake",
           "meta": "Margaret Atwood",
-          "spine": "field:#1f4a3a text:#f3e6c9 #3f8f7f 2, #e07a2e 1, #16302a 1"
+          "media": [
+            {
+              "src": "media/oryx-and-crake.png",
+              "kind": "image"
+            }
+          ],
+          "spine": "field:#a87b4f text:#fbf3e4 #ece6d6 2, #8c5a34 2, #5e3b22 1"
         }
       ],
       "links": []

@@ -14,7 +14,7 @@ export type ScreenItem = {
   tags?: string; // a project's stack or kind, comma separated
   recipe?: string; // a bake's recipe (ingredients, then the steps), under its story
   section?: string; // on the menu board, the heading it's under (Personal, Academic…)
-  spine?: string; // a book with no cover: its spine's colours top to bottom ("#e8eef2 3, #3a3a40 1")
+  spine?: string; // a book's spine colours, over its cover's: "field:#f2efe8 text:#8c7a22 #2f5e5a 2, #c9a640 1" (the field, the title, the strip's bands)
 };
 export type Media = { src: string; kind: "image" | "video" };
 
