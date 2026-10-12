@@ -6,6 +6,7 @@ import { seatOf } from "./walk";
 import { usePresence } from "./usePresence";
 import { CafeScreen } from "./Screens";
 import { TapMark, buzz } from "./TapMark";
+import { BASE } from "./types";
 import { NOTES, WARDROBE, type Layout, type SpriteDef } from "./types";
 import { NotesBoard } from "./NotesBoard";
 import { Wardrobe } from "./Wardrobe";
@@ -70,10 +71,12 @@ export function Play({
     setLiveScreens((all) => {
       const next = { ...all, [key]: sc };
       window.clearTimeout(saveTimer.current);
-      saveTimer.current = window.setTimeout(() => {
-        fetch("/__cafe/screens", { method: "POST", body: JSON.stringify({ screens: next }) }).then((r) => {
-          if (!r.ok) window.alert("Couldn't save that change to the screen.");
-        });
+      saveTimer.current = window.setTimeout(async () => {
+        // only this screen is written, into the file as it is now: this page's copy of the
+        // others may be old (they were edited somewhere else since it opened)
+        const disk = await fetch(`${BASE}screens.json`, { cache: "no-store" }).then((r) => r.json());
+        const r = await fetch("/__cafe/screens", { method: "POST", body: JSON.stringify({ screens: { ...(disk.screens ?? {}), [key]: sc } }) });
+        if (!r.ok) window.alert("Couldn't save that change to the screen.");
       }, 500);
       return next;
     });

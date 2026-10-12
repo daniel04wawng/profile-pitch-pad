@@ -46,6 +46,8 @@ function cafeEditorSaver(): Plugin {
       req.on("end", () => {
         try {
           write(body);
+          // who saved (the page it came from), so a stale tab writing old content shows up here
+          console.log(`[cafe] ${new Date().toLocaleTimeString()} saved ${req.url ?? ""} from ${req.headers.referer ?? "?"}`);
           res.statusCode = 204;
         } catch (e) {
           res.statusCode = 400;
