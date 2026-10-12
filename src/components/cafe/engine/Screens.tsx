@@ -456,18 +456,18 @@ function MenuTemplate({ screen, onClose }: Props) {
   return (
     <Frame screen={screen} onClose={onClose}>
       <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
-      {groups.map((g) =>
-        g.rows.length === 0 ? null : (
-          <section key={g.name ?? ""} className="mt-6">
-            {g.name && (
-              <h3 className="mb-3 font-['Silkscreen'] text-[13px] uppercase tracking-widest" style={{ color: t.accent }}>
-                {g.name}
-              </h3>
-            )}
+      {groups[0].rows.length > 0 && <ul className="mt-6 space-y-3">{groups[0].rows.map(({ it, i }) => row(it, i))}</ul>}
+      {/* the sections side by side, like a menu board's columns (stacked on a phone) */}
+      <div className={`grid gap-x-8 ${sections.length > 1 ? "sm:grid-cols-2" : ""}`}>
+        {groups.slice(1).map((g) => (
+          <section key={g.name} className="mt-6 min-w-0">
+            <h3 className="mb-3 pb-1 text-center font-['Silkscreen'] text-[13px] uppercase tracking-widest" style={{ color: t.accent, borderBottom: `2px dashed ${t.soft}` }}>
+              {g.name}
+            </h3>
             <ul className="space-y-3">{g.rows.map(({ it, i }) => row(it, i))}</ul>
           </section>
-        ),
-      )}
+        ))}
+      </div>
       {e?.on && <AddItem />}
       <LinkRow links={screen.links} screen={screen} onChange={(l) => e?.set({ ...screen, links: l })} />
     </Frame>
