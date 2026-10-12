@@ -433,24 +433,41 @@ function MenuTemplate({ screen, onClose }: Props) {
   const t = TONES[screen.tone] ?? TONES.chalk;
   const [open, setOpen] = useState<number | null>(null);
   if (open !== null && screen.items[open]) return <ItemDetail screen={screen} item={screen.items[open]} index={open} onBack={() => setOpen(null)} onClose={onClose} />;
+  // rows with a section are grouped under its heading, like a menu's "Pastries" and "Drinks",
+  // sections in the order they first appear; rows without one come first, unheaded
+  const sections = [...new Set(screen.items.map((it) => it.section?.trim()).filter((x): x is string => !!x))];
+  const groups: { name: string | null; rows: { it: ScreenItem; i: number }[] }[] = [null, ...sections].map((name) => ({
+    name,
+    rows: screen.items.map((it, i) => ({ it, i })).filter(({ it }) => (it.section?.trim() || null) === name),
+  }));
+  const row = (it: ScreenItem, i: number) => (
+    <li key={i}>
+      {e?.on ? (
+        <Dotted item={it} color={t.soft} onChange={(x) => e.set(withItem(screen, i, x))} />
+      ) : it.note ? (
+        <button onClick={() => setOpen(i)} className="w-full text-left hover:opacity-80">
+          <Dotted item={{ ...it, href: undefined }} color={t.soft} />
+        </button>
+      ) : (
+        <Dotted item={it} color={t.soft} />
+      )}
+    </li>
+  );
   return (
     <Frame screen={screen} onClose={onClose}>
       <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
-      <ul className="mt-6 space-y-3">
-        {screen.items.map((it, i) => (
-          <li key={i}>
-            {e?.on ? (
-              <Dotted item={it} color={t.soft} onChange={(x) => e.set(withItem(screen, i, x))} />
-            ) : it.note ? (
-              <button onClick={() => setOpen(i)} className="w-full text-left hover:opacity-80">
-                <Dotted item={{ ...it, href: undefined }} color={t.soft} />
-              </button>
-            ) : (
-              <Dotted item={it} color={t.soft} />
+      {groups.map((g) =>
+        g.rows.length === 0 ? null : (
+          <section key={g.name ?? ""} className="mt-6">
+            {g.name && (
+              <h3 className="mb-3 font-['Silkscreen'] text-[13px] uppercase tracking-widest" style={{ color: t.accent }}>
+                {g.name}
+              </h3>
             )}
-          </li>
-        ))}
-      </ul>
+            <ul className="space-y-3">{g.rows.map(({ it, i }) => row(it, i))}</ul>
+          </section>
+        ),
+      )}
       {e?.on && <AddItem />}
       <LinkRow links={screen.links} screen={screen} onChange={(l) => e?.set({ ...screen, links: l })} />
     </Frame>

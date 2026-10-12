@@ -222,6 +222,22 @@ export function ScreenEditor({
                 <input value={it.meta ?? ""} onChange={(e) => setItem(i, { meta: e.target.value || undefined })} className={input} placeholder="right side: price, date, subtitle" />
                 <textarea value={it.note ?? ""} onChange={(e) => setItem(i, { note: e.target.value || undefined })} rows={2} className={input} placeholder="details shown when opened" />
                 <input value={it.href ?? ""} onChange={(e) => setItem(i, { href: e.target.value || undefined })} className={input} placeholder="link (optional)" />
+                {s.template === "menu" && (
+                  <>
+                    <input
+                      value={it.section ?? ""}
+                      onChange={(e) => setItem(i, { section: e.target.value || undefined })}
+                      className={input}
+                      placeholder="section heading (Personal, Academic…)"
+                      list="menu-sections"
+                    />
+                    <datalist id="menu-sections">
+                      {[...new Set(s.items.map((x) => x.section).filter(Boolean))].map((sec) => (
+                        <option key={sec} value={sec} />
+                      ))}
+                    </datalist>
+                  </>
+                )}
                 {(s.template === "case" || s.template === "laptop") && (
                   <MediaList media={it.media ?? []} onChange={(m) => setItem(i, { media: m.length ? m : undefined })} />
                 )}
