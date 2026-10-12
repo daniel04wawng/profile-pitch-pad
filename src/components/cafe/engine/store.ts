@@ -86,10 +86,8 @@ export async function openCafe(w: Where): Promise<{ layout: Layout; screens: Scr
 async function openCafeRaw(w: Where): Promise<{ layout: Layout; screens: Screens }> {
   where = w;
   const site = async () => {
-    const [layout, screens] = await Promise.all([
-      fetch(BASE + "layout.json", { cache: "no-store" }).then((r) => r.json() as Promise<Layout>),
-      fetch(BASE + "screens.json", { cache: "no-store" }).then((r) => r.json()).then((d) => (d.screens ?? {}) as Screens),
-    ]);
+    const { layout, screens } = await readDisk();
+    if (w === "disk") onDisk = JSON.stringify({ layout, screens });
     return { layout, screens };
   };
   if (w === "disk") return site();
@@ -109,12 +107,32 @@ async function openCafeRaw(w: Where): Promise<{ layout: Layout; screens: Screens
   return site();
 }
 
+// The café's files as the editor last read or wrote them: a save first checks the files
+// haven't changed since (someone, Claude say, edited them while this editor was open), or it
+// would quietly put back what this editor loaded over their changes.
+let onDisk: string | null = null;
+async function readDisk() {
+  const [layout, screens] = await Promise.all([
+    fetch(BASE + "layout.json", { cache: "no-store" }).then((r) => r.json() as Promise<Layout>),
+    fetch(BASE + "screens.json", { cache: "no-store" }).then((r) => r.json()).then((d) => (d.screens ?? {}) as Screens),
+  ]);
+  return { layout, screens };
+}
+
 export async function saveCafe(layout: Layout, screens: Screens): Promise<boolean> {
   if (where === "disk") {
+    const now = JSON.stringify(await readDisk());
+    if (onDisk !== null && now !== onDisk) {
+      const go = window.confirm(
+        "The café's files changed since you opened the editor (someone else edited them).\n\nOK: save anyway, overwriting those changes with what's here.\nCancel: don't save. Then reload the page (cmd+shift+R) to get the latest and make your edits again.",
+      );
+      if (!go) return false;
+    }
     const [r1, r2] = await Promise.all([
       fetch("/__cafe/layout", { method: "POST", body: JSON.stringify(layout) }),
       fetch("/__cafe/screens", { method: "POST", body: JSON.stringify({ screens }) }),
     ]);
+    if (r1.ok && r2.ok) onDisk = JSON.stringify({ layout, screens });
     return r1.ok && r2.ok;
   }
   await tx("docs", "readwrite", (s) => s.put(layout, "layout"));
