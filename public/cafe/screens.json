@@ -105,8 +105,9 @@
       "items": [
         {
           "title": "Beyond the Trees",
-          "meta": "Adam Shoalts",
           "note": "Placeholder note on why it stuck with you.",
+          "href": "https://adamshoalts.com/expeditions/alone-across-arctic-2017/",
+          "meta": "Adam Shoalts",
           "media": [
             {
               "src": "media/beyond-the-trees.png",
@@ -115,21 +116,20 @@
           ]
         },
         {
-          "title": "Chip War",
-          "meta": "Chris Miller",
+          "title": "The Chip War",
           "note": "Placeholder note on why it stuck with you.",
+          "meta": "Chris Miller",
           "spine": "#f4f1ec 3, #c4363c 1, #f4f1ec 1, #c4363c 1, #2c4a86 2, #f4f1ec 3"
         },
         {
           "title": "The Call of the Wild",
-          "meta": "Jack London",
           "note": "Placeholder note on why it stuck with you.",
+          "meta": "Jack London",
           "spine": "#eef3f6 3, #9fbad0 2, #4a4e57 2, #c9a35a 1, #2f3540 2"
         },
         {
           "title": "Oryx and Crake",
           "meta": "Margaret Atwood",
-          "note": "Placeholder note on why it stuck with you.",
           "spine": "#1f4a3a 3, #3f8f7f 2, #e07a2e 1, #16302a 3"
         }
       ],
