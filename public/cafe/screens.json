@@ -60,21 +60,38 @@
       "template": "menu",
       "tone": "chalk",
       "kicker": "Today's menu",
-      "title": "The blog",
+      "title": "My Writing",
       "body": [
-        "Placeholder. Posts go here, newest first, like a menu that changes daily."
+        "Order up! My random thoughts, technical blogs, research, etc"
       ],
       "items": [
         {
-          "title": "First post",
-          "meta": "coming soon"
+          "title": "Friends in SF",
+          "meta": "09/07/2026",
+          "href": "https://danielwang696151.substack.com/p/its-easy-to-make-friends-in-sf-you",
+          "section": "Personal"
         },
         {
-          "title": "Second post",
-          "meta": "coming soon"
+          "title": "Business vs Tech ",
+          "meta": "16/04/2025",
+          "note": "https://danielwang696151.substack.com/p/business-vs-tech-whats-truly-right",
+          "section": "Personal"
+        },
+        {
+          "title": "Reflections of 2024",
+          "href": "https://danielwang696151.substack.com/p/my-reflection-of-2024",
+          "meta": "12/01/2025",
+          "section": "Personal"
+        },
+        {
+          "title": "SWE-Marathon",
+          "href": "https://arxiv.org/abs/2606.07682",
+          "section": "Resaerch",
+          "meta": "05/06/2026"
         }
       ],
-      "links": []
+      "links": [],
+      "align": "center"
     },
     "books": {
       "name": "Bookshelf: books I love",
@@ -87,16 +104,33 @@
       ],
       "items": [
         {
-          "title": "Another one",
-          "note": "Placeholder note on why it stuck with you."
+          "title": "Beyond the Trees",
+          "meta": "Adam Shoalts",
+          "note": "Placeholder note on why it stuck with you.",
+          "media": [
+            {
+              "src": "media/beyond-the-trees.png",
+              "kind": "image"
+            }
+          ]
         },
         {
-          "title": "A third",
-          "note": "Placeholder note on why it stuck with you."
+          "title": "Chip War",
+          "meta": "Chris Miller",
+          "note": "Placeholder note on why it stuck with you.",
+          "spine": "#f4f1ec 3, #c4363c 1, #f4f1ec 1, #c4363c 1, #2c4a86 2, #f4f1ec 3"
         },
         {
-          "title": "One more",
-          "note": "Placeholder note on why it stuck with you."
+          "title": "The Call of the Wild",
+          "meta": "Jack London",
+          "note": "Placeholder note on why it stuck with you.",
+          "spine": "#eef3f6 3, #9fbad0 2, #4a4e57 2, #c9a35a 1, #2f3540 2"
+        },
+        {
+          "title": "Oryx and Crake",
+          "meta": "Margaret Atwood",
+          "note": "Placeholder note on why it stuck with you.",
+          "spine": "#1f4a3a 3, #3f8f7f 2, #e07a2e 1, #16302a 3"
         }
       ],
       "links": []

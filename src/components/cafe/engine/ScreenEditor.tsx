@@ -238,7 +238,13 @@ export function ScreenEditor({
                     </datalist>
                   </>
                 )}
-                {(s.template === "case" || s.template === "laptop") && (
+                {s.template === "shelf" && (
+                  <>
+                    <input value={it.spine ?? ""} onChange={(e) => setItem(i, { spine: e.target.value || undefined })} className={input} placeholder="no cover? spine colours: #e8eef2 3, #3a3a40 1" />
+                    <p className="mt-1 text-[11px] opacity-70">the cover (its spine is drawn from it)</p>
+                  </>
+                )}
+                {(s.template === "case" || s.template === "laptop" || s.template === "shelf") && (
                   <MediaList media={it.media ?? []} onChange={(m) => setItem(i, { media: m.length ? m : undefined })} />
                 )}
                 {s.template === "laptop" && (

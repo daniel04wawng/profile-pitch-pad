@@ -13,7 +13,8 @@ export type ScreenItem = {
   links?: { label: string; href: string }[]; // more buttons for the item (demo, code, write-up)
   tags?: string; // a project's stack or kind, comma separated
   recipe?: string; // a bake's recipe (ingredients, then the steps), under its story
-  section?: string; // on the menu board, the tab it's under (Personal, Academic…)
+  section?: string; // on the menu board, the heading it's under (Personal, Academic…)
+  spine?: string; // a book with no cover: its spine's colours top to bottom ("#e8eef2 3, #3a3a40 1")
 };
 export type Media = { src: string; kind: "image" | "video" };
 

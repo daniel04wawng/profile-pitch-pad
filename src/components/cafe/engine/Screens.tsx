@@ -474,6 +474,145 @@ function MenuTemplate({ screen, onClose }: Props) {
   );
 }
 
+// A book's spine as pixel art. From its cover: each row of the cover's middle, its typical
+// colour (the median, so lettering doesn't wash it grey), grouped into four flat colours, so
+// the spine runs top to bottom like the cover does (a sky over a red tundra, say). Or, with no
+// cover, from colour bands chosen for it (ScreenItem.spine). Then a lit left edge, a shaded
+// right one, a darker headband and tailband and two gilt lines. Gives the picture and the
+// colour its title reads in.
+const SPINE_W = 12;
+const SPINE_H = 64;
+type RGB = [number, number, number];
+
+function spineFromCover(im: HTMLImageElement): RGB[] {
+  const c = document.createElement("canvas");
+  c.width = 24;
+  c.height = SPINE_H;
+  const g = c.getContext("2d", { willReadFrequently: true })!;
+  g.imageSmoothingQuality = "high";
+  g.drawImage(im, im.naturalWidth * 0.2, 0, im.naturalWidth * 0.6, im.naturalHeight, 0, 0, 24, SPINE_H);
+  const d = g.getImageData(0, 0, 24, SPINE_H).data;
+  const median = (v: number[]) => v.sort((x, y) => x - y)[v.length >> 1];
+  const rows: RGB[] = [];
+  for (let y = 0; y < SPINE_H; y++) {
+    const ch = [0, 1, 2].map((k) => median(Array.from({ length: 24 }, (_, x) => d[(y * 24 + x) * 4 + k])));
+    rows.push(ch as RGB);
+  }
+  // four colours (k-means over the rows, started from the dark to the light ones)
+  const lum = (p: number[]) => 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+  const byLum = [...rows].sort((p, q) => lum(p) - lum(q));
+  const cent = [0, 1, 2, 3].map((j) => [...byLum[Math.floor(((j + 0.5) * SPINE_H) / 4)]]);
+  let lab = rows.map(() => 0);
+  for (let it = 0; it < 8; it++) {
+    lab = rows.map((p) => cent.reduce((best, c0, j) => (dist(p, c0) < dist(p, cent[best]) ? j : best), 0));
+    cent.forEach((c0, j) => {
+      const mine = rows.filter((_, y) => lab[y] === j);
+      if (mine.length) for (let k = 0; k < 3; k++) c0[k] = mine.reduce((a, p) => a + p[k], 0) / mine.length;
+    });
+  }
+  // runs under 3 rows take the run above (no one-pixel stripes)
+  const out = [...lab];
+  let start = 0;
+  for (let y = 1; y <= SPINE_H; y++) {
+    if (y === SPINE_H || lab[y] !== lab[start]) {
+      if (y - start < 3 && start > 0) for (let k = start; k < y; k++) out[k] = out[start - 1];
+      start = y;
+    }
+  }
+  // a little more colour, like the café's art
+  return out.map((j) => {
+    const c0 = cent[j];
+    const m = (c0[0] + c0[1] + c0[2]) / 3;
+    return c0.map((v) => Math.max(0, Math.min(255, m + (v - m) * 1.3))) as RGB;
+  });
+}
+function dist(p: number[], q: number[]) {
+  return (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2;
+}
+function spineFromBands(bands: string): RGB[] {
+  // "#e8eef2 3, #6f8fa8 2, #3a3a40 1": colours top to bottom, each with an optional weight
+  const parts = bands.split(",").map((b) => b.trim().split(/\s+/)).filter((p) => /^#[0-9a-f]{6}$/i.test(p[0]));
+  const hex = (h: string): RGB => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16)) as RGB;
+  const total = parts.reduce((a, p) => a + (Number(p[1]) || 1), 0);
+  const rows: RGB[] = [];
+  let acc = 0;
+  for (const p of parts) {
+    acc += Number(p[1]) || 1;
+    while (rows.length < Math.round((acc / total) * SPINE_H)) rows.push(hex(p[0]));
+  }
+  return rows;
+}
+function drawSpine(rows: RGB[]) {
+  const out = document.createElement("canvas");
+  out.width = SPINE_W;
+  out.height = SPINE_H;
+  const o = out.getContext("2d")!;
+  const shade = ([r, g, b]: number[], f: number) => `rgb(${Math.min(255, r * f)},${Math.min(255, g * f)},${Math.min(255, b * f)})`;
+  rows.forEach((col, y) => {
+    const band = y < 3 || y >= SPINE_H - 3 ? 0.6 : 1; // headband and tailband
+    o.fillStyle = shade(col, band);
+    o.fillRect(0, y, SPINE_W, 1);
+    o.fillStyle = shade(col, band * 1.3);
+    o.fillRect(1, y, 1, 1); // the lit edge
+    o.fillStyle = shade(col, band * 0.7);
+    o.fillRect(SPINE_W - 2, y, 1, 1); // the shaded edge
+  });
+  o.fillStyle = "#e8c070"; // gilt lines under the headband and over the tailband
+  o.fillRect(2, 5, SPINE_W - 4, 1);
+  o.fillRect(2, SPINE_H - 6, SPINE_W - 4, 1);
+  const mid = rows.slice(10, SPINE_H - 10);
+  const lum = mid.reduce((a, [r, g, b]) => a + 0.299 * r + 0.587 * g + 0.114 * b, 0) / Math.max(1, mid.length);
+  return { url: out.toDataURL(), text: lum > 150 ? "#2b1d1a" : "#fdf8ef" };
+}
+
+function useSpine(src: string | undefined, bands: string | undefined) {
+  const [out, setOut] = useState<{ url: string; text: string } | null>(null);
+  useEffect(() => {
+    setOut(null);
+    if (!src) {
+      if (bands?.trim()) setOut(drawSpine(spineFromBands(bands)));
+      return;
+    }
+    let gone = false;
+    const im = new Image();
+    im.onload = () => !gone && setOut(drawSpine(spineFromCover(im)));
+    im.src = fileUrl(src);
+    return () => {
+      gone = true;
+    };
+  }, [src, bands]);
+  return out;
+}
+
+function Spine({ book, i, picked, onPick }: { book: ScreenItem; i: number; picked: boolean; onPick: () => void }) {
+  const cover = book.media?.find((m) => m.kind === "image")?.src;
+  const spine = useSpine(cover, book.spine);
+  return (
+    <button
+      onClick={onPick}
+      className={`relative flex w-11 shrink-0 items-center justify-center overflow-hidden transition-transform hover:-translate-y-2 ${picked ? "-translate-y-4" : ""}`}
+      style={{ ...pixelBox(spine ? "transparent" : SPINES[i % SPINES.length], INK, 3, "transparent"), height: `${72 + ((i * 37) % 26)}%` }}
+      title={book.title}
+    >
+      {spine ? (
+        <img src={spine.url} alt="" className="absolute inset-0 h-full w-full" style={{ imageRendering: "pixelated" }} />
+      ) : (
+        <>
+          <span className="absolute inset-x-0 top-3 h-1 bg-black/25" />
+          <span className="absolute inset-x-0 bottom-3 h-1 bg-black/25" />
+          <span className="absolute left-1 top-1 h-[calc(100%-8px)] w-1 bg-white/25" />
+        </>
+      )}
+      <span
+        className="relative max-h-[86%] overflow-hidden text-ellipsis whitespace-nowrap font-['Silkscreen'] text-[9px] leading-none"
+        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", color: spine?.text ?? "#fdf8ef", textShadow: spine ? "1px 1px 0 rgba(0,0,0,0.25)" : undefined }}
+      >
+        {book.title}
+      </span>
+    </button>
+  );
+}
+
 function ShelfTemplate({ screen, onClose }: Props) {
   const e = useEdit();
   const [pick, setPick] = useState<number | null>(null);
@@ -483,18 +622,7 @@ function ShelfTemplate({ screen, onClose }: Props) {
       <Body lines={screen.body} align={screen.align} onChange={(l) => e?.set({ ...screen, body: l })} />
       <div className="mt-6 flex h-44 items-end gap-2 overflow-x-auto px-3">
         {screen.items.map((b, i) => (
-          <button
-            key={i}
-            onClick={() => setPick(i)}
-            className={`relative flex w-11 shrink-0 items-center justify-center transition-transform hover:-translate-y-2 ${pick === i ? "-translate-y-4" : ""}`}
-            style={{ ...pixelBox(SPINES[i % SPINES.length], INK, 3, "transparent"), height: `${72 + ((i * 37) % 26)}%` }}
-            title={b.title}
-          >
-            <span className="absolute inset-x-0 top-3 h-1 bg-black/25" />
-            <span className="absolute inset-x-0 bottom-3 h-1 bg-black/25" />
-            <span className="absolute left-1 top-1 h-[calc(100%-8px)] w-1 bg-white/25" />
-            <span className="rotate-[-90deg] whitespace-nowrap font-['Silkscreen'] text-[9px] text-[#fdf8ef]">{b.title}</span>
-          </button>
+          <Spine key={i} book={b} i={i} picked={pick === i} onPick={() => setPick(i)} />
         ))}
       </div>
       <div className="h-3 bg-[#8f5b3e]" style={{ boxShadow: "0 3px 0 0 #6b4232" }} />
@@ -518,7 +646,14 @@ function ShelfTemplate({ screen, onClose }: Props) {
                 ""
               )}
             </p>
-            <Body lines={(screen.items[pick].note ?? "").split("\n")} onChange={(l) => e?.set(withItem(screen, pick, { ...screen.items[pick], note: l.join("\n") }))} />
+            <div className="flex gap-4">
+              {screen.items[pick].media?.find((m) => m.kind === "image") && (
+                <img src={fileUrl(screen.items[pick].media!.find((m) => m.kind === "image")!.src)} alt="" className="mt-2 h-40 w-auto shrink-0" style={{ imageRendering: "auto", ...pixelBox("transparent", INK, 3, "rgba(0,0,0,0.3)") }} />
+              )}
+              <div className="min-w-0 flex-1">
+                <Body lines={(screen.items[pick].note ?? "").split("\n")} onChange={(l) => e?.set(withItem(screen, pick, { ...screen.items[pick], note: l.join("\n") }))} />
+              </div>
+            </div>
           </>
         )}
       </div>
