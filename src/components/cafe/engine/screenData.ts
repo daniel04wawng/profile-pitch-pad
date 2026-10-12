@@ -42,7 +42,7 @@ export const TEMPLATES = {
 } as const;
 export type Template = keyof typeof TEMPLATES;
 
-export const TONES = { cream: "Cream paper", chalk: "Chalkboard", wood: "Dark wood" } as const;
+export const TONES = { cream: "Cream paper", chalk: "Chalkboard", wood: "Dark wood", bakery: "Bakery orange" } as const;
 export type Tone = keyof typeof TONES;
 
 export const UI_SPRITES = [

@@ -37,6 +37,15 @@ const TONES: Record<Tone, { fill: string; ink: string; soft: string; accent: str
   cream: { fill: "#f7efe1", ink: "#2b1d1a", soft: "rgba(43,29,26,0.25)", accent: "#5f8251", edge: INK },
   chalk: { fill: "#24342c", ink: "#f3e6c9", soft: "rgba(243,230,201,0.25)", accent: "#f6d58a", edge: "#8f5b3e" },
   wood: { fill: "#3a2219", ink: "#f3e6c9", soft: "rgba(243,230,201,0.22)", accent: "#e8b45c", edge: "#8f5b3e" },
+  bakery: { fill: "#d98c4c", ink: "#2b1d1a", soft: "rgba(43,29,26,0.25)", accent: "#fff8ec", edge: INK },
+};
+
+// The pastry case's wall behind it and the sign's lettering, per style
+const CASE_LOOK: Record<Tone, { wall: string; title: string; shadow: string; kicker: string }> = {
+  bakery: { wall: "#d98c4c", title: "#fff8ec", shadow: "#2b1d1a", kicker: "#f6d58a" },
+  cream: { wall: "#f7efe1", title: "#2b1d1a", shadow: "rgba(43,29,26,0.18)", kicker: "#a8432c" },
+  chalk: { wall: "#24342c", title: "#f3e6c9", shadow: "#0f1712", kicker: "#f6d58a" },
+  wood: { wall: "#3a2219", title: "#f3e6c9", shadow: "#140b08", kicker: "#e8b45c" },
 };
 
 export function PixelButton({ onClick, children, fill = "#86a86b", ink = INK, title, disabled }: { onClick: () => void; children: ReactNode; fill?: string; ink?: string; title?: string; disabled?: boolean }) {
@@ -278,13 +287,14 @@ function CaseTemplate({ screen, onClose }: Props) {
   const bake = (it: ScreenItem, i: number, big = false) => (
     <Bake key={i} it={it} big={big} onOpen={() => setOpen(i)} onRemove={e?.on ? () => e.set(withItem(screen, i, null)) : undefined} />
   );
+  const look = CASE_LOOK[screen.tone] ?? CASE_LOOK.bakery;
   return (
-    <div className="relative m-2 flex w-[min(760px,94vw)] flex-col items-center px-4 pb-4 pt-5 sm:px-8 [&_img]:[image-rendering:pixelated]" style={pixelBox("#d98c4c", INK, 4, "rgba(0,0,0,0.35)")} onClick={(ev) => ev.stopPropagation()}>
+    <div className="relative m-2 flex w-[min(760px,94vw)] flex-col items-center px-4 pb-4 pt-5 sm:px-8 [&_img]:[image-rendering:pixelated]" style={pixelBox(look.wall, INK, 4, "rgba(0,0,0,0.35)")} onClick={(ev) => ev.stopPropagation()}>
       {/* the sign above the case */}
       <div className="mb-4 flex w-full items-start justify-between gap-3">
         <span className="w-16" />
-        <div className="min-w-0 text-center text-[#fff8ec]" style={{ textShadow: "3px 3px 0 #2b1d1a" }}>
-          <p className="font-['Silkscreen'] text-[11px] uppercase tracking-widest text-[#f6d58a]">
+        <div className="min-w-0 text-center" style={{ color: look.title, textShadow: `3px 3px 0 ${look.shadow}` }}>
+          <p className="font-['Silkscreen'] text-[11px] uppercase tracking-widest" style={{ color: look.kicker }}>
             <Ed value={screen.kicker} placeholder="kicker" onChange={(v) => e?.set({ ...screen, kicker: v })} />
           </p>
           <h2 className="font-['Pixelify_Sans'] text-4xl font-semibold uppercase leading-none tracking-wide sm:text-5xl">
@@ -351,7 +361,7 @@ function BakeStory({ screen, index, onBack, onClose }: { screen: ScreenDef; inde
   return (
     <div
       className="relative m-2 flex max-h-[min(720px,88dvh)] w-[min(680px,92vw)] flex-col text-[#2b1d1a] transition-all duration-300 ease-out [&_img]:[image-rendering:pixelated]"
-      style={{ ...pixelBox("#d98c4c", INK, 4, "rgba(0,0,0,0.35)"), transform: shown ? "scale(1)" : "scale(0.6)", opacity: shown ? 1 : 0 }}
+      style={{ ...pixelBox((CASE_LOOK[screen.tone] ?? CASE_LOOK.bakery).wall, INK, 4, "rgba(0,0,0,0.35)"), transform: shown ? "scale(1)" : "scale(0.6)", opacity: shown ? 1 : 0 }}
       onClick={(ev) => ev.stopPropagation()}
     >
       <header className="flex items-center gap-2 px-4 pb-2 pt-3">

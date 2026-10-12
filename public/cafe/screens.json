@@ -196,18 +196,18 @@
     "bakes": {
       "name": "Pastry case: baking",
       "template": "case",
-      "tone": "cream",
+      "tone": "bakery",
       "kicker": "The pastry case",
       "title": "Fresh from my oven",
       "body": [
-        "Everything in here I baked. Pick one to see it."
+        "Showcasing some of the sweets I made over the past few years! "
       ],
       "items": [
         {
           "title": "Notion cupcake",
           "meta": "Oreo Buttercream Cupcakes",
           "sprite": "pastry-notion-cupcake",
-          "note": "Placeholder: photos and the story coming soon.",
+          "note": "My friend who worked at Notion asked me to bake for the team, so I made Oreo buttercream cupcakes with Notion cookies on top! Had to learn how to use a 3D printer to make a custom cookie cutter for these. ",
           "media": [
             {
               "src": "media/notion-cupcake-lx4sq.jpeg",
@@ -219,7 +219,7 @@
           "title": "Vercel pavlova",
           "meta": "Vanilla Berry Pavlovas",
           "sprite": "pastry-vercel-pavlova",
-          "note": "Placeholder: photos and the story coming soon.",
+          "note": "My friend invited me to bake for Vercel! Pulled an all-nighter making these and filmed one of my first baking videos along the way. Had to figure out how to capture the process while actually getting everything baked.",
           "media": [
             {
               "src": "media/vercel-pavolas-m4ffp.jpeg",
@@ -231,34 +231,41 @@
           "title": "Gemma cookies",
           "meta": "Iced Sugar Cookies",
           "sprite": "pastry-gemma-cookies",
-          "note": "Placeholder: photos and the story coming soon."
+          "note": "Reached out to GDM (shoutout Ivan) on X, and that turned into an invite to bake cookies for the Gemma 4 launch at the top of the Transamerica Pyramid! Wanted to represent the logo of Gemma 4 so 100 cookies were frosted with the logo of Gemma"
         },
         {
           "title": "Composio Cookies",
           "meta": "Iced Lemon Chocolate Cookies",
           "sprite": "pastry-composio-cookies",
-          "note": "Placeholder: photos and the story coming soon."
+          "note": "Baked Composio cookies for Composio’s booth at Hack the North! This was my first time renting out an industrial kitchen to mass produce cookies, which was a pretty cool experience. The hackers loved them, and we even had some sponsors come over to try them too!"
         },
         {
           "title": "Gemma 1B cake",
           "meta": "Pandan Kaya Sheet Cake",
           "sprite": "pastry-gemma-1b-cake",
-          "note": "Placeholder: photos and the story coming soon."
+          "note": "The Google DeepMind team reached out to ask me to bake for Gemma’s 1 billion downloads celebration! Since it was a celebration, I decided to make a sheet cake. This took me two days and was my first time making one this large! I went with pandan because I’d recently tried kaya and pandan flavours and really wanted to incorporate them into my desserts. "
         },
         {
           "title": "Waymo cake",
           "meta": "Vanilla Angel Food Cake",
           "sprite": "pastry-waymo-cake",
-          "note": "Placeholder: photos and the story coming soon."
+          "note": "Got invited to bake for Sebastian Thrun, the founder of Waymo, by Adil from Silicon Mania himself (shout out to SF's first ever late night show)! Took me three days to make the entire cake, starting from the shape of the cake to the fondant itself. This was also my first time using fondant and it was a struggle to mold it into the desired shapes but ended up turning out quite nicely!",
+          "media": [
+            {
+              "src": "media/hewqjt7aeaaxx1n-mbp1f.jpeg",
+              "kind": "image"
+            }
+          ]
         },
         {
           "title": "Coming soon",
           "meta": "next up",
           "sprite": "pastry-coming-soon",
-          "note": "Something's in the oven. Check back soon to see what I'm baking next."
+          "note": "Something's in the oven. Check back soon to see what I'm baking next!"
         }
       ],
-      "links": []
+      "links": [],
+      "align": "center"
     }
   }
 }
