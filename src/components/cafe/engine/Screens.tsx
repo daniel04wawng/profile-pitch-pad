@@ -759,9 +759,12 @@ function SpecialTemplate({ screen, onClose }: Props) {
         <div className="mt-5 space-y-5">
           {screen.items.map((it, i) => {
             const battle = (it.tags ?? "").toLowerCase().split(",").map((x) => x.trim()).includes("battle");
+            // its picture: one uploaded for it, or else its sprite
+            const pic = it.media?.find((m) => m.kind === "image")?.src;
+            const art = pic ? fileUrl(pic) : it.sprite ? sprite(it.sprite) : null;
             const dish = (
               <div className="flex items-center gap-4 sm:gap-5">
-                {it.sprite && (
+                {art && (
                   <div className="relative shrink-0">
                     {battle && (
                       // a battle nameplate: name, level, HP bar
@@ -780,7 +783,7 @@ function SpecialTemplate({ screen, onClose }: Props) {
                     )}
                     {/* the plate it sits on */}
                     <div className="flex h-28 w-28 items-end justify-center pb-3" style={{ background: `radial-gradient(ellipse 50% 14% at 50% 86%, ${t.soft}, transparent 70%)` }}>
-                      <img src={sprite(it.sprite)} alt="" className="h-20 w-auto" />
+                      <img src={art} alt="" className="h-20 w-auto max-w-[6.5rem] object-contain" />
                     </div>
                   </div>
                 )}

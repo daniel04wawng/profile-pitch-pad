@@ -244,7 +244,8 @@ export function ScreenEditor({
                     <p className="mt-1 text-[11px] opacity-70">the cover (its spine is drawn from it)</p>
                   </>
                 )}
-                {(s.template === "case" || s.template === "laptop" || s.template === "shelf") && (
+                {s.template === "special" && <p className="mt-1 text-[11px] opacity-70">a picture (used instead of the sprite)</p>}
+                {(s.template === "case" || s.template === "laptop" || s.template === "shelf" || s.template === "special") && (
                   <MediaList media={it.media ?? []} onChange={(m) => setItem(i, { media: m.length ? m : undefined })} />
                 )}
                 {s.template === "special" && (
