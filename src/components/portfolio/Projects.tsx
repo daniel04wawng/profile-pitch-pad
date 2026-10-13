@@ -70,26 +70,6 @@ const Projects = () => {
       }
     },
     {
-      id: 4,
-      title: "Automating Workflows and Enabling AI Adoption in Consulting",
-      subtitle: "KPMG",
-      status: "SHIPPED • AUG 2024",
-      gradient: "var(--gradient-blue-green)",
-      description: "KPMG, shipped August 2024",
-      company: "KPMG",
-      role: "Consulting Intern",
-      timeline: "Aug 2024",
-      team: "KPMG",
-      skills: "Python, VBA, AI Training, Process Automation",
-      details: {
-        intro: "During my internship at KPMG, I noticed a clear pattern: consultants were spending late nights manually pulling access data, cross-checking permissions, and formatting reports that should have taken minutes, not hours. Brilliant people were stuck doing repetitive work while higher-value client analysis waited.\n\nAt the same time, the firm was rolling out its own AI tools, including Microsoft Copilot, but adoption was low. Many team members did not know how to use them or where they could add value. I started asking a simple question: \"What do you hate most about the job?\" The answers revealed a long list of inefficiencies and sparked my drive to find better ways of working.\n\nI was not brought in to build tools, but that is exactly what I began doing. As a consultant on the team, I started small: identifying pain points, prototyping lightweight automations, and helping colleagues adopt the AI tools already available to them. It showed me that anyone who notices gaps can take the first step toward building a solution.",
-        problem: "Through team interviews and observation, I identified three main challenges:\n\n• Manual workflows that consumed hours each week\n• Low adoption of AI tools due to lack of training and clear use cases\n• Inefficient reliance on SmartSheet and Excel without automation\n\nThe breakthrough was realizing that if consultants could save time on repetitive tasks, they could focus more energy on meaningful client analysis.",
-        process: "As the product-minded member of the team, I took a two-pronged approach:\n\n1. Automating Workflows\n• Built Python scripts to automate repetitive data extraction and reporting tasks\n• Created a tool that instantly pulled user access data and highlighted sensitive privacy permissions\n• Used VBA and PowerShell to streamline SmartSheet and Excel reporting\n• Reduced project delivery times by an estimated 30 percent\n\n2. Enabling AI Adoption\n• Designed and ran workshops to teach consultants how to use KPMG's AI tools and Microsoft Copilot\n• Introduced prompt engineering techniques for real client use cases\n• Helped team members cut manual execution time from 15 hours to 5 hours per week",
-        solution: "The end result was a combined approach of automation and enablement:\n\n**Technical automation:**\n• Python tools for data analysis and reporting\n• VBA and PowerShell scripts to reduce Excel and SmartSheet friction\n• Streamlined workflows that cut down on repetitive tasks\n\n**AI enablement:**\n• Training sessions to increase confidence with internal AI tools\n• Practical demonstrations of Copilot and AI use cases\n• Resources for the team to apply AI independently in client engagements",
-        outcome: "The impact was clear:\n\n• Delivery times dropped by 30 percent\n• Each consultant saved around 10 hours a week on repetitive tasks\n• Manual errors decreased with automation\n• AI adoption across the team improved significantly\n\nThis was my first real experience building technical solutions in a business environment. I learned that curiosity drives impact: simply asking \"What frustrates you?\" uncovered the biggest opportunities for change. I also saw how even small scripts could unlock significant efficiency, and how teaching others multiplied my impact far beyond what I could do myself.\n\nMost importantly, KPMG showed me that product management is not always about building external products for customers. Sometimes it starts with noticing inefficiencies around you and building internal solutions that make teams work smarter, not harder."
-      }
-    },
-    {
       id: 5,
       title: "Giving Every Child a Voice Through Music",
       subtitle: "Duet",
