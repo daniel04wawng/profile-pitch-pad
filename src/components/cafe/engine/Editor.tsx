@@ -11,6 +11,7 @@ import {
   publishMineToSite,
   resetCafe,
   saveCafe,
+  mergeWithDisk,
   storage,
   writePng,
 } from "./store";
@@ -632,7 +633,22 @@ export function Editor({
   const save = async () => {
     setStatus("saving");
     try {
-      setStatus((await saveCafe(layout, screens)) ? "saved" : "error");
+      // only what was changed here goes in: screens untouched in this tab keep the file's
+      // (newer) version, and the editor then shows the merged café
+      const m = await mergeWithDisk(layout, screens);
+      if (
+        m.clashes.length &&
+        !window.confirm(
+          `${m.clashes.join(", ")} also changed somewhere else since you opened the editor. OK keeps your version of it; Cancel doesn't save (reload to see the other).`,
+        )
+      )
+        return setStatus("unsaved");
+      const ok = await saveCafe(m.layout, m.screens);
+      if (ok) {
+        setScreens(m.screens);
+        setLayoutRaw(m.layout);
+      }
+      setStatus(ok ? "saved" : "error");
     } catch {
       setStatus("error");
     }
