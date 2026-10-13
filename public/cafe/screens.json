@@ -138,6 +138,30 @@
             }
           ],
           "spine": "field:#a87b4f text:#fbf3e4 #ece6d6 2, #8c5a34 2, #5e3b22 1"
+        },
+        {
+          "title": "Project Hail Mary",
+          "meta": "Andy Weir",
+          "note": "Placeholder note on why it stuck with you.",
+          "spine": "field:#141c33 text:#f2c14e #2a3a66 2, #e8eef2 1, #f2c14e 1"
+        },
+        {
+          "title": "The Hunger Games",
+          "meta": "Suzanne Collins",
+          "note": "Placeholder note on why it stuck with you.",
+          "spine": "field:#161414 text:#d4a64a #2a2626 2, #d4a64a 1, #8a1c1c 1"
+        },
+        {
+          "title": "The Third Door",
+          "meta": "Alex Banayan",
+          "note": "Placeholder note on why it stuck with you.",
+          "spine": "field:#f4f0e4 text:#1f1f1f #f2c230 2, #1f1f1f 1"
+        },
+        {
+          "title": "The Mom Test",
+          "meta": "Rob Fitzpatrick",
+          "note": "Placeholder note on why it stuck with you.",
+          "spine": "field:#2e6da4 text:#fbf3e4 #f4d35e 1, #fbf3e4 1, #e05a47 1"
         }
       ],
       "links": []
