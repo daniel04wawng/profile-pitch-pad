@@ -11,39 +11,83 @@
       ],
       "items": [
         {
-          "title": "Surplus",
-          "meta": "Startup · 2026",
-          "sprite": "pastry-croissant",
-          "tags": "AI agents, outreach",
-          "note": "Placeholder. An AI agent that does the relationship work for you."
-        },
-        {
           "title": "Duet",
           "meta": "Cal Hacks 11.0 · First place grand prize",
           "sprite": "pastry-macaron",
           "tags": "EEG, Python, Next.js, Gemini",
-          "note": "Placeholder. A brain-computer interface that turns brainwaves into music in real time."
+          "note": "A brain-computer interface that turns brainwaves into music in real time, so children who can't express themselves with words or instruments can be heard through sound. An Emotiv EEG headset streams brainwaves, an AI composer turns focus and calm into tempo and rhythm, and Sonic Pi plays it live. 97% of demo users said they'd use it again.",
+          "media": [
+            {
+              "src": "media/duet.png",
+              "kind": "image"
+            }
+          ]
+        },
+        {
+          "title": "SolarScope",
+          "meta": "Hack Western 10.0 · Nov 2024",
+          "sprite": "pastry-tart",
+          "tags": "Swift, Python, AR, computer vision",
+          "note": "An AR app that shows what solar panels would look like on a real building before you buy them. Computer vision reads the roof, the app overlays panels in AR and predicts how much energy they'd make.",
+          "media": [
+            {
+              "src": "media/solarscope.png",
+              "kind": "image"
+            }
+          ]
+        },
+        {
+          "title": "UofT Hacks",
+          "meta": "UofT Hacks",
+          "sprite": "pastry-donut",
+          "tags": "",
+          "note": "Placeholder: what I built at UofT Hacks."
+        },
+        {
+          "title": "TreeHacks",
+          "meta": "TreeHacks",
+          "sprite": "pastry-muffin",
+          "tags": "",
+          "note": "Placeholder: what I built at TreeHacks."
         },
         {
           "title": "Mira AI",
           "meta": "NimbleRx · shipped Aug 2025",
           "sprite": "pastry-cinnamon",
           "tags": "healthcare AI, product",
-          "note": "Placeholder. A healthcare assistant that remembers context and stays safe."
+          "note": "A healthcare assistant patients can trust: it remembers each patient's context (age, state, medications) and answers safely. I led model evaluation and a three-layer prompt system with guardrails, cutting response time toward two seconds from an eleven second baseline.",
+          "media": [
+            {
+              "src": "media/mira-ai.jpg",
+              "kind": "image"
+            }
+          ]
         },
         {
           "title": "JiaBot",
           "meta": "NimbleRx · shipped Jul 2025",
           "sprite": "cup",
           "tags": "chatbot, product",
-          "note": "Placeholder. Cutting pharmacy hold times with an AI support assistant."
+          "note": "An AI support assistant to cut pharmacy hold times. After a first version only 4% of patients tried, I led the rebuild: intent recognition instead of keywords, support cards that show each patient's refill and delivery status, and smooth handoffs to staff.",
+          "media": [
+            {
+              "src": "media/jiabot.png",
+              "kind": "image"
+            }
+          ]
         },
         {
-          "title": "VGC bench",
-          "meta": "Benchmark",
-          "sprite": "pastry-muffin",
-          "tags": "AI agents, benchmark",
-          "note": "Placeholder. A benchmark for AI agents playing competitive Pokémon."
+          "title": "Agentic Student OS",
+          "meta": "In progress · 2026",
+          "sprite": "pastry-croissant",
+          "tags": "AI agents, iOS, TypeScript, Python",
+          "note": "An AI operating system for students: agents that keep up with your classes, deadlines and events and take care of the busywork. A SwiftUI app on a TypeScript and Python backend.",
+          "links": [
+            {
+              "label": "GitHub",
+              "href": "https://github.com/daniel04wawng/agentic-student-os"
+            }
+          ]
         },
         {
           "title": "Daniel's café",
