@@ -685,6 +685,29 @@ export function Editor({
     }
   };
 
+  // leaving or reloading with unsaved changes asks first (the browser's own "leave site?")
+  useEffect(() => {
+    if (status !== "unsaved") return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [status]);
+  // a photo or video added to a screen saves at once (the file is already on disk; the
+  // screen saying it's there shouldn't wait for Save, or a reload loses it)
+  const mediaCount = useMemo(
+    () => Object.values(screens).reduce((n, sc) => n + sc.items.reduce((k, it) => k + (it.media?.length ?? 0), 0), 0),
+    [screens],
+  );
+  const lastMedia = useRef(mediaCount);
+  useEffect(() => {
+    if (mediaCount > lastMedia.current && storage() === "disk") save();
+    lastMedia.current = mediaCount;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaCount]);
+
   // your own café (kept in this browser) saves itself
   const mine = storage() === "browser";
   useEffect(() => {

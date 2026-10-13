@@ -20,6 +20,10 @@
             {
               "src": "media/duet.png",
               "kind": "image"
+            },
+            {
+              "src": "media/duet-demo.mp4",
+              "kind": "video"
             }
           ]
         },
