@@ -1,7 +1,57 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BASE } from "./types";
 import { fileUrl, saveMedia } from "./store";
 import { TEMPLATES, TONES, UI_SPRITES, type Media, type ScreenDef, type ScreenItem, type Screens, type Template, type Tone } from "./screenData";
+
+// A project's story, written like a post: a tall box, and "+ photo here", which uploads a photo
+// (or video) and puts it in the story where the cursor is, as a line
+// "![caption](media/…)" (write the caption between the brackets).
+function StoryBox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const at = useRef(value.length);
+  const [busy, setBusy] = useState("");
+  const add = async (files: FileList) => {
+    let text = value;
+    let pos = Math.min(at.current, text.length);
+    for (const f of [...files]) {
+      setBusy(`adding ${f.name}…`);
+      try {
+        const m = await saveMedia(f);
+        const line = `![](${m.src})`;
+        const before = text.slice(0, pos);
+        const after = text.slice(pos);
+        const pre = before && !before.endsWith("\n\n") ? (before.endsWith("\n") ? "\n" : "\n\n") : "";
+        const post = after.startsWith("\n") ? "\n" : "\n\n";
+        text = before + pre + line + post + after;
+        pos = (before + pre + line + post).length;
+      } catch (e) {
+        window.alert(String(e instanceof Error ? e.message : e));
+      }
+    }
+    setBusy("");
+    onChange(text);
+  };
+  const remember = () => (at.current = ref.current?.selectionStart ?? value.length);
+  return (
+    <div>
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={(e) => (onChange(e.target.value), remember())}
+        onSelect={remember}
+        onKeyUp={remember}
+        onClick={remember}
+        rows={14}
+        className={`${input} resize-y`}
+        placeholder={"the story, like a post:\n## a section\n• a bullet\n**bold**\nclick where a photo goes, then + photo here"}
+      />
+      <label className="mt-1 inline-block cursor-pointer rounded border border-white/15 px-2 py-0.5 text-[11px] hover:bg-white/10" onMouseDown={remember}>
+        {busy || "+ photo here (at the cursor)"}
+        <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" className="hidden" onChange={(e) => e.target.files && add(e.target.files)} />
+      </label>
+    </div>
+  );
+}
 
 // An item's photos and videos: thumbnails you can reorder or remove, and a button to add more.
 function MediaList({ media, onChange }: { media: Media[]; onChange: (m: Media[]) => void }) {
@@ -220,13 +270,11 @@ export function ScreenEditor({
                   </button>
                 </div>
                 <input value={it.meta ?? ""} onChange={(e) => setItem(i, { meta: e.target.value || undefined })} className={input} placeholder="right side: price, date, subtitle" />
-                <textarea
-                  value={it.note ?? ""}
-                  onChange={(e) => setItem(i, { note: e.target.value || undefined })}
-                  rows={s.template === "laptop" ? 12 : 3}
-                  className={`${input} resize-y`}
-                  placeholder={s.template === "laptop" ? "the story: ## a section, • a bullet, **bold**" : "details shown when opened"}
-                />
+                {s.template === "laptop" ? (
+                  <StoryBox value={it.note ?? ""} onChange={(v) => setItem(i, { note: v || undefined })} />
+                ) : (
+                  <textarea value={it.note ?? ""} onChange={(e) => setItem(i, { note: e.target.value || undefined })} rows={3} className={`${input} resize-y`} placeholder="details shown when opened" />
+                )}
                 <input value={it.href ?? ""} onChange={(e) => setItem(i, { href: e.target.value || undefined })} className={input} placeholder="link (optional)" />
                 {s.template === "menu" && (
                   <>

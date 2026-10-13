@@ -932,7 +932,10 @@ function TextTemplate({ screen, onClose }: Props) {
 
 // Projects on the café laptop: a pixel laptop with a little website open on it. Each project
 // is a box (its demo playing, or its sprite), and opens to its demo, the story and its links.
-// A project's write-up, lightly formatted: "## " starts a section, "• " a bullet, **bold**.
+// A project's write-up, lightly formatted: "## " starts a section, "• " a bullet, **bold**, and
+// a line "![caption](media/photo.jpg)" puts that photo (or video) right there, captioned. A
+// line like "[Photo: the team after winning]" is a reminder of a photo still to add: shown as
+// an empty frame on the dev server, never to visitors.
 function inline(t: string) {
   return t.split(/(\*\*[^*]+\*\*)/).map((p, i) => (p.startsWith("**") && p.endsWith("**") ? <strong key={i}>{p.slice(2, -2)}</strong> : p));
 }
@@ -961,6 +964,28 @@ function Story({ text }: { text: string }) {
       continue;
     }
     flush();
+    const pic = l.match(/^!\[(.*?)\]\((.+?)\)$/);
+    if (pic) {
+      const m: Media = { src: pic[2], kind: /\.(mp4|webm|mov)$/i.test(pic[2]) ? "video" : "image" };
+      out.push(
+        <figure key={out.length} className="my-5">
+          <div className="overflow-hidden" style={pixelBox("#15131c", INK, 3, "rgba(0,0,0,0.2)")}>
+            <MediaView m={m} className="max-h-[420px] w-full" />
+          </div>
+          {pic[1] && <figcaption className="mt-2 text-center font-['Space_Grotesk'] text-[13px] italic opacity-70">{pic[1]}</figcaption>}
+        </figure>,
+      );
+      continue;
+    }
+    if (/^\[(photo|image|video|picture)\b[^\]]*\]$/i.test(l)) {
+      if (import.meta.env.DEV)
+        out.push(
+          <div key={out.length} className="my-4 border-2 border-dashed border-[#a8432c]/50 px-4 py-6 text-center font-['Silkscreen'] text-[10px] uppercase tracking-wider text-[#a8432c]/80">
+            {l.slice(1, -1)} (add it with + photo here)
+          </div>,
+        );
+      continue;
+    }
     if (l.startsWith("## "))
       out.push(
         <h3 key={out.length} className="pt-3 font-['Silkscreen'] text-[11px] uppercase tracking-widest text-[#a8432c]">
@@ -977,7 +1002,7 @@ const storyPreview = (t: string) =>
   t
     .split("\n")
     .map((l) => l.trim())
-    .find((l) => l && !l.startsWith("## ") && !l.startsWith("• "))
+    .find((l) => l && !l.startsWith("## ") && !l.startsWith("• ") && !l.startsWith("![") && !l.startsWith("["))
     ?.replace(/\*\*/g, "") ?? "";
 
 function LaptopTemplate({ screen, onClose }: Props) {
