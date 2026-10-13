@@ -889,6 +889,54 @@ function TextTemplate({ screen, onClose }: Props) {
 
 // Projects on the café laptop: a pixel laptop with a little website open on it. Each project
 // is a box (its demo playing, or its sprite), and opens to its demo, the story and its links.
+// A project's write-up, lightly formatted: "## " starts a section, "• " a bullet, **bold**.
+function inline(t: string) {
+  return t.split(/(\*\*[^*]+\*\*)/).map((p, i) => (p.startsWith("**") && p.endsWith("**") ? <strong key={i}>{p.slice(2, -2)}</strong> : p));
+}
+function Story({ text }: { text: string }) {
+  const out: ReactNode[] = [];
+  let bullets: string[] = [];
+  const flush = () => {
+    if (bullets.length)
+      out.push(
+        <ul key={`u${out.length}`} className="ml-1 space-y-1">
+          {bullets.map((b, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="opacity-50">▪</span>
+              <span>{inline(b)}</span>
+            </li>
+          ))}
+        </ul>,
+      );
+    bullets = [];
+  };
+  for (const raw of text.split("\n")) {
+    const l = raw.trim();
+    if (!l) continue;
+    if (l.startsWith("• ") || l.startsWith("- ")) {
+      bullets.push(l.slice(2));
+      continue;
+    }
+    flush();
+    if (l.startsWith("## "))
+      out.push(
+        <h3 key={out.length} className="pt-3 font-['Silkscreen'] text-[11px] uppercase tracking-widest text-[#a8432c]">
+          {l.slice(3)}
+        </h3>,
+      );
+    else out.push(<p key={out.length}>{inline(l)}</p>);
+  }
+  flush();
+  return <>{out}</>;
+}
+// the card's teaser: the write-up's first paragraph, without its formatting
+const storyPreview = (t: string) =>
+  t
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => l && !l.startsWith("## ") && !l.startsWith("• "))
+    ?.replace(/\*\*/g, "") ?? "";
+
 function LaptopTemplate({ screen, onClose }: Props) {
   const e = useEdit();
   const [open, setOpen] = useState<number | null>(null);
@@ -958,7 +1006,7 @@ function LaptopTemplate({ screen, onClose }: Props) {
                   {e?.on ? (
                     <Ed multi value={item.note ?? ""} placeholder="what it is, what you did, what you learned…" onChange={(v) => put({ ...item, note: v })} />
                   ) : (
-                    (item.note ?? "").split("\n").filter((l) => l.trim()).map((l, k) => <p key={k}>{l}</p>)
+                    <Story text={item.note ?? ""} />
                   )}
                 </div>
                 {e?.on && <LinksEdit links={item.links ?? []} onChange={(l) => put({ ...item, links: l })} />}
@@ -1004,7 +1052,7 @@ function LaptopTemplate({ screen, onClose }: Props) {
                       <div className="p-3">
                         <p className="font-['Pixelify_Sans'] text-[18px] leading-tight">{it.title}</p>
                         {it.meta && <p className="mt-0.5 font-['Silkscreen'] text-[9px] uppercase tracking-wider opacity-60">{it.meta}</p>}
-                        {it.note && <p className="mt-2 line-clamp-2 font-['Space_Grotesk'] text-[13px] opacity-75">{it.note}</p>}
+                        {it.note && <p className="mt-2 line-clamp-2 font-['Space_Grotesk'] text-[13px] opacity-75">{storyPreview(it.note)}</p>}
                         {tags(it.tags).length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {tags(it.tags).slice(0, 4).map((t) => (

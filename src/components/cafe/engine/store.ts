@@ -129,10 +129,30 @@ export async function mergeWithDisk(layout: Layout, screens: Screens): Promise<{
   const clashes: string[] = [];
   for (const key of new Set([...Object.keys(base.screens), ...Object.keys(screens)])) {
     const mine = screens[key];
-    if (same(mine, base.screens[key])) continue; // untouched here: the file's version stands
-    if (!same(disk.screens[key], base.screens[key]) && !same(disk.screens[key], mine)) clashes.push(mine?.name ?? base.screens[key]?.name ?? key);
-    if (mine) out[key] = mine;
-    else delete out[key];
+    const was = base.screens[key];
+    const now = disk.screens[key];
+    if (same(mine, was)) continue; // untouched here: the file's version stands
+    if (!mine) {
+      delete out[key]; // deleted here
+      continue;
+    }
+    if (!was || !now || same(now, was)) {
+      out[key] = mine; // new here, or only changed here
+      continue;
+    }
+    // changed here and in the file: field by field, each part changed here wins, the rest
+    // (a title changed here, the items changed elsewhere, say) keeps the file's
+    const merged = { ...now } as Record<string, unknown>;
+    const m = mine as Record<string, unknown>;
+    const w = was as Record<string, unknown>;
+    const n = now as Record<string, unknown>;
+    for (const f of new Set([...Object.keys(m), ...Object.keys(w)])) {
+      if (same(m[f], w[f])) continue;
+      if (!same(n[f], w[f]) && !same(n[f], m[f])) clashes.push(`${mine.name ?? key} (${f})`);
+      if (f in m) merged[f] = m[f];
+      else delete merged[f];
+    }
+    out[key] = merged as unknown as Screens[string];
   }
   return { layout: same(layout, base.layout) ? disk.layout : layout, screens: out, clashes };
 }

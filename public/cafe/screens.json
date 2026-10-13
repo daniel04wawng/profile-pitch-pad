@@ -5,9 +5,9 @@
       "template": "laptop",
       "tone": "cream",
       "kicker": "on the laptop",
-      "title": "Things I've built",
+      "title": "Things I previously built!",
       "body": [
-        "Each box is a project: open one for the demo, the story and the links."
+        ""
       ],
       "items": [
         {
@@ -15,7 +15,7 @@
           "meta": "Cal Hacks 11.0 · First place grand prize",
           "sprite": "pastry-macaron",
           "tags": "EEG, Python, Next.js, Gemini",
-          "note": "A brain-computer interface that turns brainwaves into music in real time, so children who can't express themselves with words or instruments can be heard through sound. An Emotiv EEG headset streams brainwaves, an AI composer turns focus and calm into tempo and rhythm, and Sonic Pi plays it live. 97% of demo users said they'd use it again.",
+          "note": "A brain-computer interface that turns brainwaves into music in real time, so children who can't speak or play an instrument can still be heard.\n\n## Why\nOne in ten children in the US has a developmental disability, and many have no way to express themselves through words or instruments. My teammate Justin and I had taught music to kids for years and watched non-verbal students get left out. At Cal Hacks, our team of four asked: what if brainwaves could become music, live?\n\n## The problem\n• Few creative tools for kids who can't use words or instruments\n• Non-verbal students left out of music and art\n• Nothing bridging the gap between mind and music\n\n## How we built it\nAn Emotiv EEG headset streams brainwaves to a Python backend (Cortex), with SingleStore for low-latency processing. A live AI \"composer\" on Google Gemini picks what to play next from the child's emotional state and what it just played, and Sonic Pi performs it. I built the Next.js frontend that shows the brainwaves and the music together.\n\nThe hardest part was truly live AI music, making creative choices on the fly, and none of us had touched an EEG before.\n\n## What it does\nA child puts on the headset and Duet turns their focus and calm into tempo, rhythm and intensity, so they hear their inner world as music.\n\n## Outcome\n**97%** of demo users said they'd use it again, and Duet won **First Place Grand Prize at Cal Hacks 11.0**. It reminded me why I build: to make technology meaningful, accessible, and human.",
           "media": [
             {
               "src": "media/duet.png",
