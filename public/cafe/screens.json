@@ -77,6 +77,19 @@
           ]
         },
         {
+          "title": "Greensort Western",
+          "meta": "Co-founder · shipped Jan 2024",
+          "sprite": "pastry-bread",
+          "tags": "sustainability, product, mobile",
+          "note": "London, Ontario was the largest city in Canada without a green bin, so every scrap of food waste at Western went to landfill. We launched the campus's first green bin program across residences, repurposing bins from storage, and built a sorting app (object recognition and a little gamification) into Western's student app.",
+          "media": [
+            {
+              "src": "media/greensort-western.jpg",
+              "kind": "image"
+            }
+          ]
+        },
+        {
           "title": "Agentic Student OS",
           "meta": "In progress · 2026",
           "sprite": "pastry-croissant",
