@@ -100,12 +100,12 @@
       "kicker": "The bookshelf",
       "title": "Books I love",
       "body": [
-        "Placeholder. Your favorite books, with a line on why each one stuck."
+        "These are books that I highly recommend anyone read! No spoilers so you can start fresh "
       ],
       "items": [
         {
           "title": "Beyond the Trees",
-          "note": "Placeholder note on why it stuck with you.",
+          "note": "I like two things about this book:\n\n1. Against all odds: Without spoiling anything, I really liked Adam’s mentality and how he kept finding ways to overcome the challenges he faced.\n\n2. The History of Canada: I love learning about history, and the book weaves a lot of First Nations history and settlers’ journeys into his own adventure, which made it even more interesting to read!",
           "href": "https://adamshoalts.com/expeditions/alone-across-arctic-2017/",
           "meta": "Adam Shoalts",
           "media": [
@@ -118,7 +118,7 @@
         },
         {
           "title": "The Chip War",
-          "note": "Placeholder note on why it stuck with you.",
+          "note": "Highly recommend this book! It breaks down how we got to the point where compute is such a hot commodity (essentially the next oil). Even the historical parts dive into the political and economic tensions that shaped our supply chains and still influence the policies we’re dealing with today. I think its a great read to get caught up on how tech shapes geopolitics",
           "meta": "Chris Miller",
           "spine": "field:#f6f4ef text:#8a7a4a #2f5e5a 1, #c4363c 1, #f6f4ef 1, #c4363c 1",
           "media": [
@@ -126,11 +126,12 @@
               "src": "media/chip-war.png",
               "kind": "image"
             }
-          ]
+          ],
+          "href": "https://static1.squarespace.com/static/5530dddfe4b0679504639dc1/t/673b32bb08089c041cfdfe5f/1731932877725/chip+war.pdf"
         },
         {
           "title": "The Call of the Wild",
-          "note": "Placeholder note on why it stuck with you.",
+          "note": "Read this a lot when I was younger and honestly just found the story really entertaining! I’ve always loved huskies, so the sled dogs were a big part of the appeal too. No deep explanation for this one, just a book thats nostalgic for me.",
           "meta": "Jack London",
           "spine": "field:#f4f4f2 text:#111111 #111111 2, #f4f4f2 1, #e87b1e 1",
           "media": [
@@ -149,12 +150,13 @@
               "kind": "image"
             }
           ],
-          "spine": "field:#a87b4f text:#fbf3e4 #ece6d6 2, #8c5a34 2, #5e3b22 1"
+          "spine": "field:#a87b4f text:#fbf3e4 #ece6d6 2, #8c5a34 2, #5e3b22 1",
+          "note": "I had to read Oryx and Crake for high school and lowkey hated it because I needed to write an essay for marks. I ended up reading a sparknotes version and pulling quotes from parts that seemed relevant for my argument.  I only gave the book a proper chance afterwards and really, really enjoyed it (goes to show I like doing things without being told to do them lol). I recently reread it, and a lot of the lessons and the metaphors reminded me of how AI is developing and how people are reacting to it.  The story moves between the past and present, slowly letting you piece together what actually happened. To think this came out in 2003, Margaret Atwood was so ahead of her time imo."
         },
         {
           "title": "Project Hail Mary",
           "meta": "Andy Weir",
-          "note": "Placeholder note on why it stuck with you.",
+          "note": "I’m a huge space nerd, so I really enjoyed just geeking out over this story! Would definitely recommend listening to the audiobook too. The way some of the characters’ voices are brought to life makes it pretty special.",
           "spine": "field:#0e0e0e text:#e7c34a #c9a23a 2, #0e0e0e 1, #e7c34a 1",
           "media": [
             {
@@ -166,7 +168,7 @@
         {
           "title": "The Hunger Games",
           "meta": "Suzanne Collins",
-          "note": "Placeholder note on why it stuck with you.",
+          "note": "One of my favourite series! I’ve read all the books and watched all the movies so far (just waiting for Sunrise on the Reaping now). My favourite parts while reading the book was picturing the world , especially before seeing the movies, and creating my own versions of the settings in my head",
           "spine": "field:#141414 text:#ffffff #2a2a2a 1, #c79a3a 2, #2a2a2a 1",
           "media": [
             {
@@ -178,7 +180,7 @@
         {
           "title": "The Third Door",
           "meta": "Alex Banayan",
-          "note": "Placeholder note on why it stuck with you.",
+          "note": "A friend recommended The Third Door to me in first year of uni, and it was the first book that got me super into startups! It inspired me to take my first solo trip to Collision in Toronto to meet people in tech and start figuring out what my own “third door” could be. This would still be my first recommendation this to anyone interested in the startup world who’s trying to figure out the first steps to take to get involved ",
           "spine": "field:#0d0d0d text:#ffffff #1d1d1d 2, #ffffff 1, #22a6e0 1",
           "media": [
             {
@@ -190,7 +192,7 @@
         {
           "title": "The Mom Test",
           "meta": "Rob Fitzpatrick",
-          "note": "Placeholder note on why it stuck with you.",
+          "note": "Read this while building my startup, and a lot of the lessons were immediately applicable! It really made me think about how to ask better questions so the feedback I get is honest and useful, then figure out how to actually apply it to what I’m building. But honestly, this goes beyond startups - think just learning how to ask good questions and apply feedback is helpful for most use cases",
           "spine": "field:#e8336f text:#ffffff #f5f0f2 1, #e8336f 1, #1d1d1d 1",
           "media": [
             {
@@ -284,14 +286,23 @@
     },
     "now": {
       "name": "Special of the day",
-      "template": "text",
+      "template": "special",
       "tone": "cream",
       "kicker": "Special of the day",
       "title": "In the oven",
       "body": [
-        "Placeholder. What you're working on right now, plus anything freshly launched."
+        "What I'm cooking up right now."
       ],
-      "items": [],
+      "items": [
+        {
+          "title": "VGC Agent Bench",
+          "meta": "in the oven",
+          "note": "A benchmark for AI agents playing competitive Pokémon (VGC). Can an agent build a team and pilot it like a top player?",
+          "sprite": "monster",
+          "tags": "battle",
+          "href": "https://github.com/daniel04wawng/vgc-agent-bench-research"
+        }
+      ],
       "links": []
     },
     "bakes": {

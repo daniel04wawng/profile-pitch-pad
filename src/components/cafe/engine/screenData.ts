@@ -36,6 +36,7 @@ export type TextAlign = "left" | "center" | "right";
 export const TEMPLATES = {
   case: "Glass case (browse items, like pastries)",
   menu: "Chalkboard menu (list with prices)",
+  special: "Specials card (today's special, like a café menu)",
   shelf: "Bookshelf (items are book spines)",
   music: "Music (record player + tracks)",
   receipt: "Receipt (contact links)",
@@ -49,7 +50,7 @@ export type Tone = keyof typeof TONES;
 
 export const UI_SPRITES = [
   "pastry-notion-cupcake", "pastry-vercel-pavlova", "pastry-gemma-cookies", "pastry-composio-cookies", "pastry-gemma-1b-cake", "pastry-waymo-cake", "pastry-coming-soon", "pastry-cake", "pastry-cookies", "pastry-crepe", "pastry-bread", "pastry-pie", "pastry-cupcake", "pastry-tart",
-  "pastry-croissant", "pastry-macaron", "pastry-cinnamon", "pastry-muffin", "pastry-donut", "cup", "record",
+  "pastry-croissant", "pastry-macaron", "pastry-cinnamon", "pastry-muffin", "pastry-donut", "cup", "record", "monster",
 ];
 
 export function blankScreen(name: string): ScreenDef {

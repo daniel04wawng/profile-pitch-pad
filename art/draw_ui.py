@@ -200,8 +200,43 @@ def cup():
     save(s, "cup")
 
 
+
+def monster():
+    """An original pocket monster (a fox cub with a flame of a tail) for the specials card's
+    Pokemon benchmark: not any real Pokemon, just the feel of one."""
+    art = [
+        "....o............o..........",
+        "...oOo..........oOo.........",
+        "...oHOo........oOOo.....o...",
+        "..oOPOOoooooooooOOPDo..oYo..",
+        "..oOHHOOOOOOOOOOOOODo..oYYo.",
+        ".oOHHOOOOOOOOOOOOOODDo.oYRo.",
+        ".oOHOOKKOOOOOOOOKKOODo.oRYRo",
+        ".oOOOOKWOOOOOOOOKWOODo.oRRYo",
+        ".oOOPPOOOCCooCCOOOPPDo..oRRo",
+        ".oOOOOOOOCCCCCCOOOODDo..oRo.",
+        "..oOOOOCCCCCCCCCCODDo..oRo..",
+        "...ooCCCCCCCCCCCCCoo..oOo...",
+        "...oLCCCCCCCCCCCCCLo.oOo....",
+        "..oLLCCCCCCCCCCCCCLLoOo.....",
+        "..oLLCCCCCCCCCCCCCLLDo......",
+        "..oLLLCCCCCCCCCCCLLLDo......",
+        "...oLLLLLLLLLLLLLLLDo.......",
+        "...oOOoooOOOOOoooOOo........",
+        "...ooo...ooooo...ooo........",
+    ]
+    key = {"o": "ink", "O": "terra1", "H": "terra2", "D": "terra0", "L": "terra0", "C": "cream2", "K": "keyblack", "W": "white",
+           "P": "pink1", "Y": "gold2", "R": (214, 74, 48, 255)}
+    s = Iso(len(art[0]) + 2, len(art) + 2)
+    for y, row in enumerate(art):
+        for x, ch in enumerate(row):
+            if ch in key:
+                c = key[ch]
+                s.im.putpixel((x + 1, y + 1), P[c] if isinstance(c, str) else c)
+    save(s, "monster")
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    for f in (cookies, crepe, bread, pie, cupcake, tart) if "--new" in sys.argv else (croissant, macaron, cinnamon, muffin, donut, cake_slice, cookies, crepe, bread, pie, cupcake, tart, record, cup):
+    for f in (cookies, crepe, bread, pie, cupcake, tart) if "--new" in sys.argv else (croissant, macaron, cinnamon, muffin, donut, cake_slice, cookies, crepe, bread, pie, cupcake, tart, record, cup, monster):
         f()
     print("ui sprites ->", OUT)

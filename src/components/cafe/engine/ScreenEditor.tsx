@@ -247,6 +247,9 @@ export function ScreenEditor({
                 {(s.template === "case" || s.template === "laptop" || s.template === "shelf") && (
                   <MediaList media={it.media ?? []} onChange={(m) => setItem(i, { media: m.length ? m : undefined })} />
                 )}
+                {s.template === "special" && (
+                  <input value={it.tags ?? ""} onChange={(e) => setItem(i, { tags: e.target.value || undefined })} className={input} placeholder="tags (battle: a battle nameplate over its sprite)" />
+                )}
                 {s.template === "laptop" && (
                   <>
                     <input value={it.tags ?? ""} onChange={(e) => setItem(i, { tags: e.target.value || undefined })} className={input} placeholder="tags: React, Python, hackathon…" />
@@ -264,7 +267,7 @@ export function ScreenEditor({
                     </button>
                   </>
                 )}
-                {(s.template === "case" || s.template === "laptop") && (
+                {(s.template === "case" || s.template === "laptop" || s.template === "special") && (
                   <select value={it.sprite ?? ""} onChange={(e) => setItem(i, { sprite: e.target.value || undefined })} className={input}>
                     <option value="">pastry sprite…</option>
                     {UI_SPRITES.map((sp) => (

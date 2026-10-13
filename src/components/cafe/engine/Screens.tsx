@@ -718,6 +718,117 @@ function MusicTemplate({ screen, playing, onMusic, onClose }: Props) {
   );
 }
 
+// The specials card: a café's "today's special" menu card, cream with a double ruled border,
+// the heading between ornaments, each special a dish (its sprite on a plate, its name with a
+// dotted leader to its status where a price would go, what it is), linking out when it has a
+// link. A dish tagged "battle" gets a battle nameplate with an HP bar over its sprite.
+function SpecialTemplate({ screen, onClose }: Props) {
+  const e = useEdit();
+  const t = TONES[screen.tone] ?? TONES.cream;
+  const Orn = () => (
+    <div className="my-3 flex items-center justify-center gap-2" style={{ color: t.accent }} aria-hidden>
+      <span className="h-[3px] w-16" style={{ background: "currentColor", opacity: 0.6 }} />
+      <span className="font-['Silkscreen'] text-[12px]">✦</span>
+      <span className="h-[3px] w-16" style={{ background: "currentColor", opacity: 0.6 }} />
+    </div>
+  );
+  return (
+    <div
+      className="relative m-2 flex max-h-[min(680px,86dvh)] w-[min(620px,92vw)] flex-col [&_img]:[image-rendering:pixelated]"
+      style={{ ...pixelBox(t.fill, t.edge, 4), color: t.ink }}
+      onClick={(ev) => ev.stopPropagation()}
+    >
+      <div className="absolute right-3 top-3 z-10 flex gap-2">
+        <EditToggle />
+        <PixelButton onClick={onClose} fill={t.fill} ink={t.ink} title="Close (Esc)">
+          x
+        </PixelButton>
+      </div>
+      {/* the menu card's inner ruled border */}
+      <div className="m-3 min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8" style={{ boxShadow: `inset 0 0 0 3px ${t.ink}, inset 0 0 0 6px ${t.fill}, inset 0 0 0 8px ${t.ink}` }}>
+        <p className="text-center font-['Silkscreen'] text-[11px] uppercase tracking-[0.3em]" style={{ color: t.accent }}>
+          <Ed value={screen.kicker} placeholder="kicker" onChange={(v) => e?.set({ ...screen, kicker: v })} />
+        </p>
+        <h2 className="mt-2 text-center font-['Pixelify_Sans'] text-4xl font-semibold leading-tight">
+          <Ed value={screen.title} placeholder="title" onChange={(v) => e?.set({ ...screen, title: v })} />
+        </h2>
+        <Orn />
+        <div className="text-[15px]">
+          <Body lines={screen.body} align={screen.align ?? "center"} onChange={(l) => e?.set({ ...screen, body: l })} />
+        </div>
+        <div className="mt-5 space-y-5">
+          {screen.items.map((it, i) => {
+            const battle = (it.tags ?? "").toLowerCase().split(",").map((x) => x.trim()).includes("battle");
+            const dish = (
+              <div className="flex items-center gap-4 sm:gap-5">
+                {it.sprite && (
+                  <div className="relative shrink-0">
+                    {battle && (
+                      // a battle nameplate: name, level, HP bar
+                      <div className="absolute -top-6 left-1/2 z-10 w-28 -translate-x-1/2 px-1.5 py-1" style={pixelBox("#fbf8f2", INK, 2, "rgba(0,0,0,0.25)")}>
+                        <div className="flex justify-between font-['Silkscreen'] text-[7px] uppercase leading-none text-[#2b1d1a]">
+                          <span className="truncate">{it.title}</span>
+                          <span>Lv50</span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1">
+                          <span className="font-['Silkscreen'] text-[6px] text-[#a8432c]">HP</span>
+                          <span className="h-1.5 flex-1 bg-[#2b1d1a] p-[1px]">
+                            <span className="block h-full w-[72%] bg-[#5fbf5a]" />
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {/* the plate it sits on */}
+                    <div className="flex h-28 w-28 items-end justify-center pb-3" style={{ background: `radial-gradient(ellipse 50% 14% at 50% 86%, ${t.soft}, transparent 70%)` }}>
+                      <img src={sprite(it.sprite)} alt="" className="h-20 w-auto" />
+                    </div>
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-['Pixelify_Sans'] text-[22px] font-semibold leading-tight">
+                      <Ed value={it.title} placeholder="the special" onChange={(v) => e?.set(withItem(screen, i, { ...it, title: v }))} />
+                    </span>
+                    <span className="mb-1 min-w-4 flex-1 self-end border-b-[3px] border-dotted" style={{ borderColor: t.soft }} />
+                    <span className="font-['Silkscreen'] text-[10px] uppercase" style={{ color: t.accent }}>
+                      <Ed value={it.meta ?? ""} placeholder="status" onChange={(v) => e?.set(withItem(screen, i, { ...it, meta: v || undefined }))} />
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[15px] opacity-90">
+                    <Ed multi value={it.note ?? ""} placeholder="what it is" onChange={(v) => e?.set(withItem(screen, i, { ...it, note: v || undefined }))} />
+                  </div>
+                  {it.href && !e?.on && (
+                    <p className="mt-2 font-['Silkscreen'] text-[10px] uppercase underline-offset-4 group-hover:underline" style={{ color: t.accent }}>
+                      → {it.href.includes("github.com") ? "see it on GitHub" : "take a look"}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+            return it.href && !e?.on ? (
+              <a key={i} href={it.href} target="_blank" rel="noreferrer" className="group block transition-transform hover:-translate-y-1">
+                {dish}
+              </a>
+            ) : (
+              <div key={i}>
+                {dish}
+                {e?.on && (
+                  <div className="mt-1 flex justify-end">
+                    <EditButton onClick={() => e.set(withItem(screen, i, null))}>✕</EditButton>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {e?.on && <AddItem />}
+        <Orn />
+        <LinkRow links={screen.links} screen={screen} onChange={(l) => e?.set({ ...screen, links: l })} />
+      </div>
+    </div>
+  );
+}
+
 function ReceiptTemplate({ screen, onClose }: Props) {
   const e = useEdit();
   return (
@@ -985,6 +1096,8 @@ function TemplateOf(props: Props) {
       return <MusicTemplate {...props} />;
     case "receipt":
       return <ReceiptTemplate {...props} />;
+    case "special":
+      return <SpecialTemplate {...props} />;
     default:
       return <TextTemplate {...props} />;
   }
