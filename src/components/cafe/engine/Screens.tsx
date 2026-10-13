@@ -1,5 +1,5 @@
 import { TuneMaker } from "./TuneMaker";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Ed, EditButton, EditCtx, LinksEdit, MediaEdit, useEdit, withItem } from "./screenEdit";
 import { BASE } from "./types";
 import { fileUrl } from "./store";
@@ -173,17 +173,60 @@ function MediaView({ m, className = "", fit = "contain" }: { m: Media; className
 // A gallery: the picked photo or video large, the rest as thumbnails to pick from.
 function Gallery({ media, frame = "#2b1d1a" }: { media: Media[]; frame?: string }) {
   const [i, setI] = useState(0);
-  const m = media[Math.min(i, media.length - 1)];
+  const n = media.length;
+  const at = Math.min(i, n - 1);
+  const m = media[at];
+  const go = (d: number) => setI((k) => (Math.min(k, n - 1) + d + n) % n);
+  // arrow keys flip through too (while this gallery is on screen)
+  useEffect(() => {
+    if (n < 2) return;
+    const key = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && e.target.closest("input, textarea, [contenteditable]")) return;
+      if (e.key === "ArrowLeft") go(-1);
+      if (e.key === "ArrowRight") go(1);
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n]);
+  const swipe = useRef<number | null>(null);
   if (!m) return null;
+  const arrow = (d: number) => (
+    <button
+      onClick={(e) => (e.stopPropagation(), go(d))}
+      className={`absolute top-1/2 z-10 -translate-y-1/2 px-2.5 py-1 font-['Pixelify_Sans'] text-[18px] leading-none text-[#2b1d1a] transition-transform hover:scale-110 ${d < 0 ? "left-2" : "right-2"}`}
+      style={pixelBox("#fbf8f2", INK, 2, "rgba(0,0,0,0.35)")}
+      aria-label={d < 0 ? "Previous" : "Next"}
+    >
+      {d < 0 ? "‹" : "›"}
+    </button>
+  );
   return (
     <div>
-      <div className="flex h-[min(46dvh,340px)] items-center justify-center bg-black/80" style={pixelBox("#15131c", frame, 3, "rgba(0,0,0,0.25)")}>
-        <MediaView m={m} className="h-full w-full" />
+      <div
+        className="relative flex h-[min(46dvh,340px)] items-center justify-center bg-black/80"
+        style={pixelBox("#15131c", frame, 3, "rgba(0,0,0,0.25)")}
+        onPointerDown={(e) => (swipe.current = e.clientX)}
+        onPointerUp={(e) => {
+          if (swipe.current !== null && Math.abs(e.clientX - swipe.current) > 40 && n > 1) go(e.clientX < swipe.current ? 1 : -1);
+          swipe.current = null;
+        }}
+      >
+        <MediaView key={m.src + at} m={m} className="h-full w-full" />
+        {n > 1 && (
+          <>
+            {arrow(-1)}
+            {arrow(1)}
+            <span className="absolute bottom-2 right-2 z-10 bg-black/60 px-1.5 py-0.5 font-['Silkscreen'] text-[9px] text-white">
+              {at + 1} / {n}
+            </span>
+          </>
+        )}
       </div>
-      {media.length > 1 && (
+      {n > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
           {media.map((x, k) => (
-            <button key={x.src + k} onClick={() => setI(k)} className="relative h-14 w-14 shrink-0 overflow-hidden" style={{ outline: k === i ? `3px solid ${frame}` : "none", opacity: k === i ? 1 : 0.7 }}>
+            <button key={x.src + k} onClick={() => setI(k)} className="relative h-14 w-14 shrink-0 overflow-hidden" style={{ outline: k === at ? `3px solid ${frame}` : "none", opacity: k === at ? 1 : 0.7 }}>
               <MediaView m={x} className="h-full w-full" fit="cover" />
               {x.kind === "video" && <span className="absolute bottom-0 left-0 bg-black/70 px-1 font-['Silkscreen'] text-[8px] text-white">▶</span>}
             </button>
