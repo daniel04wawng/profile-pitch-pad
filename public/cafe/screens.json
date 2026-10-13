@@ -297,7 +297,6 @@
         {
           "title": "VGC Agent Bench",
           "meta": "in the oven",
-          "note": "A benchmark for AI agents playing competitive Pokémon (VGC). Can an agent build a team and pilot it like a top player?",
           "sprite": "monster",
           "tags": "battle",
           "href": "https://github.com/daniel04wawng/vgc-agent-bench-research",
