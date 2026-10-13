@@ -342,10 +342,38 @@ def wall_lamp():
 # ---------------------------------------------------------------- batch: books, window, plants
 
 
+def favourite_books():
+    """Daniel's books from the café's bookshelf screen (public/cafe/screens.json), as their
+    spines' colours: (field, title, strip bands), from each book's `spine`
+    ("field:#a87b4f text:#fbf3e4 #ece6d6 2, #8c5a34 2")."""
+    import json
+    import re
+    path = os.path.join(os.path.dirname(OUT), "screens.json")
+    hexrgb = lambda h: tuple(int(h[k:k + 2], 16) for k in (1, 3, 5)) + (255,)  # noqa: E731
+    out = []
+    for book in json.load(open(path))["screens"].get("books", {}).get("items", []):
+        spec = book.get("spine") or ""
+        field = text = None
+        strip = []
+        for kind, h in re.findall(r"(field:|text:)?(#[0-9a-fA-F]{6})", spec):
+            if kind == "field:":
+                field = hexrgb(h)
+            elif kind == "text:":
+                text = hexrgb(h)
+            else:
+                strip.append(hexrgb(h))
+        if field:
+            out.append((field, text or field, strip or [field]))
+    return out
+
+
 def bookshelf():
-    """Tall wooden bookshelf full of books, for a back wall (front faces down-left)."""
+    """Tall wooden bookshelf full of books, for a back wall (front faces down-left). The middle
+    shelf, at eye level, holds Daniel's favourites (the bookshelf screen's books) in their
+    spines' colours: the field, with the cover's art in a strip at the top."""
     import random
     rng = random.Random(7)
+    favourites = favourite_books()
     c = Canvas(90, 140)
     X0, Y0 = 20, 90
     L, D, H = 12, 4, 66
@@ -362,6 +390,19 @@ def bookshelf():
             row.append((t, t + w, rng.choice(spines), rng.randint(7, 11), rng.random() < 0.35))
             t += w
         books[i] = row
+    FAV = 2  # the eye-level shelf
+    if favourites:
+        row, t = [], 0.6
+        for k, (field, text, strip) in enumerate(favourites):
+            if t + 1.0 > L - 0.6:
+                break
+            row.append((t, t + 1.0, ("fav", field, text, strip), 9 + (k * 5) % 3, False))
+            t += 1.0
+        while t < L - 1.1:  # the rest of the shelf, everyday books
+            w = rng.choice([0.5, 0.5, 1.0])
+            row.append((t, t + w, rng.choice(spines), rng.randint(7, 10), rng.random() < 0.35))
+            t += w
+        books[FAV] = row
 
     def front(t, z):
         if t < 0.6 or t > L - 0.6 or z >= H - 3:
@@ -373,6 +414,12 @@ def bookshelf():
             if z0 <= z < SH[i + 1] - 2:
                 for (t0, t1, col, h, band) in books[i]:
                     if t0 <= t < t1 and z < z0 + h:
+                        if isinstance(col, tuple):  # a favourite: its field, its strip at the top (2px wide: no room for a title)
+                            _, field, text, strip = col
+                            top = int(z0 + h - 1 - z)
+                            if top < 2:
+                                return strip[min(top, len(strip) - 1)]
+                            return field
                         if band and z in (z0 + h - 3, z0 + 2):
                             return "gold2"
                         return "shine" if (t - t0 < 0.25 and z > z0 + 1 and col in ("navy1", "red1", "sage0", "choc1", "mah3")) else col
