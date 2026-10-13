@@ -204,6 +204,37 @@ export function Editor({
   const [painting, setPainting] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
+  // the side panel's width: drag its left edge to make it wider (kept in this browser)
+  const [panelW, setPanelW] = useState(() => {
+    try {
+      return Math.min(900, Math.max(280, Number(localStorage.getItem("cafe-editor-panel")) || 300));
+    } catch {
+      return 300;
+    }
+  });
+  const [sizing, setSizing] = useState(false);
+  const startSizing = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setSizing(true);
+    const x0 = e.clientX;
+    const w0 = panelW;
+    const move = (ev: PointerEvent) => setPanelW(Math.min(Math.max(280, w0 + (x0 - ev.clientX)), Math.min(900, window.innerWidth - 320)));
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      setSizing(false);
+      setPanelW((w) => {
+        try {
+          localStorage.setItem("cafe-editor-panel", String(w));
+        } catch {
+          // (no storage: it just won't be remembered)
+        }
+        return w;
+      });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
   // lighting preview: null = live San Francisco time; a number previews that hour
   const [lightOn, setLightOn] = useState(true);
   const [previewHour, setPreviewHour] = useState<number | null>(null);
@@ -1290,9 +1321,17 @@ export function Editor({
         </div>
 
         <aside
-          className={`flex shrink-0 flex-col overflow-hidden border-l border-white/10 bg-[#1d1a26] transition-[width] duration-300 ease-out ${panelOpen ? "w-[300px]" : "w-0 border-l-0"}`}
+          className={`relative flex shrink-0 flex-col overflow-hidden border-l border-white/10 bg-[#1d1a26] ${sizing ? "" : "transition-[width] duration-300 ease-out"} ${panelOpen ? "" : "w-0 border-l-0"}`}
+          style={panelOpen ? { width: panelW } : undefined}
         >
-          <div className="flex w-[300px] min-h-0 flex-1 flex-col">
+          {panelOpen && (
+            <div
+              onPointerDown={startSizing}
+              title="Drag to make the panel wider"
+              className="absolute inset-y-0 left-0 z-20 w-1.5 cursor-col-resize hover:bg-white/20"
+            />
+          )}
+          <div className="flex min-h-0 flex-1 flex-col" style={{ width: panelW }}>
             <div className="flex border-b border-white/10">
               {(["scene", "assets", "screens"] as const).map((t) => (
                 <button

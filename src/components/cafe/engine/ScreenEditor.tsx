@@ -220,7 +220,13 @@ export function ScreenEditor({
                   </button>
                 </div>
                 <input value={it.meta ?? ""} onChange={(e) => setItem(i, { meta: e.target.value || undefined })} className={input} placeholder="right side: price, date, subtitle" />
-                <textarea value={it.note ?? ""} onChange={(e) => setItem(i, { note: e.target.value || undefined })} rows={2} className={input} placeholder="details shown when opened" />
+                <textarea
+                  value={it.note ?? ""}
+                  onChange={(e) => setItem(i, { note: e.target.value || undefined })}
+                  rows={s.template === "laptop" ? 12 : 3}
+                  className={`${input} resize-y`}
+                  placeholder={s.template === "laptop" ? "the story: ## a section, • a bullet, **bold**" : "details shown when opened"}
+                />
                 <input value={it.href ?? ""} onChange={(e) => setItem(i, { href: e.target.value || undefined })} className={input} placeholder="link (optional)" />
                 {s.template === "menu" && (
                   <>
