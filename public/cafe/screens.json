@@ -120,13 +120,25 @@
           "title": "The Chip War",
           "note": "Placeholder note on why it stuck with you.",
           "meta": "Chris Miller",
-          "spine": "field:#f2efe8 text:#8c7a22 #2f5e5a 2, #c9a640 1, #2f5e5a 1"
+          "spine": "field:#f6f4ef text:#8a7a4a #2f5e5a 1, #c4363c 1, #f6f4ef 1, #c4363c 1",
+          "media": [
+            {
+              "src": "media/chip-war.png",
+              "kind": "image"
+            }
+          ]
         },
         {
           "title": "The Call of the Wild",
           "note": "Placeholder note on why it stuck with you.",
           "meta": "Jack London",
-          "spine": "field:#eef3f6 text:#2f3540 #9fbad0 2, #4a4e57 2, #c9a35a 1"
+          "spine": "field:#f4f4f2 text:#111111 #111111 2, #f4f4f2 1, #e87b1e 1",
+          "media": [
+            {
+              "src": "media/the-call-of-the-wild.png",
+              "kind": "image"
+            }
+          ]
         },
         {
           "title": "Oryx and Crake",
@@ -143,25 +155,49 @@
           "title": "Project Hail Mary",
           "meta": "Andy Weir",
           "note": "Placeholder note on why it stuck with you.",
-          "spine": "field:#141c33 text:#f2c14e #2a3a66 2, #e8eef2 1, #f2c14e 1"
+          "spine": "field:#0e0e0e text:#e7c34a #c9a23a 2, #0e0e0e 1, #e7c34a 1",
+          "media": [
+            {
+              "src": "media/project-hail-mary.png",
+              "kind": "image"
+            }
+          ]
         },
         {
           "title": "The Hunger Games",
           "meta": "Suzanne Collins",
           "note": "Placeholder note on why it stuck with you.",
-          "spine": "field:#161414 text:#d4a64a #2a2626 2, #d4a64a 1, #8a1c1c 1"
+          "spine": "field:#141414 text:#ffffff #2a2a2a 1, #c79a3a 2, #2a2a2a 1",
+          "media": [
+            {
+              "src": "media/the-hunger-games.png",
+              "kind": "image"
+            }
+          ]
         },
         {
           "title": "The Third Door",
           "meta": "Alex Banayan",
           "note": "Placeholder note on why it stuck with you.",
-          "spine": "field:#f4f0e4 text:#1f1f1f #f2c230 2, #1f1f1f 1"
+          "spine": "field:#0d0d0d text:#ffffff #1d1d1d 2, #ffffff 1, #22a6e0 1",
+          "media": [
+            {
+              "src": "media/the-third-door.png",
+              "kind": "image"
+            }
+          ]
         },
         {
           "title": "The Mom Test",
           "meta": "Rob Fitzpatrick",
           "note": "Placeholder note on why it stuck with you.",
-          "spine": "field:#2e6da4 text:#fbf3e4 #f4d35e 1, #fbf3e4 1, #e05a47 1"
+          "spine": "field:#e8336f text:#ffffff #f5f0f2 1, #e8336f 1, #1d1d1d 1",
+          "media": [
+            {
+              "src": "media/the-mom-test.png",
+              "kind": "image"
+            }
+          ]
         }
       ],
       "links": []
