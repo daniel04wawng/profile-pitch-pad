@@ -15,7 +15,7 @@ const Experience = () => {
       description: "Built the world's first brain-computer interface that converts neural activity directly into musical compositions using EEG sensors and ML algorithms"
     },
     {
-      title: "Hack Western 10.0", 
+      title: "Hack Western 11.0", 
       award: "Best Hardware Hack",
       date: "Nov 2024",
       location: "Western University",
