@@ -934,10 +934,22 @@ function TextTemplate({ screen, onClose }: Props) {
 // is a box (its demo playing, or its sprite), and opens to its demo, the story and its links.
 // A project's write-up, lightly formatted: "## " starts a section, "• " a bullet, **bold**, and
 // a line "![caption](media/photo.jpg)" puts that photo (or video) right there, captioned. A
-// line like "[Photo: the team after winning]" is a reminder of a photo still to add: shown as
+// "[text](https://…)" in a paragraph is a link. A line like "[Photo: the team after winning]"
+// (or "[Link: …]") is a reminder of a photo still to add: shown as
 // an empty frame on the dev server, never to visitors.
 function inline(t: string) {
-  return t.split(/(\*\*[^*]+\*\*)/).map((p, i) => (p.startsWith("**") && p.endsWith("**") ? <strong key={i}>{p.slice(2, -2)}</strong> : p));
+  // **bold** and [a link](https://…)
+  return t.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\(https?:\/\/[^)\s]+\))/).map((p, i) => {
+    if (p.startsWith("**") && p.endsWith("**")) return <strong key={i}>{p.slice(2, -2)}</strong>;
+    const a = p.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);
+    if (a)
+      return (
+        <a key={i} href={a[2]} target="_blank" rel="noreferrer" className="underline decoration-[#a8432c] decoration-2 underline-offset-2 hover:text-[#a8432c]">
+          {a[1]}
+        </a>
+      );
+    return p;
+  });
 }
 function Story({ text }: { text: string }) {
   const out: ReactNode[] = [];
@@ -977,11 +989,11 @@ function Story({ text }: { text: string }) {
       );
       continue;
     }
-    if (/^\[(photo|image|video|picture)\b[^\]]*\]$/i.test(l)) {
+    if (/^\[(photo|image|video|picture|link)\b[^\]]*\]$/i.test(l)) {
       if (import.meta.env.DEV)
         out.push(
           <div key={out.length} className="my-4 border-2 border-dashed border-[#a8432c]/50 px-4 py-6 text-center font-['Silkscreen'] text-[10px] uppercase tracking-wider text-[#a8432c]/80">
-            {l.slice(1, -1)} (add it with + photo here)
+            {l.slice(1, -1)} {/^\[link/i.test(l) ? "(write it as [text](https://…))" : "(add it with + photo here)"}
           </div>,
         );
       continue;
