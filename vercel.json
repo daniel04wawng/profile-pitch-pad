@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/radio",
+      "destination": "/radio.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

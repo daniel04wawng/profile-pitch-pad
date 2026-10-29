@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bluezmango radio</title>
+<style>
+  :root { --bg:#17120f; --card:#221a15; --ink:#f3e6d8; --dim:#b39f8c; --accent:#e0a35c; --line:#3a2d24; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+         font:16px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+         display:flex; justify-content:center; padding:48px 16px; }
+  main { width:100%; max-width:520px; }
+  h1 { font-size:14px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); margin:0 0 24px; font-weight:600; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:24px; }
+  #title { font-size:22px; font-weight:650; margin:0; }
+  #caption { color:var(--dim); font-size:14px; margin:6px 0 18px; }
+  .bar { height:4px; background:var(--line); border-radius:2px; overflow:hidden; }
+  #fill { height:100%; width:0; background:var(--accent); }
+  .row { display:flex; align-items:center; gap:12px; margin-top:18px; }
+  button { background:var(--accent); color:#1b130d; border:0; border-radius:999px; padding:12px 22px;
+           font-weight:700; font-size:15px; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--dim); border:1px solid var(--line); }
+  #status { color:var(--dim); font-size:13px; }
+  h2 { font-size:13px; letter-spacing:.15em; text-transform:uppercase; color:var(--dim); margin:28px 0 10px; font-weight:600; }
+  ol { margin:0; padding-left:20px; color:var(--dim); font-size:14px; }
+  li { margin:4px 0; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#6b5a4d; margin-right:6px; }
+  .dot.on { background:#7fd18b; }
+  form { display:flex; gap:8px; margin-top:10px; }
+  input { flex:1; min-width:0; background:var(--card); color:var(--ink); border:1px solid var(--line);
+          border-radius:999px; padding:11px 16px; font:inherit; font-size:15px; }
+  input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  #reqmsg { color:var(--dim); font-size:13px; min-height:20px; margin:8px 4px 0; }
+  li.mine { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>bluezmango radio</h1>
+  <div class="card">
+    <p id="title">Press play</p>
+    <p id="caption">New songs in bluezmango's style, made as you listen.</p>
+    <div class="bar"><div id="fill"></div></div>
+    <div class="row">
+      <button id="play">Play</button>
+      <span id="status"></span>
+    </div>
+  </div>
+  <h2>Request a song</h2>
+  <form id="reqform">
+    <input id="prompt" maxlength="160" placeholder="e.g. rainy jazz with a soft saxophone" autocomplete="off">
+    <button type="submit">Request</button>
+  </form>
+  <p id="reqmsg"></p>
+  <h2>Up next</h2>
+  <ol id="next"><li>loading…</li></ol>
+  <audio id="audio" preload="auto"></audio>
+</main>
+<script>
+const audio = document.getElementById("audio");
+const $ = (id) => document.getElementById(id);
+let station = null, playing = false, currentId = null;
+
+async function fetchStation() {
+  const r = await fetch("/api/radio-station", { cache: "no-store" });
+  station = await r.json();
+  render();
+  return station;
+}
+
+// Your own request: its id and text stay in this browser only.
+function myRequest() { try { return JSON.parse(localStorage.getItem("myRequest") || "null"); } catch { return null; } }
+
+function render() {
+  const s = station;
+  const mine = myRequest();
+  const label = (x) => x.requestId && mine && x.requestId === mine.id ? `your request: ${esc(mine.prompt)}` : esc(x.title);
+  $("next").innerHTML = s.upNext.length
+    ? s.upNext.map((x) => `<li class="${x.requestId && mine && x.requestId === mine.id ? "mine" : ""}">${label(x)}</li>`).join("")
+    : "<li>being made…</li>";
+  if (mine) {
+    if (s.current?.requestId === mine.id) $("reqmsg").textContent = "Your request is playing now.";
+    else if (s.upNext.some((x) => x.requestId === mine.id)) $("reqmsg").textContent = "Your request is ready, it plays after this song.";
+    else if (s.pendingRequests.includes(mine.id)) $("reqmsg").textContent = "Your request is being made (a few minutes)…";
+  }
+  $("status").innerHTML = `<span class="dot ${s.generatorOnline ? "on" : ""}"></span>` +
+    (s.generatorOnline ? "generator on" : "generator off, replaying recent songs");
+  if (!playing && s.current) $("title").textContent = s.current.title;
+}
+
+function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c]); }
+
+async function syncAndPlay() {
+  const s = await fetchStation();
+  if (!s.current) { $("title").textContent = "Warming up…"; setTimeout(syncAndPlay, 10000); return; }
+  if (s.current.id !== currentId) {
+    currentId = s.current.id;
+    audio.src = s.current.url;
+    const mine = myRequest();
+    const isMine = s.current.requestId && mine && s.current.requestId === mine.id;
+    $("title").textContent = isMine ? "Your request" : s.current.title;
+    $("caption").textContent = isMine ? mine.prompt : (s.current.caption || "");
+  }
+  // Join mid-song like a radio; skip the tail end so we don't play 2 s then jump.
+  const offset = s.offset < s.current.duration - 3 ? s.offset : 0;
+  audio.currentTime = offset;
+  await audio.play();
+}
+
+audio.addEventListener("ended", () => setTimeout(syncAndPlay, 400));
+audio.addEventListener("timeupdate", () => {
+  if (audio.duration) $("fill").style.width = `${(100 * audio.currentTime) / audio.duration}%`;
+});
+
+$("play").onclick = async () => {
+  if (playing) { audio.pause(); playing = false; $("play").textContent = "Play"; return; }
+  playing = true; $("play").textContent = "Pause";
+  try { await syncAndPlay(); } catch (e) { $("status").textContent = "couldn't start: " + e.message; }
+};
+
+$("reqform").onsubmit = async (e) => {
+  e.preventDefault();
+  const prompt = $("prompt").value.trim();
+  if (!prompt) return;
+  $("reqmsg").textContent = "Sending…";
+  const r = await fetch("/api/radio-request", { method: "POST", headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ prompt }) });
+  const out = await r.json().catch(() => ({ error: "something went wrong" }));
+  if (out.error) { $("reqmsg").textContent = out.error; return; }
+  try { localStorage.setItem("myRequest", JSON.stringify({ id: out.id, prompt })); } catch {}
+  $("prompt").value = "";
+  $("reqmsg").textContent = station?.generatorOnline
+    ? "Got it! Your song is being made, it plays as soon as it's ready."
+    : "Got it! The generator is off right now; your song gets made when it's back on.";
+  fetchStation();
+};
+
+// Heartbeat: being on the page (tab visible) is what keeps the station running
+// and the generator working. Leave, and the queue waits for the next visitor.
+fetchStation();
+setInterval(() => { if (document.visibilityState === "visible" || playing) fetchStation(); }, 20000);
+</script>
+</body>
+</html>
