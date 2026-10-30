@@ -55,25 +55,16 @@
           "note": "Placeholder: what I built at TreeHacks."
         },
         {
-          "title": "Mira AI",
-          "meta": "NimbleRx · shipped Aug 2025",
+          "title": "NimbleRx",
+          "meta": "Product Manager intern · Summer 2025",
           "sprite": "pastry-cinnamon",
-          "tags": "healthcare AI, product",
-          "note": "A healthcare assistant patients can trust: it remembers each patient's context (age, state, medications) and answers safely. I led model evaluation and a three-layer prompt system with guardrails, cutting response time toward two seconds from an eleven second baseline.",
+          "tags": "healthcare AI, chatbot, product",
+          "note": "## Mira AI\nA healthcare assistant patients can trust: it remembers each patient's context (age, state, medications) and answers safely. I led model evaluation and a three-layer prompt system with guardrails, cutting response time toward two seconds from an eleven second baseline.\n\n## JiaBot\nAn AI support assistant to cut pharmacy hold times. After a first version only 4% of patients tried, I led the rebuild: intent recognition instead of keywords, support cards that show each patient's refill and delivery status, and smooth handoffs to staff.",
           "media": [
             {
               "src": "media/mira-ai.jpg",
               "kind": "image"
-            }
-          ]
-        },
-        {
-          "title": "JiaBot",
-          "meta": "NimbleRx · shipped Jul 2025",
-          "sprite": "cup",
-          "tags": "chatbot, product",
-          "note": "An AI support assistant to cut pharmacy hold times. After a first version only 4% of patients tried, I led the rebuild: intent recognition instead of keywords, support cards that show each patient's refill and delivery status, and smooth handoffs to staff.",
-          "media": [
+            },
             {
               "src": "media/jiabot.png",
               "kind": "image"
@@ -105,13 +96,6 @@
               "href": "https://github.com/daniel04wawng/agentic-student-os"
             }
           ]
-        },
-        {
-          "title": "Daniel's café",
-          "meta": "This site",
-          "sprite": "pastry-cake",
-          "tags": "React, pixel art, multiplayer",
-          "note": "The café you're standing in: an isometric pixel café with a level editor, avatars and live visitors."
         }
       ],
       "links": []
