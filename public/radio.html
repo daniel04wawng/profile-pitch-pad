@@ -80,7 +80,7 @@ function render() {
   const label = (x) => x.requestId && mine && x.requestId === mine.id ? `your request: ${esc(mine.prompt)}` : esc(x.title);
   $("next").innerHTML = s.upNext.length
     ? s.upNext.map((x) => `<li class="${x.requestId && mine && x.requestId === mine.id ? "mine" : ""}">${label(x)}</li>`).join("")
-    : "<li>being made…</li>";
+    : `<li>${s.generatorOnline ? "new songs being made (a few minutes each)…" : "nothing new queued, replaying earlier songs"}</li>`;
   if (mine) {
     if (s.current?.requestId === mine.id) $("reqmsg").textContent = "Your request is playing now.";
     else if (s.upNext.some((x) => x.requestId === mine.id)) $("reqmsg").textContent = "Your request is ready, it plays after this song.";
