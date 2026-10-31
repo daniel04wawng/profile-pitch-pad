@@ -21,6 +21,7 @@
   button { background:var(--accent); color:#1b130d; border:0; border-radius:999px; padding:12px 22px;
            font-weight:700; font-size:15px; cursor:pointer; }
   button.ghost { background:transparent; color:var(--dim); border:1px solid var(--line); }
+  button:disabled { opacity:.45; cursor:default; }
   #status { color:var(--dim); font-size:13px; }
   h2 { font-size:13px; letter-spacing:.15em; text-transform:uppercase; color:var(--dim); margin:28px 0 10px; font-weight:600; }
   ol { margin:0; padding-left:20px; color:var(--dim); font-size:14px; }
@@ -44,6 +45,7 @@
     <div class="bar"><div id="fill"></div></div>
     <div class="row">
       <button id="play">Play</button>
+      <button id="skip" class="ghost" disabled>Skip</button>
       <span id="status"></span>
     </div>
   </div>
@@ -114,9 +116,20 @@ audio.addEventListener("timeupdate", () => {
 });
 
 $("play").onclick = async () => {
-  if (playing) { audio.pause(); playing = false; $("play").textContent = "Play"; return; }
-  playing = true; $("play").textContent = "Pause";
+  if (playing) { audio.pause(); playing = false; $("play").textContent = "Play"; $("skip").disabled = true; return; }
+  playing = true; $("play").textContent = "Pause"; $("skip").disabled = false;
   try { await syncAndPlay(); } catch (e) { $("status").textContent = "couldn't start: " + e.message; }
+};
+
+$("skip").onclick = async () => {
+  if (!currentId) return;
+  $("skip").disabled = true;
+  const r = await fetch("/api/radio-skip", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ songId: currentId }) }).catch(() => null);
+  const out = r ? await r.json().catch(() => ({})) : { error: "couldn't reach the radio" };
+  if (out.error) $("status").textContent = out.error;
+  if (playing) await syncAndPlay().catch(() => {});
+  setTimeout(() => ($("skip").disabled = !playing), 1500);
 };
 
 $("reqform").onsubmit = async (e) => {

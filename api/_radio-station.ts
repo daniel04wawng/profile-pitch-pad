@@ -96,6 +96,17 @@ export function touch(s: State, now: number) {
   return advance(s, now);
 }
 
+// A listener skips the song playing now, for everyone (it's one shared station). `songId` must
+// be the song they hear, so two people pressing skip at once only skip one song.
+export function skip(s: State, songId: unknown, now: number): { skipped: boolean; evicted: Song[] } {
+  const evicted = touch(s, now);
+  if (!s.current || s.current.id !== songId) return { skipped: false, evicted };
+  evicted.push(...finish(s, s.current));
+  s.current = nextSong(s);
+  s.startedAt = now;
+  return { skipped: true, evicted };
+}
+
 export function publicView(s: State, now: number) {
   const t = s.pausedAt ?? now;
   return {

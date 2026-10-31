@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  addRequest, addSong, advance, claimJob, emptyState, LISTENER_TTL_MS, publicView, QUEUE_TARGET, touch,
+  addRequest, addSong, advance, claimJob, emptyState, LISTENER_TTL_MS, publicView, QUEUE_TARGET, skip, touch,
 } from "../api/_radio-station.ts";
 
 const song = (id, duration = 100) => ({ id, url: `u/${id}`, title: id, duration });
@@ -143,4 +143,15 @@ test("request validation and cap", () => {
   assert.ok(addRequest(s, "x", 1).error);
   for (let i = 0; i < 10; i++) assert.ok(addRequest(s, `song ${i}`, 1).id);
   assert.ok(addRequest(s, "one too many", 1).error);
+});
+
+test("skip moves everyone to the next song, once", () => {
+  const s = stationWith(3);
+  touch(s, 1_030_000);
+  assert.equal(skip(s, "s0", 1_030_000).skipped, true);
+  const v = publicView(s, 1_030_000);
+  assert.equal(v.current.id, "s1");
+  assert.equal(v.offset, 0);
+  assert.equal(skip(s, "s0", 1_030_500).skipped, false); // a second press for the old song does nothing
+  assert.equal(publicView(s, 1_030_500).current.id, "s1");
 });
